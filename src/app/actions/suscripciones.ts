@@ -1,6 +1,6 @@
 'use server'
 
-import { prisma } from '@/lib/prisma'
+import prisma from '@/lib/prisma'
 import { addDays } from 'date-fns'
 import { revalidatePath } from 'next/cache'
 

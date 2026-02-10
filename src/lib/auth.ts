@@ -12,22 +12,40 @@ export const authOptions: NextAuthOptions = {
                 password: { label: "Contraseña", type: "password" }
             },
             async authorize(credentials) {
-                if (!credentials?.username || !credentials?.password) return null
+                console.log('Authorize called with user:', credentials?.username)
 
-                const user = await prisma.user.findUnique({
-                    where: { username: credentials.username }
-                })
+                if (!credentials?.username || !credentials?.password) {
+                    console.log('Missing credentials in authorize')
+                    return null
+                }
 
-                if (!user) return null
+                try {
+                    const user = await prisma.user.findUnique({
+                        where: { username: credentials.username }
+                    })
+                    console.log('User found in DB:', user ? 'Yes' : 'No')
 
-                const passwordMatch = await bcrypt.compare(credentials.password, user.password)
+                    if (!user) {
+                        console.log('User not found')
+                        return null
+                    }
 
-                if (!passwordMatch) return null
+                    const passwordMatch = await bcrypt.compare(credentials.password, user.password)
+                    console.log('Password match:', passwordMatch)
 
-                return {
-                    id: user.id,
-                    name: user.username,
-                    role: user.role
+                    if (!passwordMatch) {
+                        console.log('Password mismatch')
+                        return null
+                    }
+
+                    return {
+                        id: user.id,
+                        name: user.username,
+                        role: user.role
+                    }
+                } catch (error) {
+                    console.error('Authorize error:', error)
+                    return null
                 }
             }
         })
@@ -54,5 +72,5 @@ export const authOptions: NextAuthOptions = {
     session: {
         strategy: "jwt",
     },
-    secret: process.env.NEXTAUTH_SECRET || "secret_default_change_me",
+    secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "secret_default_change_me",
 }
