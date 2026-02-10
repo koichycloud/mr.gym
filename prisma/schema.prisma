@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  password  String
+  role      String   @default("ADMIN")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Socio {
+  id              String        @id @default(uuid())
+  codigo          String        @unique
+  nombres         String?
+  apellidos       String?
+  tipoDocumento   String        @default("DNI")
+  numeroDocumento String        @unique
+  fechaNacimiento DateTime
+  sexo            String        @default("M") // M = Masculino, F = Femenino
+  telefono        String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  suscripciones   Suscripcion[]
+  historialCodigos CodigoHistorial[]
+  medidas         MedidaFisica[]
+}
+
+model CodigoHistorial {
+  id          String   @id @default(uuid())
+  socioId     String
+  codigo      String
+  fechaCambio DateTime @default(now())
+  socio       Socio    @relation(fields: [socioId], references: [id], onDelete: Cascade)
+}
+
+model Suscripcion {
+  id          String   @id @default(uuid())
+  socioId     String
+  codigo      String?  // Administrative code for this subscription (e.g. receipt number)
+  fechaInicio DateTime @default(now())
+  meses       Int
+  fechaFin    DateTime
+  estado      String   @default("ACTIVA")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  socio       Socio    @relation(fields: [socioId], references: [id], onDelete: Cascade)
+}
+
+model MedidaFisica {
+  id              String   @id @default(uuid())
+  socioId         String
+  fecha           DateTime @default(now())
+  peso            Float?
+  altura          Float?
+  porcentajeGrasa Float?
+  porcentajeMusculo Float?
+  cuello          Float?
+  hombros         Float?
+  pecho           Float?
+  cintura         Float?
+  vientreBajo     Float?
+  cadera          Float?
+  gluteos         Float?
+  biceps          Float?
+  antebrazos      Float?
+  muslos          Float?
+  cuadriceps      Float?
+  pantorrillas    Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  socio           Socio    @relation(fields: [socioId], references: [id], onDelete: Cascade)
+}
