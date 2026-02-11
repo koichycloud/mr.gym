@@ -10,12 +10,13 @@ interface SocioFormProps {
     initialData?: {
         id?: string
         codigo: string
-        nombres: string
-        apellidos: string
+        nombres?: string | null
+        apellidos?: string | null
         tipoDocumento: string
         numeroDocumento: string
         fechaNacimiento: Date
-        telefono?: string
+        sexo?: string
+        telefono?: string | null
     }
     onSubmit: (data: any) => Promise<{ success: boolean; error?: string }>
     title: string
@@ -37,19 +38,17 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
         fechaNacimiento: initialData?.fechaNacimiento
             ? format(new Date(initialData.fechaNacimiento), 'yyyy-MM-dd')
             : '',
-        telefono: initialData?.telefono || '',
-        sexo: (initialData as any)?.sexo || 'M'
+        sexo: initialData?.sexo || 'M',
+        telefono: initialData?.telefono || ''
     })
 
     // Subscription State
     const [subscriptionData, setSubscriptionData] = useState<{
         meses: string | number
         fechaInicio: string
-        codigo?: string
     }>({
         meses: 1,
-        fechaInicio: new Date().toISOString().split('T')[0],
-        codigo: ''
+        fechaInicio: new Date().toISOString().split('T')[0]
     })
     const [fechaFin, setFechaFin] = useState('')
 
@@ -154,8 +153,7 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
                 ...(includeSubscription ? {
                     suscripcion: {
                         meses: Number(subscriptionData.meses),
-                        fechaInicio: new Date(subscriptionData.fechaInicio),
-                        codigo: subscriptionData.codigo
+                        fechaInicio: new Date(subscriptionData.fechaInicio)
                     }
                 } : {})
             }
@@ -234,7 +232,6 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
                             onChange={handleChange}
                             className="input input-bordered w-full"
                             placeholder={formData.tipoDocumento === 'DNI' ? '8 dígitos' : 'Máx. 12 caracteres'}
-
                             required
                         />
                         {documentoError && (

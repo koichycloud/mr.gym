@@ -55,8 +55,7 @@ export async function createSubscription(data: {
     meses: number
     fechaInicio: Date
     fechaFin: Date
-    nuevoCodigo?: string // Optional new code for Socio
-    codigo?: string // Optional administrative code for Subscription
+    nuevoCodigo?: string // Optional new code
 }) {
     try {
         // 1. Check if Code matches
@@ -97,7 +96,6 @@ export async function createSubscription(data: {
                 meses: data.meses,
                 fechaInicio: data.fechaInicio,
                 fechaFin: data.fechaFin,
-                codigo: data.codigo,
                 estado: 'ACTIVA'
             }
         })

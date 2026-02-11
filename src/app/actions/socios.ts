@@ -40,7 +40,6 @@ export async function createSocio(data: {
     suscripcion?: {
         meses: number
         fechaInicio: Date
-        codigo?: string
     }
 }) {
     try {
@@ -61,7 +60,6 @@ export async function createSocio(data: {
                     meses: suscripcion.meses,
                     fechaInicio: suscripcion.fechaInicio,
                     fechaFin: fechaFin,
-                    codigo: suscripcion.codigo,
                     estado: 'ACTIVA'
                 }]
             }

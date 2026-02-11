@@ -44,7 +44,6 @@ model CodigoHistorial {
 model Suscripcion {
   id          String   @id @default(uuid())
   socioId     String
-  codigo      String?  // Administrative code for this subscription (e.g. receipt number)
   fechaInicio DateTime @default(now())
   meses       Int
   fechaFin    DateTime

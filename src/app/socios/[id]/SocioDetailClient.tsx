@@ -130,7 +130,6 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                             <thead>
                                                 <tr>
                                                     <th>Inicio</th>
-                                                    <th>Código</th>
                                                     <th>Meses</th>
                                                     <th>Vencimiento</th>
                                                     <th>Estado</th>
@@ -141,7 +140,6 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                                 {socio.suscripciones?.map((sub: any) => (
                                                     <tr key={sub.id}>
                                                         <td>{format(new Date(sub.fechaInicio), 'dd/MM/yyyy')}</td>
-                                                        <td className="font-mono text-xs">{sub.codigo || '-'}</td>
                                                         <td>{sub.meses}</td>
                                                         <td>{format(new Date(sub.fechaFin), 'dd/MM/yyyy')}</td>
                                                         <td>
@@ -162,7 +160,7 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                                 ))}
                                                 {(!socio.suscripciones || socio.suscripciones.length === 0) && (
                                                     <tr>
-                                                        <td colSpan={6} className="text-center py-4 opacity-50">No hay historial</td>
+                                                        <td colSpan={5} className="text-center py-4 opacity-50">No hay historial</td>
                                                     </tr>
                                                 )}
                                             </tbody>

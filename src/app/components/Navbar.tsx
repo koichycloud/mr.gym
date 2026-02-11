@@ -10,6 +10,8 @@ export default function Navbar() {
     const pathname = usePathname()
     const { data: session } = useSession()
 
+    if (pathname === '/login') return null
+
     const isActive = (path: string) => {
         if (path === '/' && pathname === '/') return 'active'
         if (path !== '/' && pathname.startsWith(path)) return 'active'

@@ -21,13 +21,11 @@ export default function NewSubscriptionModal({ socioId, socioNombre, socioCodigo
     const [formData, setFormData] = useState<{
         meses: string | number
         fechaInicio: string
-        nuevoCodigo?: string
-        codigo?: string // Administrative code
+        nuevoCodigo: string
     }>({
         meses: 1,
         fechaInicio: new Date().toISOString().split('T')[0],
-        nuevoCodigo: socioCodigo,
-        codigo: ''
+        nuevoCodigo: socioCodigo
     })
 
     const [fechaFin, setFechaFin] = useState('')
@@ -53,15 +51,14 @@ export default function NewSubscriptionModal({ socioId, socioNombre, socioCodigo
         setError(null)
 
         try {
-            const formattedCode = (formData.nuevoCodigo || '').padStart(6, '0')
+            const formattedCode = formData.nuevoCodigo.padStart(6, '0') // Ensure padding logic here too
 
             const result = await onSubmit({
                 socioId,
                 meses: Number(formData.meses),
                 fechaInicio: new Date(formData.fechaInicio),
                 fechaFin: new Date(fechaFin),
-                nuevoCodigo: formattedCode !== socioCodigo ? formattedCode : undefined,
-                codigo: formData.codigo // Pass admin code
+                nuevoCodigo: formattedCode !== socioCodigo ? formattedCode : undefined
             })
 
             if (result.success) {
@@ -102,7 +99,7 @@ export default function NewSubscriptionModal({ socioId, socioNombre, socioCodigo
                                     setFormData(prev => ({ ...prev, nuevoCodigo: formatCode(val) }))
                                 }
                             }}
-                            onBlur={() => setFormData(prev => ({ ...prev, nuevoCodigo: (prev.nuevoCodigo || '').padStart(6, '0') }))}
+                            onBlur={() => setFormData(prev => ({ ...prev, nuevoCodigo: prev.nuevoCodigo.padStart(6, '0') }))}
                             className="input input-bordered w-full"
                         />
                     </div>
