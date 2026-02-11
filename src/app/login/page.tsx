@@ -23,7 +23,7 @@ export default function LoginPage() {
         })
 
         if (res?.error) {
-            setError('Credenciales inválidas')
+            setError(`Error: ${res.error} (Intenta refrescar la página)`)
             setLoading(false)
         } else {
             router.push('/')
