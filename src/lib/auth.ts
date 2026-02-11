@@ -12,22 +12,38 @@ export const authOptions: NextAuthOptions = {
                 password: { label: "Contraseña", type: "password" }
             },
             async authorize(credentials) {
-                if (!credentials?.username || !credentials?.password) return null
+                console.log("[AUTH] Authorizing user:", credentials?.username)
 
-                const user = await prisma.user.findUnique({
-                    where: { username: credentials.username }
-                })
+                if (!credentials?.username || !credentials?.password) {
+                    console.log("[AUTH] Missing credentials")
+                    return null
+                }
 
-                if (!user) return null
+                try {
+                    const user = await prisma.user.findUnique({
+                        where: { username: credentials.username }
+                    })
 
-                const passwordMatch = await bcrypt.compare(credentials.password, user.password)
+                    console.log("[AUTH] User found in DB:", user ? "YES" : "NO")
 
-                if (!passwordMatch) return null
+                    if (!user) {
+                        console.log("[AUTH] User not found")
+                        return null
+                    }
 
-                return {
-                    id: user.id,
-                    name: user.username,
-                    role: user.role
+                    const passwordMatch = await bcrypt.compare(credentials.password, user.password)
+                    console.log("[AUTH] Password match:", passwordMatch ? "YES" : "NO")
+
+                    if (!passwordMatch) return null
+
+                    return {
+                        id: user.id,
+                        name: user.username,
+                        role: user.role
+                    }
+                } catch (error) {
+                    console.error("[AUTH] Error in authorize:", error)
+                    return null
                 }
             }
         })
