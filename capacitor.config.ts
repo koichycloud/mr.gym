@@ -5,8 +5,8 @@ const config: CapacitorConfig = {
   appName: 'MrGym',
   webDir: 'public',
   server: {
-    url: 'http://10.0.2.2:3002', // Desarrollo: Android Emulator. Producción: https://tu-dominio.com
-    cleartext: true
+    url: 'https://mrgymperu.netlify.app',
+    allowNavigation: ['mrgymperu.netlify.app']
   }
 };
 
