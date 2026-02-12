@@ -33,7 +33,9 @@ jobs:
       - name: Build APK
         run: |
           cd android
-          # Fix potential Windows line endings and permissions
+          # Install dos2unix to fix Windows line endings
+          sudo apt-get update && sudo apt-get install -y dos2unix
+          dos2unix gradlew
           chmod +x gradlew
           ./gradlew assembleDebug --stacktrace
 
