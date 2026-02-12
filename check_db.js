@@ -3,7 +3,9 @@ const prisma = new PrismaClient()
 
 async function main() {
     const count = await prisma.socio.count()
+    const subCount = await prisma.suscripcion.count()
     console.log('Total Socios:', count)
+    console.log('Total Suscripciones:', subCount)
 
     if (count > 0) {
         const last = await prisma.socio.findFirst({ orderBy: { createdAt: 'desc' }, include: { suscripciones: true } })

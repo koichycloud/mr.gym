@@ -12,37 +12,43 @@ export const authOptions: NextAuthOptions = {
                 password: { label: "Contraseña", type: "password" }
             },
             async authorize(credentials) {
-                console.log("[AUTH] Authorizing user:", credentials?.username)
+                console.log("[AUTH_DEBUG] 1. Authorizing attempt for:", credentials?.username)
 
                 if (!credentials?.username || !credentials?.password) {
-                    console.log("[AUTH] Missing credentials")
+                    console.error("[AUTH_DEBUG] 2. Missing credentials (username or password)")
                     return null
                 }
 
                 try {
+                    console.log("[AUTH_DEBUG] 3. Searching for user in DB...")
                     const user = await prisma.user.findUnique({
                         where: { username: credentials.username }
                     })
 
-                    console.log("[AUTH] User found in DB:", user ? "YES" : "NO")
+                    console.log("[AUTH_DEBUG] 4. User found in DB:", user ? "YES (ID: " + user.id + ")" : "NO")
 
                     if (!user) {
-                        console.log("[AUTH] User not found")
+                        console.error("[AUTH_DEBUG] 5. User not found for username:", credentials.username)
                         return null
                     }
 
+                    console.log("[AUTH_DEBUG] 6. Verifying password...")
                     const passwordMatch = await bcrypt.compare(credentials.password, user.password)
-                    console.log("[AUTH] Password match:", passwordMatch ? "YES" : "NO")
+                    console.log("[AUTH_DEBUG] 7. Password match result:", passwordMatch ? "MATCH" : "NO MATCH")
 
-                    if (!passwordMatch) return null
+                    if (!passwordMatch) {
+                        console.error("[AUTH_DEBUG] 8. Password mismatch")
+                        return null
+                    }
 
+                    console.log("[AUTH_DEBUG] 9. Authorization successful for:", user.username)
                     return {
                         id: user.id,
                         name: user.username,
                         role: user.role
                     }
                 } catch (error) {
-                    console.error("[AUTH] Error in authorize:", error)
+                    console.error("[AUTH_DEBUG] CRITICAL ERROR in authorize function:", error)
                     return null
                 }
             }

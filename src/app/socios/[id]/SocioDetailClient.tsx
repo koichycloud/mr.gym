@@ -30,7 +30,7 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
     }
 
     return (
-        <div className="min-h-screen bg-base-200 p-8">
+        <div className="min-h-screen bg-base-200 p-4 md:p-8">
             <div className="max-w-5xl mx-auto space-y-8">
                 {/* Header */}
                 <div className="flex justify-between items-center">

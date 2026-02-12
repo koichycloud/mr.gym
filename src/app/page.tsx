@@ -14,7 +14,7 @@ export default async function Home() {
   return (
     <main className="min-h-screen bg-base-200">
 
-      <div className="p-8 max-w-7xl mx-auto space-y-8">
+      <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6 md:space-y-8">
 
         {/* Stats Row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
