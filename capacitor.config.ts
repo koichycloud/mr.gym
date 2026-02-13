@@ -5,8 +5,9 @@ const config: CapacitorConfig = {
   appName: 'MrGym',
   webDir: 'public',
   server: {
-    url: 'https://mrgymperu.netlify.app',
-    allowNavigation: ['mrgymperu.netlify.app']
+    // Reemplaza esto con tu URL real de Netlify cuando la tengas
+    url: 'https://TU-SITIO-EN-NETLIFY.netlify.app',
+    cleartext: true
   }
 };
 

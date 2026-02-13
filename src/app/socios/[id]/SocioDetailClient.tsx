@@ -9,11 +9,12 @@ import { format } from 'date-fns'
 import NewSubscriptionModal from '@/app/components/suscripciones/NewSubscriptionModal'
 import EditSubscriptionModal from '@/app/components/suscripciones/EditSubscriptionModal'
 import MedidasTab from '@/app/components/medidas/MedidasTab'
+import { QRCodeSVG } from 'qrcode.react'
 
 export default function SocioDetailClient({ socio }: { socio: any }) {
     const [showModal, setShowModal] = useState(false)
     const [editingSub, setEditingSub] = useState<any>(null)
-    const [activeTab, setActiveTab] = useState<'general' | 'medidas'>('general')
+    const [activeTab, setActiveTab] = useState<'general' | 'medidas' | 'carnet'>('general')
 
     if (!socio) return <div>Cargando...</div>
 
@@ -66,7 +67,77 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                     >
                         Datos Físicos
                     </a>
+                    <a
+                        role="tab"
+                        className={`tab ${activeTab === 'carnet' ? 'tab-active' : ''}`}
+                        onClick={() => setActiveTab('carnet')}
+                    >
+                        Carnet Digital
+                    </a>
                 </div>
+
+                {activeTab === 'carnet' && (
+                    <div className="card bg-base-100 shadow-xl">
+                        <div className="card-body items-center text-center">
+                            <h2 className="card-title text-2xl mb-2">Carnet de Acceso</h2>
+                            <div className="p-4 bg-white rounded-lg border-2 border-base-300" id="qr-code-container">
+                                <QRCodeSVG
+                                    value={socio.codigo}
+                                    size={256}
+                                    level="H"
+                                    includeMargin
+                                    id="socio-qr-svg"
+                                />
+                            </div>
+                            <p className="mt-4 font-mono text-xl tracking-widest font-bold">{socio.codigo}</p>
+                            <p className="text-sm opacity-60">Muestra este código en recepción para ingresar</p>
+
+                            <div className="flex gap-2 mt-4">
+                                <button className="btn btn-primary btn-sm" onClick={() => {
+                                    const svg = document.getElementById("socio-qr-svg");
+                                    if (svg) {
+                                        const svgData = new XMLSerializer().serializeToString(svg);
+                                        const canvas = document.createElement("canvas");
+                                        const ctx = canvas.getContext("2d");
+                                        const img = new Image();
+                                        img.onload = () => {
+                                            canvas.width = img.width;
+                                            canvas.height = img.height;
+                                            ctx?.drawImage(img, 0, 0);
+                                            const pngFile = canvas.toDataURL("image/png");
+                                            const downloadLink = document.createElement("a");
+                                            downloadLink.download = `QR-${socio.nombres}-${socio.codigo}.png`;
+                                            downloadLink.href = pngFile;
+                                            downloadLink.click();
+                                        };
+                                        img.src = "data:image/svg+xml;base64," + btoa(svgData);
+                                    }
+                                }}>
+                                    Descargar QR ⬇️
+                                </button>
+                                <button className="btn btn-outline btn-sm" onClick={() => {
+                                    const text = `Hola ${socio.nombres}, aquí tienes tu código de acceso para Mr. Gym: ${socio.codigo}`;
+                                    window.open(`https://wa.me/${socio.telefono}?text=${encodeURIComponent(text)}`, '_blank');
+                                }}>
+                                    Enviar por WhatsApp 💬
+                                </button>
+                            </div>
+
+                            <div className="mt-6 alert alert-info">
+                                <MapPin size={24} />
+                                <div>
+                                    <h3 className="font-bold">Estado de Acceso</h3>
+                                    <div className="text-sm">
+                                        {latestSub?.estado === 'ACTIVA'
+                                            ? <span className="text-success font-bold text-lg">HABILITADO ✅</span>
+                                            : <span className="text-error font-bold text-lg">DENEGADO ❌</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {activeTab === 'general' ? (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

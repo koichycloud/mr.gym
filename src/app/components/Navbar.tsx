@@ -57,6 +57,12 @@ export default function Navbar() {
                             </Link>
                         </li>
                     )}
+                    <li>
+                        <Link href="/admin/scanner" className={isActive('/admin/scanner')}>
+                            <Users size={18} />
+                            Scanner (Acceso)
+                        </Link>
+                    </li>
                 </ul>
             </div>
             <div className="navbar-end">
