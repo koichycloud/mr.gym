@@ -4,9 +4,9 @@ const bcrypt = require('bcryptjs')
 const prisma = new PrismaClient()
 
 async function main() {
-  const password = 'admin' // Password simplificado por ahora, se puede cambiar
+  const password = 'SuperAdminSecure2025!@#' // Password seguro actualizado
   const hashedPassword = await bcrypt.hash(password, 10)
-  
+
   const user = await prisma.user.upsert({
     where: { username: 'admin' },
     update: {},

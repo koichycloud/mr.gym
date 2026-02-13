@@ -2,8 +2,14 @@
 
 import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import { requireAuth } from '@/lib/auth-utils'
+import { socioSchema } from '@/lib/validations'
+import { z } from 'zod'
 
 export async function getNextCode() {
+    // Read-only, maybe public? Let's keep it public for now or protect if needed.
+    // For now, let's leave read-only as is or protect if sensitive.
+    // User requested "Write" operations to be protected.
     const lastSocio = await prisma.socio.findFirst({
         orderBy: {
             codigo: 'desc'
@@ -28,22 +34,16 @@ export async function getNextCode() {
     return '000001'
 }
 
-export async function createSocio(data: {
-    codigo: string
-    nombres?: string
-    apellidos?: string
-    tipoDocumento: string
-    numeroDocumento: string
-    fechaNacimiento: Date
-    sexo: string
-    telefono?: string
-    suscripcion?: {
-        meses: number
-        fechaInicio: Date
-    }
-}) {
+export async function createSocio(data: z.infer<typeof socioSchema>) {
     try {
-        const { suscripcion, ...socioData } = data
+        await requireAuth() // 🔒 Protected
+
+        const validation = socioSchema.safeParse(data)
+        if (!validation.success) {
+            return { success: false, error: validation.error.issues[0].message }
+        }
+
+        const { suscripcion, ...socioData } = validation.data
 
         // Auto-format code to 6 digits on save
         const formattedCode = socioData.codigo.padStart(6, '0')
@@ -111,22 +111,30 @@ export async function getSocioById(id: string) {
     })
 }
 
-export async function updateSocio(id: string, data: {
-    codigo: string
-    nombres?: string
-    apellidos?: string
-    tipoDocumento: string
-    numeroDocumento: string
-    fechaNacimiento: Date
-    telefono?: string
-}) {
+export async function updateSocio(id: string, data: z.infer<typeof socioSchema>) {
     try {
-        const formattedCode = data.codigo.padStart(6, '0')
+        await requireAuth() // 🔒 Protected
+
+        // For update, we might allow partials.
+        const updateSchema = socioSchema.partial().extend({
+            codigo: z.string().min(1, "El código es requerido").max(10),
+            tipoDocumento: z.string(),
+            numeroDocumento: z.string(),
+            fechaNacimiento: z.coerce.date(),
+        })
+
+        const validation = updateSchema.safeParse(data)
+        if (!validation.success) {
+            return { success: false, error: validation.error.issues[0].message }
+        }
+
+        const validData = validation.data
+        const formattedCode = validData.codigo!.padStart(6, '0')
 
         const socio = await prisma.socio.update({
             where: { id },
             data: {
-                ...data,
+                ...validData,
                 codigo: formattedCode
             }
         })

@@ -3,6 +3,9 @@
 import prisma from '@/lib/prisma'
 import { addDays } from 'date-fns'
 import { revalidatePath } from 'next/cache'
+import { requireAuth } from '@/lib/auth-utils'
+import { suscripcionSchema } from '@/lib/validations'
+import { z } from 'zod'
 
 export async function getExpiringSubscriptions() {
     const today = new Date()
@@ -50,59 +53,58 @@ export async function getExpiredSubscriptions() {
     return subscriptions
 }
 
-export async function createSubscription(data: {
-    socioId: string
-    meses: number
-    fechaInicio: Date
-    fechaFin: Date
-    nuevoCodigo?: string // Optional new code
-}) {
+export async function createSubscription(data: z.infer<typeof suscripcionSchema>) {
     try {
-        // 1. Check if Code matches
-        if (data.nuevoCodigo) {
-            const currentSocio = await prisma.socio.findUnique({
-                where: { id: data.socioId }
+        await requireAuth() // 🔒 Protected
+
+        const validation = suscripcionSchema.safeParse(data)
+        if (!validation.success) {
+            return { success: false, error: validation.error.issues[0].message }
+        }
+
+        const validData = validation.data
+        const currentSocio = await prisma.socio.findUnique({
+            where: { id: validData.socioId }
+        })
+
+        if (currentSocio && currentSocio.codigo !== validData.nuevoCodigo && validData.nuevoCodigo) {
+            // Code changed! verify uniqueness
+            const existing = await prisma.socio.findUnique({
+                where: { codigo: validData.nuevoCodigo }
             })
 
-            if (currentSocio && currentSocio.codigo !== data.nuevoCodigo) {
-                // Code changed! verify uniqueness
-                const existing = await prisma.socio.findUnique({
-                    where: { codigo: data.nuevoCodigo }
-                })
-
-                if (existing) {
-                    return { success: false, error: `El código ${data.nuevoCodigo} ya está en uso.` }
-                }
-
-                // Save OLD code to history
-                await prisma.codigoHistorial.create({
-                    data: {
-                        socioId: data.socioId,
-                        codigo: currentSocio.codigo
-                    }
-                })
-
-                // Update Socio with NEW code
-                await prisma.socio.update({
-                    where: { id: data.socioId },
-                    data: { codigo: data.nuevoCodigo }
-                })
+            if (existing) {
+                return { success: false, error: `El código ${validData.nuevoCodigo} ya está en uso.` }
             }
+
+            // Save OLD code to history
+            await prisma.codigoHistorial.create({
+                data: {
+                    socioId: validData.socioId,
+                    codigo: currentSocio.codigo
+                }
+            })
+
+            // Update Socio with NEW code
+            await prisma.socio.update({
+                where: { id: validData.socioId },
+                data: { codigo: validData.nuevoCodigo }
+            })
         }
 
         const subscription = await prisma.suscripcion.create({
             data: {
-                socioId: data.socioId,
-                meses: data.meses,
-                fechaInicio: data.fechaInicio,
-                fechaFin: data.fechaFin,
+                socioId: validData.socioId,
+                meses: validData.meses,
+                fechaInicio: validData.fechaInicio,
+                fechaFin: validData.fechaFin,
                 estado: 'ACTIVA'
             }
         })
 
         revalidatePath('/')
         revalidatePath('/socios')
-        revalidatePath(`/socios/${data.socioId}`)
+        revalidatePath(`/socios/${validData.socioId}`)
 
         return { success: true, subscription }
     } catch (error) {
@@ -113,6 +115,10 @@ export async function createSubscription(data: {
 
 export async function updateSubscription(id: string, newDate: Date, meses: number) {
     try {
+        await requireAuth() // 🔒 Protected
+
+        if (meses < 1) return { success: false, error: "Meses inválidos" }
+
         const subscription = await prisma.suscripcion.findUnique({
             where: { id }
         })

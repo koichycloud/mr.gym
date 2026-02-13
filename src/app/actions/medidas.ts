@@ -2,31 +2,24 @@
 
 import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import { requireAuth } from '@/lib/auth-utils'
+import { medidaSchema } from '@/lib/validations'
+import { z } from 'zod'
 
-export async function createMedida(data: {
-    socioId: string
-    peso?: number
-    altura?: number
-    porcentajeGrasa?: number
-    porcentajeMusculo?: number
-    cuello?: number
-    hombros?: number
-    pecho?: number
-    cintura?: number
-    vientreBajo?: number
-    cadera?: number
-    gluteos?: number
-    biceps?: number
-    antebrazos?: number
-    muslos?: number
-    cuadriceps?: number
-    pantorrillas?: number
-    fecha: Date
-}) {
+export async function createMedida(data: z.infer<typeof medidaSchema>) {
     try {
+        await requireAuth() // 🔒 Protected
+
+        const validation = medidaSchema.safeParse(data)
+        if (!validation.success) {
+            return { success: false, error: validation.error.issues[0].message }
+        }
+
+        const validData = validation.data
+
         const medida = await prisma.medidaFisica.create({
             data: {
-                ...data
+                ...validData
             }
         })
 
@@ -53,6 +46,7 @@ export async function getMedidasBySocio(socioId: string) {
 
 export async function deleteMedida(id: string, socioId: string) {
     try {
+        await requireAuth() // 🔒 Protected
         await prisma.medidaFisica.delete({
             where: { id }
         })

@@ -16,6 +16,7 @@ model User {
   updatedAt DateTime @updatedAt
 }
 
+
 model Socio {
   id              String        @id @default(uuid())
   codigo          String        @unique
@@ -31,6 +32,9 @@ model Socio {
   suscripciones   Suscripcion[]
   historialCodigos CodigoHistorial[]
   medidas         MedidaFisica[]
+
+  @@index([nombres, apellidos]) // Optimize name search
+  @@map("Socio")
 }
 
 model CodigoHistorial {
@@ -51,6 +55,9 @@ model Suscripcion {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   socio       Socio    @relation(fields: [socioId], references: [id], onDelete: Cascade)
+
+  @@index([fechaFin, estado]) // Optimize expiration queries
+  @@index([socioId])        // Optimize lookups by socio
 }
 
 model MedidaFisica {
@@ -76,4 +83,7 @@ model MedidaFisica {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   socio           Socio    @relation(fields: [socioId], references: [id], onDelete: Cascade)
+
+  @@index([socioId, fecha]) // Optimize chart data fetching
 }
+

@@ -10,6 +10,9 @@ export default function Navbar() {
     const pathname = usePathname()
     const { data: session } = useSession()
 
+    console.log("Navbar Session Debug:", session)
+    console.log("User Role:", session?.user?.role)
+
     if (pathname === '/login') return null
 
     const isActive = (path: string) => {
@@ -46,6 +49,14 @@ export default function Navbar() {
                             Socios
                         </Link>
                     </li>
+                    {session?.user?.role === 'ADMIN' && (
+                        <li>
+                            <Link href="/users" className={isActive('/users')}>
+                                <Users size={18} />
+                                Usuarios
+                            </Link>
+                        </li>
+                    )}
                 </ul>
             </div>
             <div className="navbar-end">
