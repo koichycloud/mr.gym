@@ -29,9 +29,11 @@ model Socio {
   telefono        String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
-  suscripciones   Suscripcion[]
+  suscripciones    Suscripcion[]
   historialCodigos CodigoHistorial[]
-  medidas         MedidaFisica[]
+  medidas          MedidaFisica[]
+  asistencias      Asistencia[]
+  pagos            Pago[]
 
   @@index([nombres, apellidos]) // Optimize name search
   @@map("Socio")
@@ -85,5 +87,32 @@ model MedidaFisica {
   socio           Socio    @relation(fields: [socioId], references: [id], onDelete: Cascade)
 
   @@index([socioId, fecha]) // Optimize chart data fetching
+}
+
+model Asistencia {
+  id        String   @id @default(uuid())
+  socioId   String
+  fecha     DateTime @default(now())
+  tipo      String   @default("ENTRADA") // ENTRADA o SALIDA
+  socio     Socio    @relation(fields: [socioId], references: [id], onDelete: Cascade)
+
+  @@index([socioId, fecha])
+  @@index([fecha])
+}
+
+model Pago {
+  id            String   @id @default(uuid())
+  socioId       String?
+  suscripcionId String?
+  monto         Float
+  metodoPago    String   @default("EFECTIVO") // EFECTIVO, TRANSFERENCIA, YAPE, PLIN
+  concepto      String   @default("SUSCRIPCION") // SUSCRIPCION, PRODUCTO, OTRO
+  descripcion   String?
+  fecha         DateTime @default(now())
+  createdAt     DateTime @default(now())
+  socio         Socio?   @relation(fields: [socioId], references: [id], onDelete: SetNull)
+
+  @@index([fecha])
+  @@index([socioId])
 }
 

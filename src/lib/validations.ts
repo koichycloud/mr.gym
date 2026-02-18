@@ -50,3 +50,12 @@ export const userSchema = z.object({
     password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
     role: z.enum(["ADMIN", "RECEPCION"]).default("RECEPCION")
 })
+
+export const pagoSchema = z.object({
+    socioId: z.string().optional(),
+    suscripcionId: z.string().optional(),
+    monto: z.number().positive("El monto debe ser mayor a 0"),
+    metodoPago: z.enum(["EFECTIVO", "TRANSFERENCIA", "YAPE", "PLIN"]),
+    concepto: z.enum(["SUSCRIPCION", "PRODUCTO", "OTRO"]),
+    descripcion: z.string().optional(),
+})

@@ -36,19 +36,20 @@ export default function LoginPage() {
             <div className="card w-full max-w-sm shadow-2xl bg-base-100">
                 <div className="card-body">
                     <div className="text-center mb-4">
-                        <h2 className="card-title justify-center text-3xl font-bold text-primary">Mr. Gym</h2>
-                        <p className="text-sm text-gray-500">Inicia sesión para continuar</p>
+                        <h2 className="card-title justify-center text-5xl font-bold text-[#3f2009]" style={{ WebkitTextStroke: '4px black', paintOrder: 'stroke fill' }}>Mr. Gym</h2>
+                        <p className="text-sm text-white font-semibold">Bienvenido al mejor lugar para entrenar.</p>
                     </div>
 
                     <form onSubmit={handleSubmit}>
                         <div className="form-control">
                             <label className="label">
-                                <span className="label-text">Usuario</span>
+                                <span className="label-text text-[#1ABC9C] font-bold">Usuario</span>
                             </label>
                             <input
                                 type="text"
                                 placeholder="usuario"
-                                className="input input-bordered"
+                                className="input input-bordered !bg-black !text-white placeholder-gray-500 w-full"
+                                style={{ backgroundColor: 'black', color: 'white' }}
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
                                 required
@@ -56,12 +57,13 @@ export default function LoginPage() {
                         </div>
                         <div className="form-control">
                             <label className="label">
-                                <span className="label-text">Contraseña</span>
+                                <span className="label-text text-[#1ABC9C] font-bold">Contraseña</span>
                             </label>
                             <input
                                 type="password"
                                 placeholder="contraseña"
-                                className="input input-bordered"
+                                className="input input-bordered !bg-black !text-white placeholder-gray-500 w-full"
+                                style={{ backgroundColor: 'black', color: 'white' }}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
@@ -76,7 +78,7 @@ export default function LoginPage() {
 
                         <div className="form-control mt-6">
                             <button
-                                className={`btn btn-primary ${loading ? 'loading' : ''}`}
+                                className={`btn bg-white text-black hover:bg-gray-200 border-none w-full font-bold text-lg ${loading ? 'loading' : ''}`}
                                 disabled={loading}
                             >
                                 {loading ? 'Entrando...' : 'Entrar'}

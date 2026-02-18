@@ -1,7 +1,9 @@
 import Link from 'next/link'
-import { Plus, Users, Calendar, AlertTriangle, Upload } from 'lucide-react'
+import { Plus, Users, Calendar, AlertTriangle, Upload, CalendarDays, DollarSign } from 'lucide-react'
 import { getSocios } from './actions/socios'
 import { getExpiringSubscriptions, getExpiredSubscriptions } from './actions/suscripciones'
+import { contarAsistenciasHoy } from './actions/asistencia'
+import { getTotalIngresosHoy } from './actions/pagos'
 import { format } from 'date-fns'
 
 export const dynamic = 'force-dynamic'
@@ -10,14 +12,16 @@ export default async function Home() {
   const expiring = await getExpiringSubscriptions()
   const expired = await getExpiredSubscriptions()
   const socios = await getSocios()
+  const asistenciasHoy = await contarAsistenciasHoy()
+  const ingresosHoy = await getTotalIngresosHoy()
 
   return (
-    <main className="min-h-screen bg-base-200">
+    <main className="min-h-screen bg-white">
 
       <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6 md:space-y-8">
 
         {/* Stats Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="stats shadow bg-base-100">
             <div className="stat">
               <div className="stat-figure text-primary">
@@ -25,7 +29,7 @@ export default async function Home() {
               </div>
               <div className="stat-title">Total Socios</div>
               <div className="stat-value text-primary">{socios.length}</div>
-              <div className="stat-desc">Registrados en el sistema</div>
+              <div className="stat-desc">Registrados</div>
             </div>
           </div>
 
@@ -34,46 +38,68 @@ export default async function Home() {
               <div className={`stat-figure ${expiring.length > 0 ? 'text-warning' : 'text-secondary'}`}>
                 <AlertTriangle className="inline-block w-8 h-8 stroke-current" />
               </div>
-              <div className="stat-title">Vencimientos Próximos</div>
+              <div className="stat-title">Por Vencer</div>
               <div className={`stat-value ${expiring.length > 0 ? 'text-warning' : 'text-secondary'}`}>
                 {expiring.length}
               </div>
-              <div className="stat-desc">En los próximos 10 días</div>
+              <div className="stat-desc">Próximos 10 días</div>
+            </div>
+          </div>
+
+          <div className="stats shadow bg-base-100">
+            <div className="stat">
+              <div className="stat-figure text-accent">
+                <CalendarDays className="inline-block w-8 h-8 stroke-current" />
+              </div>
+              <div className="stat-title">Asistencias Hoy</div>
+              <div className="stat-value text-accent">{asistenciasHoy}</div>
+              <div className="stat-desc">Ingresos registrados</div>
+            </div>
+          </div>
+
+          <div className="stats shadow bg-base-100">
+            <div className="stat">
+              <div className="stat-figure text-success">
+                <DollarSign className="inline-block w-8 h-8 stroke-current" />
+              </div>
+              <div className="stat-title">Ingresos Hoy</div>
+              <div className="stat-value text-success text-2xl">S/ {ingresosHoy.toFixed(2)}</div>
+              <div className="stat-desc">Caja del día</div>
             </div>
           </div>
         </div>
 
         {/* Hero Shortcuts */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Link href="/socios/nuevo" className="card bg-primary text-primary-content hover:scale-105 transition-transform duration-200 shadow-xl cursor-pointer">
-            <div className="card-body items-center text-center">
-              <Plus size={48} />
-              <h2 className="card-title text-2xl">Nuevo Socio</h2>
-              <p>Registrar un miembro</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Link href="/socios/nuevo" className="card card-compact bg-primary text-primary-content hover:scale-105 transition-transform duration-200 shadow-xl cursor-pointer">
+            <div className="card-body items-center text-center py-6">
+              <Plus size={32} />
+              <h2 className="card-title text-lg">Nuevo Socio</h2>
+              <p className="text-xs opacity-90">Registrar miembro</p>
             </div>
           </Link>
 
-          <Link href="/socios" className="card bg-secondary text-secondary-content hover:scale-105 transition-transform duration-200 shadow-xl cursor-pointer">
-            <div className="card-body items-center text-center">
-              <Users size={48} />
-              <h2 className="card-title text-2xl">Ver Socios</h2>
-              <p>Gestión de miembros</p>
+          <Link href="/socios" className="card card-compact bg-secondary text-secondary-content hover:scale-105 transition-transform duration-200 shadow-xl cursor-pointer">
+            <div className="card-body items-center text-center py-6">
+              <Users size={32} />
+              <h2 className="card-title text-lg">Ver Socios</h2>
+              <p className="text-xs opacity-90">Gestión miembros</p>
             </div>
           </Link>
 
-          <div className="card bg-accent text-accent-content hover:scale-105 transition-transform duration-200 shadow-xl cursor-pointer">
-            <div className="card-body items-center text-center">
-              <Calendar size={48} />
-              <h2 className="card-title text-2xl">Suscripciones</h2>
-              <p>Gestión de pagos</p>
+          <div className="card card-compact bg-accent text-accent-content hover:scale-105 transition-transform duration-200 shadow-xl cursor-pointer">
+            <div className="card-body items-center text-center py-6">
+              <Calendar size={32} />
+              <h2 className="card-title text-lg">Suscripciones</h2>
+              <p className="text-xs opacity-90">Gestión pagos</p>
             </div>
           </div>
 
-          <Link href="/socios/importar" className="card bg-neutral text-neutral-content hover:scale-105 transition-transform duration-200 shadow-xl cursor-pointer">
-            <div className="card-body items-center text-center">
-              <Upload size={48} />
-              <h2 className="card-title text-2xl">Importar Excel</h2>
-              <p>Carga masiva de socios</p>
+          <Link href="/socios/importar" className="card card-compact bg-neutral text-neutral-content hover:scale-105 transition-transform duration-200 shadow-xl cursor-pointer">
+            <div className="card-body items-center text-center py-6">
+              <Upload size={32} />
+              <h2 className="card-title text-lg">Importar</h2>
+              <p className="text-xs opacity-90">Carga masiva</p>
             </div>
           </Link>
         </div>
@@ -91,6 +117,7 @@ export default async function Home() {
                   <thead>
                     <tr>
                       <th>Socio</th>
+                      <th className="w-10 text-center">Sexo</th>
                       <th>Código</th>
                       <th>Teléfono</th>
                       <th>Vence</th>
@@ -101,9 +128,12 @@ export default async function Home() {
                     {expiring.map(sub => (
                       <tr key={sub.id} className="hover">
                         <td className="font-bold">
-                          <span className={`px-2 py-1 rounded ${sub.socio.sexo === 'F' ? 'bg-pink-100 text-pink-800' : 'bg-blue-100 text-blue-800'}`}>
-                            {sub.socio.nombres} {sub.socio.apellidos}
-                          </span>
+                          <span>{sub.socio.nombres} {sub.socio.apellidos}</span>
+                        </td>
+                        <td className="text-center">
+                          <div className={`w-6 h-6 mx-auto flex items-center justify-center text-[10px] font-bold rounded ${sub.socio.sexo === 'F' ? 'bg-pink-100 text-pink-800' : 'bg-blue-100 text-blue-800'}`}>
+                            {sub.socio.sexo === 'F' ? 'F' : 'M'}
+                          </div>
                         </td>
                         <td className="font-mono">{sub.socio.codigo}</td>
                         <td>{sub.socio.telefono || '-'}</td>
@@ -137,6 +167,7 @@ export default async function Home() {
                   <thead>
                     <tr>
                       <th>Socio</th>
+                      <th className="w-10 text-center">Sexo</th>
                       <th>Código</th>
                       <th>Teléfono</th>
                       <th>Venció</th>
@@ -147,9 +178,12 @@ export default async function Home() {
                     {expired.map(sub => (
                       <tr key={sub.id} className="hover">
                         <td className="font-bold">
-                          <span className={`px-2 py-1 rounded ${sub.socio.sexo === 'F' ? 'bg-pink-100 text-pink-800' : 'bg-blue-100 text-blue-800'}`}>
-                            {sub.socio.nombres} {sub.socio.apellidos}
-                          </span>
+                          <span>{sub.socio.nombres} {sub.socio.apellidos}</span>
+                        </td>
+                        <td className="text-center">
+                          <div className={`w-6 h-6 mx-auto flex items-center justify-center text-[10px] font-bold rounded ${sub.socio.sexo === 'F' ? 'bg-pink-100 text-pink-800' : 'bg-blue-100 text-blue-800'}`}>
+                            {sub.socio.sexo === 'F' ? 'F' : 'M'}
+                          </div>
                         </td>
                         <td className="font-mono">{sub.socio.codigo}</td>
                         <td>{sub.socio.telefono || '-'}</td>

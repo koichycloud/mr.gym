@@ -2,8 +2,15 @@ import { getSocioById, updateSocio } from '@/app/actions/socios'
 import SocioForm from '@/app/socios/SocioForm'
 import { notFound } from 'next/navigation'
 
-export default async function EditarSocio({ params }: { params: { id: string } }) {
+export default async function EditarSocio({
+    params,
+    searchParams
+}: {
+    params: Promise<{ id: string }>,
+    searchParams: Promise<{ renew?: string }>
+}) {
     const { id } = await params
+    const { renew } = await searchParams
     const socio = await getSocioById(id)
 
     if (!socio) {
@@ -22,6 +29,7 @@ export default async function EditarSocio({ params }: { params: { id: string } }
                     title="Editar Socio"
                     initialData={socio}
                     onSubmit={handleUpdate}
+                    includeSubscription={!!renew}
                 />
             </div>
         </div>

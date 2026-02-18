@@ -95,6 +95,9 @@ export async function getSocios() {
                 where: { estado: 'ACTIVA' },
                 orderBy: { fechaFin: 'desc' },
                 take: 1
+            },
+            historialCodigos: {
+                orderBy: { fechaCambio: 'desc' }
             }
         }
     })
@@ -106,6 +109,9 @@ export async function getSocioById(id: string) {
         include: {
             suscripciones: {
                 orderBy: { fechaFin: 'desc' }
+            },
+            historialCodigos: {
+                orderBy: { fechaCambio: 'desc' }
             }
         }
     })
@@ -128,14 +134,42 @@ export async function updateSocio(id: string, data: z.infer<typeof socioSchema>)
             return { success: false, error: validation.error.issues[0].message }
         }
 
-        const validData = validation.data
-        const formattedCode = validData.codigo!.padStart(6, '0')
+        const { suscripcion, ...socioData } = validation.data
+        const formattedCode = socioData.codigo.padStart(6, '0')
+
+        // Check if code is changing to record history
+        const currentSocio = await prisma.socio.findUnique({ where: { id } })
+        if (currentSocio && currentSocio.codigo !== formattedCode) {
+            await prisma.codigoHistorial.create({
+                data: {
+                    socioId: id,
+                    codigo: currentSocio.codigo
+                }
+            })
+        }
+
+        // Prepare subscription create data if provided
+        let suscripcionesCreate = undefined
+        if (suscripcion && suscripcion.meses > 0) {
+            const fechaFin = new Date(suscripcion.fechaInicio)
+            fechaFin.setMonth(fechaFin.getMonth() + suscripcion.meses)
+
+            suscripcionesCreate = {
+                create: [{
+                    meses: suscripcion.meses,
+                    fechaInicio: suscripcion.fechaInicio,
+                    fechaFin: fechaFin,
+                    estado: 'ACTIVA'
+                }]
+            }
+        }
 
         const socio = await prisma.socio.update({
             where: { id },
             data: {
-                ...validData,
-                codigo: formattedCode
+                ...socioData,
+                codigo: formattedCode,
+                suscripciones: suscripcionesCreate
             }
         })
         revalidatePath('/socios')
@@ -149,11 +183,10 @@ export async function updateSocio(id: string, data: z.infer<typeof socioSchema>)
 }
 
 export async function checkSocioExists(tipoDocumento: string, numeroDocumento: string) {
-    const socio = await prisma.socio.findFirst({
+    return await prisma.socio.findFirst({
         where: {
             tipoDocumento: tipoDocumento,
             numeroDocumento: numeroDocumento
         }
     })
-    return !!socio
 }

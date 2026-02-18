@@ -15,7 +15,8 @@ export default function SociosListClient({ initialSocios }: { initialSocios: any
         socio.nombres.toLowerCase().includes(search.toLowerCase()) ||
         socio.apellidos.toLowerCase().includes(search.toLowerCase()) ||
         socio.numeroDocumento.includes(search) ||
-        socio.codigo.toLowerCase().includes(search.toLowerCase())
+        socio.codigo.toLowerCase().includes(search.toLowerCase()) ||
+        socio.historialCodigos?.some((h: any) => h.codigo.toLowerCase().includes(search.toLowerCase()))
     )
 
     const exportToExcel = () => {
@@ -147,6 +148,7 @@ export default function SociosListClient({ initialSocios }: { initialSocios: any
                                 <tr>
                                     <th>Código</th>
                                     <th>Nombre</th>
+                                    <th className="w-10 text-center">Sexo</th>
                                     <th>Documento</th>
                                     <th>Suscripción</th>
                                     <th>Teléfono</th>
@@ -156,20 +158,41 @@ export default function SociosListClient({ initialSocios }: { initialSocios: any
                             <tbody>
                                 {filteredSocios.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} className="text-center py-8 text-gray-500">
+                                        <td colSpan={7} className="text-center py-8 text-gray-500">
                                             No se encontraron socios.
                                         </td>
                                     </tr>
                                 ) : (
                                     filteredSocios.map((socio) => (
                                         <tr key={socio.id} className="hover">
-                                            <td className="font-mono font-bold text-primary">{socio.codigo}</td>
                                             <td>
-                                                <div className={`font-bold inline-block px-2 py-1 rounded ${socio.sexo === 'F' ? 'bg-pink-100 text-pink-800' : 'bg-blue-100 text-blue-800'}`}>
+                                                <div className="flex flex-col">
+                                                    <span className="font-mono font-bold text-primary">{socio.codigo}</span>
+                                                    {socio.historialCodigos && socio.historialCodigos.length > 0 && (
+                                                        <div className="flex items-center gap-1 text-[10px] opacity-40 font-mono">
+                                                            <Clock size={10} />
+                                                            {socio.historialCodigos.map((h: any, i: number) => (
+                                                                <span key={h.id}>
+                                                                    {i > 0 && " ← "}
+                                                                    {h.codigo}
+                                                                </span>
+                                                            )).slice(0, 2)} {/* Limit to last 2 historical codes for UI space */}
+                                                            {socio.historialCodigos.length > 2 && " ..."}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div className="font-bold">
                                                     {socio.nombres} {socio.apellidos}
                                                 </div>
                                                 <div className="text-xs opacity-50">
                                                     Edad: {new Date().getFullYear() - new Date(socio.fechaNacimiento).getFullYear()} años
+                                                </div>
+                                            </td>
+                                            <td className="text-center">
+                                                <div className={`w-6 h-6 mx-auto flex items-center justify-center text-[10px] font-bold rounded ${socio.sexo === 'F' ? 'bg-pink-100 text-pink-800' : 'bg-blue-100 text-blue-800'}`}>
+                                                    {socio.sexo === 'F' ? 'F' : 'M'}
                                                 </div>
                                             </td>
                                             <td>{socio.tipoDocumento} {socio.numeroDocumento}</td>

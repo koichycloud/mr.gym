@@ -71,6 +71,18 @@ export async function validateAccess(codigo: string): Promise<AccessResult> {
             }
         }
 
+        // Auto-register attendance on successful access
+        try {
+            await prisma.asistencia.create({
+                data: {
+                    socioId: socio.id,
+                    tipo: 'ENTRADA'
+                }
+            })
+        } catch (err) {
+            console.error('Error registrando asistencia automática:', err)
+        }
+
         return {
             success: true,
             message: 'Acceso Permitido',

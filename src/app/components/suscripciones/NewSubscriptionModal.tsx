@@ -25,7 +25,7 @@ export default function NewSubscriptionModal({ socioId, socioNombre, socioCodigo
     }>({
         meses: 1,
         fechaInicio: new Date().toISOString().split('T')[0],
-        nuevoCodigo: socioCodigo
+        nuevoCodigo: ''
     })
 
     const [fechaFin, setFechaFin] = useState('')
@@ -88,7 +88,7 @@ export default function NewSubscriptionModal({ socioId, socioNombre, socioCodigo
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="form-control">
                         <label className="label">
-                            <span className="label-text font-bold">Código (Opcional cambio)</span>
+                            <span className="label-text font-bold">Código de Renovación / Recibo</span>
                         </label>
                         <input
                             type="text"

@@ -28,6 +28,7 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [documentoError, setDocumentoError] = useState<string | null>(null)
+    const [existingSocio, setExistingSocio] = useState<any | null>(null)
 
     const [formData, setFormData] = useState({
         codigo: initialData?.codigo || '',
@@ -85,11 +86,13 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
                 return
             }
 
-            const exists = await checkSocioExists(formData.tipoDocumento, formData.numeroDocumento)
-            if (exists) {
+            const s = await checkSocioExists(formData.tipoDocumento, formData.numeroDocumento)
+            if (s) {
                 setDocumentoError(`El ${formData.tipoDocumento} ${formData.numeroDocumento} ya está registrado.`)
+                setExistingSocio(s)
             } else {
                 setDocumentoError(null)
+                setExistingSocio(null)
             }
         }, 500)
 
@@ -235,7 +238,18 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
                             required
                         />
                         {documentoError && (
-                            <span className="text-error text-sm mt-1 block font-bold">{documentoError}</span>
+                            <div className="flex items-center justify-between gap-4 mt-1">
+                                <span className="text-error text-sm font-bold">{documentoError}</span>
+                                {existingSocio && (
+                                    <button
+                                        type="button"
+                                        onClick={() => router.push(`/socios/${existingSocio.id}/editar?renew=true`)}
+                                        className="btn btn-xs btn-outline btn-error"
+                                    >
+                                        Ir a Renovación
+                                    </button>
+                                )}
+                            </div>
                         )}
                     </div>
 

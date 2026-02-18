@@ -1,28 +1,63 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import QRCodeScanner from '@/app/components/scanner/QRCodeScanner'
 import { validateAccess, AccessResult } from '@/app/actions/access'
-import { CheckCircle, XCircle, User, AlertTriangle } from 'lucide-react'
+import { CheckCircle, XCircle, User, AlertTriangle, Monitor } from 'lucide-react'
+import Link from 'next/link'
+import { Toaster, toast } from 'sonner' // Import sonner
 
 export default function ScannerPage() {
     const [scanning, setScanning] = useState(true)
     const [result, setResult] = useState<AccessResult | null>(null)
     const [loading, setLoading] = useState(false)
     const [countdown, setCountdown] = useState(5)
+    const [handsFree, setHandsFree] = useState(false)
+    const inputRef = useRef<HTMLInputElement>(null)
+
+    // Broadcast Channel Ref
+    const channelRef = useRef<BroadcastChannel | null>(null)
+
+    useEffect(() => {
+        channelRef.current = new BroadcastChannel('scanner_channel')
+        return () => channelRef.current?.close()
+    }, [])
 
     const handleScan = async (decodedText: string) => {
-        if (loading || !scanning) return
+        if (loading) return // Don't block if scanning=false (manual input needs to work)
 
-        setScanning(false) // Stop scanning momentarily
+        // If coming from camera, stop it. If manual, just process.
+        if (scanning) setScanning(false)
+
         setLoading(true)
 
         try {
             const validation = await validateAccess(decodedText)
             setResult(validation)
             setCountdown(5) // Reset countdown
+
+            // Broadcast to Customer Screen
+            channelRef.current?.postMessage({
+                type: 'SCAN_RESULT',
+                payload: validation
+            })
+
+            // Show Toast on Admin Screen
+            if (validation.success) {
+                toast.success(`Acceso Permitido: ${validation.socio?.nombres}`, {
+                    duration: 4000,
+                    style: { background: '#dcfce7', color: '#166534', fontSize: '1.2rem' }
+                })
+            } else {
+                toast.error(`DENEGADO: ${validation.message}`, {
+                    duration: 5000,
+                    style: { background: '#fee2e2', color: '#991b1b', fontSize: '1.2rem' }
+                })
+            }
+
         } catch (error) {
             console.error("Scan error", error)
+            toast.error("Error al validar código")
         } finally {
             setLoading(false)
         }
@@ -31,7 +66,25 @@ export default function ScannerPage() {
     const resetScanner = () => {
         setResult(null)
         setScanning(true)
+        // Refocus for hands-free
+        if (handsFree) {
+            setTimeout(() => {
+                inputRef.current?.focus()
+            }, 100)
+        }
     }
+
+    // Keep focus in hands-free mode
+    useEffect(() => {
+        if (handsFree && !result) {
+            const interval = setInterval(() => {
+                if (document.activeElement !== inputRef.current) {
+                    inputRef.current?.focus()
+                }
+            }, 2000) // Check every 2s just in case
+            return () => clearInterval(interval)
+        }
+    }, [handsFree, result])
 
     // Auto-reset effect
     useEffect(() => {
@@ -56,20 +109,69 @@ export default function ScannerPage() {
 
     return (
         <div className="min-h-screen bg-neutral p-4 flex flex-col items-center">
-            <h1 className="text-3xl font-bold text-neutral-content mb-8 mt-4">Control de Acceso 📸</h1>
+            <Toaster position="top-right" richColors />
+
+            <div className="flex w-full justify-between items-center mb-8 max-w-4xl">
+                <h1 className="text-3xl font-bold text-neutral-content ">Control de Acceso 📸</h1>
+                <Link href="/admin/scanner/cliente" target="_blank" className="btn btn-secondary btn-sm">
+                    <Monitor size={18} />
+                    Abrir Pantalla Cliente 🖥️
+                </Link>
+            </div>
 
             {/* Scanner Container */}
             {scanning && !result && (
-                <div className="w-full max-w-sm bg-base-100 rounded-xl overflow-hidden shadow-2xl relative">
-                    <QRCodeScanner
-                        fps={10}
-                        qrbox={250}
-                        disableFlip={false}
-                        qrCodeSuccessCallback={handleScan}
-                        verbose={false}
-                    />
-                    <div className="p-4 text-center">
-                        <p className="animate-pulse">Esperando código QR...</p>
+                <div className="flex flex-col gap-6 w-full max-w-sm items-center">
+                    {/* Camera Scanner */}
+                    <div className="w-full bg-base-100 rounded-xl overflow-hidden shadow-2xl relative">
+                        <QRCodeScanner
+                            fps={10}
+                            qrbox={250}
+                            disableFlip={false}
+                            qrCodeSuccessCallback={handleScan}
+                            verbose={false}
+                        />
+                        <div className="p-4 text-center">
+                            <p className="animate-pulse text-sm">Apunte la cámara al código QR</p>
+                        </div>
+                    </div>
+
+                    <div className="divider">O USA LECTOR USB / TECLADO</div>
+
+                    {/* Manual / USB Input */}
+                    <div className="w-full flex flex-col gap-2">
+                        <div className="form-control bg-base-200 rounded-lg px-4 py-2">
+                            <label className="label cursor-pointer">
+                                <span className="label-text font-bold">Modo "Manos Libres" (Kiosco) ⚡</span>
+                                <input type="checkbox" className="toggle toggle-primary" checked={handsFree} onChange={(e) => setHandsFree(e.target.checked)} />
+                            </label>
+                            <span className="text-xs px-1 opacity-70">
+                                Mantiene el foco en el campo para escanear sin tocar el mouse.
+                            </span>
+                        </div>
+
+                        <input
+                            ref={inputRef}
+                            type="text"
+                            placeholder={handsFree ? "LISTO PARA ESCANEAR... (MODO AUTO)" : "Haz clic y escanea con pistola USB..."}
+                            className={`input input-bordered w-full text-center text-lg shadow-lg focus:input-primary ${handsFree ? 'input-primary ring-2 ring-primary/50' : ''}`}
+                            autoFocus
+                            onBlur={() => {
+                                if (handsFree) {
+                                    // Force refocus
+                                    setTimeout(() => inputRef.current?.focus(), 100)
+                                }
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    handleScan(e.currentTarget.value)
+                                    e.currentTarget.value = ''
+                                }
+                            }}
+                        />
+                        <p className="text-xs text-center mt-2 opacity-60">
+                            Funciona con lectores de código de barras/QR USB (Pistola o Mesa)
+                        </p>
                     </div>
                 </div>
             )}

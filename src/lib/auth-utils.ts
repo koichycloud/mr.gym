@@ -8,8 +8,15 @@ export async function requireAuth() {
         throw new Error("Unauthorized: You must be logged in to perform this action.")
     }
 
-    // Optional: Check for specific roles if needed
-    // if (session.user.role !== 'ADMIN') { ... }
+    return session
+}
+
+export async function requireAdmin() {
+    const session = await requireAuth()
+
+    if (session.user.role !== 'ADMIN') {
+        throw new Error("Forbidden: Solo administradores pueden realizar esta acción.")
+    }
 
     return session
 }

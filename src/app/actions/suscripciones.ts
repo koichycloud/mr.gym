@@ -53,7 +53,10 @@ export async function getExpiredSubscriptions() {
     return subscriptions
 }
 
-export async function createSubscription(data: z.infer<typeof suscripcionSchema>) {
+export async function createSubscription(
+    data: z.infer<typeof suscripcionSchema>,
+    pagoInfo?: { monto: number; metodoPago: string }
+) {
     try {
         await requireAuth() // 🔒 Protected
 
@@ -67,29 +70,16 @@ export async function createSubscription(data: z.infer<typeof suscripcionSchema>
             where: { id: validData.socioId }
         })
 
-        if (currentSocio && currentSocio.codigo !== validData.nuevoCodigo && validData.nuevoCodigo) {
-            // Code changed! verify uniqueness
-            const existing = await prisma.socio.findUnique({
-                where: { codigo: validData.nuevoCodigo }
-            })
-
-            if (existing) {
-                return { success: false, error: `El código ${validData.nuevoCodigo} ya está en uso.` }
-            }
-
-            // Save OLD code to history
+        if (validData.nuevoCodigo) {
+            // Save NEW code to history (as requested, original remains DNI/Carnet)
             await prisma.codigoHistorial.create({
                 data: {
                     socioId: validData.socioId,
-                    codigo: currentSocio.codigo
+                    codigo: validData.nuevoCodigo
                 }
             })
 
-            // Update Socio with NEW code
-            await prisma.socio.update({
-                where: { id: validData.socioId },
-                data: { codigo: validData.nuevoCodigo }
-            })
+            // Note: We NO LONGER update the socio's primary code here.
         }
 
         const subscription = await prisma.suscripcion.create({
@@ -102,8 +92,27 @@ export async function createSubscription(data: z.infer<typeof suscripcionSchema>
             }
         })
 
+        // Auto-register payment if payment info provided
+        if (pagoInfo && pagoInfo.monto > 0) {
+            try {
+                await prisma.pago.create({
+                    data: {
+                        socioId: validData.socioId,
+                        suscripcionId: subscription.id,
+                        monto: pagoInfo.monto,
+                        metodoPago: pagoInfo.metodoPago || 'EFECTIVO',
+                        concepto: 'SUSCRIPCION',
+                        descripcion: `Suscripción ${validData.meses} mes(es)`
+                    }
+                })
+            } catch (pagoError) {
+                console.error('Error registrando pago automático:', pagoError)
+            }
+        }
+
         revalidatePath('/')
         revalidatePath('/socios')
+        revalidatePath('/caja')
         revalidatePath(`/socios/${validData.socioId}`)
 
         return { success: true, subscription }
