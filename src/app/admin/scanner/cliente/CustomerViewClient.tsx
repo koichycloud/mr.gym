@@ -54,10 +54,27 @@ export default function CustomerViewClient() {
             }`}>
             <div className="bg-white/10 backdrop-blur-md rounded-3xl p-16 shadow-2xl max-w-5xl w-full border-4 border-white/20 animate-scale-in">
 
-                {isSuccess ? (
-                    <CheckCircle className="mx-auto text-white w-48 h-48 mb-8 drop-shadow-md" />
+                {socio?.foto ? (
+                    <div className="relative mx-auto mb-8 w-64 h-64">
+                        <img
+                            src={socio.foto}
+                            alt={socio.nombres}
+                            className={`w-full h-full object-cover rounded-full border-8 shadow-2xl ${isSuccess ? 'border-success' : 'border-error'}`}
+                        />
+                        {/* Status Icon Indicator Overlay */}
+                        <div className={`absolute bottom-0 right-4 p-2 rounded-full border-4 border-white ${isSuccess ? 'bg-success' : 'bg-error'}`}>
+                            {isSuccess ?
+                                <CheckCircle className="text-white w-12 h-12" /> :
+                                <XCircle className="text-white w-12 h-12" />
+                            }
+                        </div>
+                    </div>
                 ) : (
-                    <XCircle className="mx-auto text-white w-48 h-48 mb-8 drop-shadow-md" />
+                    isSuccess ? (
+                        <CheckCircle className="mx-auto text-white w-48 h-48 mb-8 drop-shadow-md" />
+                    ) : (
+                        <XCircle className="mx-auto text-white w-48 h-48 mb-8 drop-shadow-md" />
+                    )
                 )}
 
                 <h1 className="text-[6rem] font-black text-white leading-none mb-4 uppercase drop-shadow-md">

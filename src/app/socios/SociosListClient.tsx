@@ -2,22 +2,53 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Plus, Search, ArrowLeft, Eye, Edit, Clock, FileDown, FileText } from 'lucide-react'
+import { Plus, Search, ArrowLeft, Eye, Edit, Clock, FileDown, FileText, Trash2 } from 'lucide-react'
 import { differenceInMonths, differenceInDays, differenceInWeeks, format } from 'date-fns'
 import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { deleteSocio } from '@/app/actions/socios'
+import { useRouter } from 'next/navigation'
 
-export default function SociosListClient({ initialSocios }: { initialSocios: any[] }) {
+export default function SociosListClient({ initialSocios, isAdmin }: { initialSocios: any[], isAdmin: boolean }) {
     const [search, setSearch] = useState('')
+    const router = useRouter()
+    const [isDeleting, setIsDeleting] = useState(false)
 
-    const filteredSocios = initialSocios.filter(socio =>
-        socio.nombres.toLowerCase().includes(search.toLowerCase()) ||
-        socio.apellidos.toLowerCase().includes(search.toLowerCase()) ||
-        socio.numeroDocumento.includes(search) ||
-        socio.codigo.toLowerCase().includes(search.toLowerCase()) ||
-        socio.historialCodigos?.some((h: any) => h.codigo.toLowerCase().includes(search.toLowerCase()))
-    )
+    const handleDelete = async (id: string, name: string) => {
+        if (!confirm(`¿Estás seguro de que deseas eliminar al socio ${name}? Esta acción no se puede deshacer y borrará todo su historial y suscripciones.`)) {
+            return
+        }
+
+        setIsDeleting(true)
+        try {
+            const result = await deleteSocio(id)
+            if (result.success) {
+                // Success message or toast could go here
+                router.refresh()
+            } else {
+                alert(result.error || 'Error al eliminar socio')
+            }
+        } catch (error) {
+            alert('Error al procesar la solicitud')
+        } finally {
+            setIsDeleting(false)
+        }
+    }
+
+    const filteredSocios = initialSocios.filter(socio => {
+        const term = search.toLowerCase()
+        const fullName = `${socio.nombres} ${socio.apellidos}`.toLowerCase()
+
+        return (
+            socio.nombres.toLowerCase().includes(term) ||
+            socio.apellidos.toLowerCase().includes(term) ||
+            fullName.includes(term) ||
+            socio.numeroDocumento.includes(search) ||
+            socio.codigo.toLowerCase().includes(term) ||
+            socio.historialCodigos?.some((h: any) => h.codigo.toLowerCase().includes(term))
+        )
+    })
 
     const exportToExcel = () => {
         const dataToExport = filteredSocios.map(s => ({
@@ -207,6 +238,16 @@ export default function SociosListClient({ initialSocios }: { initialSocios: any
                                                 <Link href={`/socios/${socio.id}/editar`} className="btn btn-sm btn-circle btn-ghost" title="Editar">
                                                     <Edit size={18} />
                                                 </Link>
+                                                {isAdmin && (
+                                                    <button
+                                                        onClick={() => handleDelete(socio.id, `${socio.nombres} ${socio.apellidos}`)}
+                                                        className="btn btn-sm btn-circle btn-ghost text-error"
+                                                        title="Eliminar"
+                                                        disabled={isDeleting}
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                )}
                                             </td>
                                         </tr>
                                     ))

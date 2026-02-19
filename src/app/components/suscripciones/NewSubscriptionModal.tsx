@@ -133,6 +133,7 @@ export default function NewSubscriptionModal({ socioId, socioNombre, socioCodigo
                             value={formData.fechaInicio}
                             onChange={(e) => setFormData(prev => ({ ...prev, fechaInicio: e.target.value }))}
                             className="input input-bordered w-full"
+                            max="9999-12-31"
                             required
                         />
                     </div>

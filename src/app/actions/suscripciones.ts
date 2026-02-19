@@ -67,19 +67,23 @@ export async function createSubscription(
 
         const validData = validation.data
         const currentSocio = await prisma.socio.findUnique({
-            where: { id: validData.socioId }
+            where: { id: validData.socioId },
+            include: {
+                suscripciones: { orderBy: { fechaInicio: 'desc' }, take: 1 }
+            }
         })
 
-        if (validData.nuevoCodigo) {
-            // Save NEW code to history (as requested, original remains DNI/Carnet)
+        // Always record the PREVIOUS code to history when creating a new subscription.
+        // This means the history represents the code the socio HAD before this renewal.
+        const previousCode = currentSocio?.suscripciones[0]?.codigo || currentSocio?.codigo
+        if (previousCode) {
             await prisma.codigoHistorial.create({
                 data: {
                     socioId: validData.socioId,
-                    codigo: validData.nuevoCodigo
+                    codigo: previousCode,
+                    fechaCambio: validData.fechaInicio
                 }
             })
-
-            // Note: We NO LONGER update the socio's primary code here.
         }
 
         const subscription = await prisma.suscripcion.create({
@@ -88,7 +92,9 @@ export async function createSubscription(
                 meses: validData.meses,
                 fechaInicio: validData.fechaInicio,
                 fechaFin: validData.fechaFin,
-                estado: 'ACTIVA'
+                estado: 'ACTIVA',
+                // Use new code if provided, otherwise use the socio's current code
+                codigo: validData.nuevoCodigo || currentSocio?.codigo
             }
         })
 
@@ -140,12 +146,15 @@ export async function updateSubscription(id: string, newDate: Date, meses: numbe
         const fechaFin = new Date(fechaInicio)
         fechaFin.setMonth(fechaFin.getMonth() + meses)
 
+        const estado = fechaFin < new Date() ? 'VENCIDA' : 'ACTIVA'
+
         await prisma.suscripcion.update({
             where: { id },
             data: {
                 fechaInicio: fechaInicio,
                 meses: meses,
-                fechaFin: fechaFin
+                fechaFin: fechaFin,
+                estado: estado
             }
         })
 

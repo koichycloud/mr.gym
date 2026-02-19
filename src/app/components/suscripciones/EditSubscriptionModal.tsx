@@ -65,6 +65,7 @@ export default function EditSubscriptionModal({ subscription, onClose, onSubmit 
                             className="input input-bordered w-full"
                             value={date}
                             onChange={(e) => setDate(e.target.value)}
+                            max="9999-12-31"
                             required
                         />
                     </div>

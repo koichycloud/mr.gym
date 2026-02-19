@@ -7,9 +7,6 @@ import { socioSchema } from '@/lib/validations'
 import { z } from 'zod'
 
 export async function getNextCode() {
-    // Read-only, maybe public? Let's keep it public for now or protect if needed.
-    // For now, let's leave read-only as is or protect if sensitive.
-    // User requested "Write" operations to be protected.
     const lastSocio = await prisma.socio.findFirst({
         orderBy: {
             codigo: 'desc'
@@ -25,12 +22,10 @@ export async function getNextCode() {
 
     if (match) {
         const numberPart = match[1]
-        // If the code is purely numeric or ends in numbers, increment
         const nextNum = parseInt(numberPart, 10) + 1
         return String(nextNum).padStart(6, '0')
     }
 
-    // Fallback if last code is completely weird
     return '000001'
 }
 
@@ -44,23 +39,24 @@ export async function createSocio(data: z.infer<typeof socioSchema>) {
         }
 
         const { suscripcion, ...socioData } = validation.data
-
-        // Auto-format code to 6 digits on save
         const formattedCode = socioData.codigo.padStart(6, '0')
 
         // Prepare subscription create data if provided
         let suscripcionesCreate = undefined
         if (suscripcion && suscripcion.meses > 0) {
             const fechaFin = new Date(suscripcion.fechaInicio)
-            // Add months correctly
             fechaFin.setMonth(fechaFin.getMonth() + suscripcion.meses)
+
+            // Dynamic status based on date
+            const estado = fechaFin < new Date() ? 'VENCIDA' : 'ACTIVA'
 
             suscripcionesCreate = {
                 create: [{
                     meses: suscripcion.meses,
                     fechaInicio: suscripcion.fechaInicio,
                     fechaFin: fechaFin,
-                    estado: 'ACTIVA'
+                    estado: estado,
+                    codigo: formattedCode // Save snapshot
                 }]
             }
         }
@@ -75,6 +71,7 @@ export async function createSocio(data: z.infer<typeof socioSchema>) {
                 nombres: socioData.nombres,
                 apellidos: socioData.apellidos,
                 telefono: socioData.telefono,
+                fotoUrl: socioData.fotoUrl,
                 suscripciones: suscripcionesCreate
             }
         })
@@ -87,12 +84,28 @@ export async function createSocio(data: z.infer<typeof socioSchema>) {
     }
 }
 
+
+async function updateExpiredSubscriptions() {
+    await prisma.suscripcion.updateMany({
+        where: {
+            estado: 'ACTIVA',
+            fechaFin: { lt: new Date() }
+        },
+        data: {
+            estado: 'VENCIDA'
+        }
+    })
+}
+
 export async function getSocios() {
+    await requireAuth() // 🔒 Protected
+    await updateExpiredSubscriptions() // Lazy update
     return await prisma.socio.findMany({
         orderBy: { codigo: 'desc' },
         include: {
             suscripciones: {
-                where: { estado: 'ACTIVA' },
+                // REMOVED: where: { estado: 'ACTIVA' }
+                // We want the latest subscription regardless of status to correctly show "Vencida" if applicable
                 orderBy: { fechaFin: 'desc' },
                 take: 1
             },
@@ -104,6 +117,8 @@ export async function getSocios() {
 }
 
 export async function getSocioById(id: string) {
+    await requireAuth() // 🔒 Protected
+    await updateExpiredSubscriptions() // Lazy update
     return await prisma.socio.findUnique({
         where: { id },
         include: {
@@ -121,7 +136,6 @@ export async function updateSocio(id: string, data: z.infer<typeof socioSchema>)
     try {
         await requireAuth() // 🔒 Protected
 
-        // For update, we might allow partials.
         const updateSchema = socioSchema.partial().extend({
             codigo: z.string().min(1, "El código es requerido").max(10),
             tipoDocumento: z.string(),
@@ -154,12 +168,16 @@ export async function updateSocio(id: string, data: z.infer<typeof socioSchema>)
             const fechaFin = new Date(suscripcion.fechaInicio)
             fechaFin.setMonth(fechaFin.getMonth() + suscripcion.meses)
 
+            // Dynamic status based on date
+            const estado = fechaFin < new Date() ? 'VENCIDA' : 'ACTIVA'
+
             suscripcionesCreate = {
                 create: [{
                     meses: suscripcion.meses,
                     fechaInicio: suscripcion.fechaInicio,
                     fechaFin: fechaFin,
-                    estado: 'ACTIVA'
+                    estado: estado,
+                    codigo: formattedCode // Save snapshot
                 }]
             }
         }
@@ -182,11 +200,33 @@ export async function updateSocio(id: string, data: z.infer<typeof socioSchema>)
     }
 }
 
+// ... existing exports ...
+
 export async function checkSocioExists(tipoDocumento: string, numeroDocumento: string) {
+    await requireAuth() // 🔒 Protected
     return await prisma.socio.findFirst({
         where: {
             tipoDocumento: tipoDocumento,
             numeroDocumento: numeroDocumento
         }
     })
+}
+
+import { requireAdmin } from '@/lib/auth-utils'
+
+export async function deleteSocio(id: string) {
+    try {
+        await requireAdmin() // 🔒 Admin Only
+
+        await prisma.socio.delete({
+            where: { id }
+        })
+
+        revalidatePath('/socios')
+        revalidatePath('/')
+        return { success: true }
+    } catch (error) {
+        console.error('Error deleting socio:', error)
+        return { success: false, error: 'Error al eliminar socio.' }
+    }
 }

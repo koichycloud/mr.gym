@@ -34,6 +34,7 @@ model Socio {
   medidas          MedidaFisica[]
   asistencias      Asistencia[]
   pagos            Pago[]
+  fotoUrl          String?      // URL de la foto del socio
 
   @@index([nombres, apellidos]) // Optimize name search
   @@map("Socio")
@@ -54,6 +55,7 @@ model Suscripcion {
   meses       Int
   fechaFin    DateTime
   estado      String   @default("ACTIVA")
+  codigo      String?  // Code snapshot at the time of subscription
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   socio       Socio    @relation(fields: [socioId], references: [id], onDelete: Cascade)

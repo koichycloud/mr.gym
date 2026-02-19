@@ -9,7 +9,7 @@ export type AccessResult = {
     socio?: {
         nombres: string
         apellidos: string
-        foto?: string // Placeholder for future
+        foto?: string | null // Modified to include photo URL
         estado: 'ACTIVO' | 'VENCIDO' | 'INACTIVO'
         diasVencimiento?: number
         ultimoPago?: Date
@@ -47,6 +47,7 @@ export async function validateAccess(codigo: string): Promise<AccessResult> {
                 socio: {
                     nombres: socio.nombres || '',
                     apellidos: socio.apellidos || '',
+                    foto: socio.fotoUrl, // Map photo
                     estado: 'INACTIVO'
                 }
             }
@@ -64,6 +65,7 @@ export async function validateAccess(codigo: string): Promise<AccessResult> {
                 socio: {
                     nombres: socio.nombres || '',
                     apellidos: socio.apellidos || '',
+                    foto: socio.fotoUrl, // Map photo
                     estado: 'VENCIDO',
                     diasVencimiento: Math.abs(diffDays),
                     ultimoPago: suscripcion.fechaInicio
@@ -89,6 +91,7 @@ export async function validateAccess(codigo: string): Promise<AccessResult> {
             socio: {
                 nombres: socio.nombres || '',
                 apellidos: socio.apellidos || '',
+                foto: socio.fotoUrl, // Map photo
                 estado: 'ACTIVO',
                 diasVencimiento: diffDays,
                 ultimoPago: suscripcion.fechaInicio

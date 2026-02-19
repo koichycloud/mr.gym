@@ -93,7 +93,7 @@ export default function Navbar() {
                             </div>
                         </div>
                         <ul tabIndex={0} className="mt-3 z-[1] p-2 shadow menu menu-sm dropdown-content bg-base-100 rounded-box w-52">
-                            <li><button onClick={() => signOut()}>Cerrar Sesión</button></li>
+                            <li><button onClick={() => signOut({ callbackUrl: '/login' })}>Cerrar Sesión</button></li>
                         </ul>
                     </div>
                 ) : (

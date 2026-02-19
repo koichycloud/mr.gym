@@ -379,10 +379,10 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                             </thead>
                                             <tbody>
                                                 {socio.suscripciones?.map((sub: any, index: number) => {
-                                                    // Logic: The latest subscription (index 0) shows the current socio.codigo.
-                                                    // Previous subscriptions show the historical codes in order (the code that was changed/stored during that renewal).
+                                                    // Logic: Prefer sub.codigo if available (accurate snapshot). 
+                                                    // Fallback to index-based logic for old data (backward compatibility).
                                                     const historicalCodes = socio.historialCodigos || []
-                                                    const displayCode = index === 0 ? socio.codigo : (historicalCodes[index - 1]?.codigo || socio.codigo)
+                                                    const displayCode = sub.codigo || (index === 0 ? socio.codigo : (historicalCodes[index - 1]?.codigo || socio.codigo))
 
                                                     return (
                                                         <tr key={sub.id}>

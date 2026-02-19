@@ -9,6 +9,7 @@ export const socioSchema = z.object({
     fechaNacimiento: z.coerce.date(),
     sexo: z.enum(["M", "F"]),
     telefono: z.string().optional(),
+    fotoUrl: z.string().optional(),
     suscripcion: z.object({
         meses: z.number().int().min(0).default(0),
         fechaInicio: z.coerce.date().default(() => new Date())
