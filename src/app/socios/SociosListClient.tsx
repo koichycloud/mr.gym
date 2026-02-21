@@ -132,7 +132,7 @@ export default function SociosListClient({ initialSocios, isAdmin }: { initialSo
     }
 
     return (
-        <div className="min-h-screen bg-base-200 p-8">
+        <div className="min-h-screen bg-white p-8">
             <div className="max-w-6xl mx-auto">
                 <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
                     <div className="flex items-center gap-4">

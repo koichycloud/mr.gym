@@ -9,13 +9,19 @@ async function main() {
     console.log(`--- Checking DNI ${dni} ---`)
     const byDni = await prisma.socio.findMany({
         where: { numeroDocumento: dni },
-        include: { suscripciones: true }
+        include: {
+            suscripciones: true,
+            historialCodigos: true
+        }
     })
 
     byDni.forEach(s => {
         console.log(`Socio ID: ${s.id}, Code: ${s.codigo}, DNI: ${s.numeroDocumento}, Name: ${s.nombres}`)
         s.suscripciones.forEach(sub => {
             console.log(`  Sub ID: ${sub.id}, Start: ${sub.fechaInicio.toISOString().split('T')[0]}, End: ${sub.fechaFin.toISOString().split('T')[0]}, Created: ${sub.createdAt.toISOString()}`)
+        })
+        s.historialCodigos.forEach(h => {
+            console.log(`  History Code: ${h.codigo}, Date: ${h.fechaCambio.toISOString()}`)
         })
     })
 

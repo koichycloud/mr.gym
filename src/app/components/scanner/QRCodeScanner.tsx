@@ -23,20 +23,34 @@ export default function QRCodeScanner(props: QRCodeScannerProps) {
     useEffect(() => {
         mountedRef.current = true
 
-        // Initialization
-        if (!scannerRef.current) {
-            scannerRef.current = new Html5Qrcode(qrcodeRegionId)
-        }
-
         const startScanning = async () => {
+            // Wait for DOM element to be available
+            if (!document.getElementById(qrcodeRegionId)) {
+                console.warn("Scanner element not found, retrying...")
+                setTimeout(startScanning, 100)
+                return
+            }
+
+            // Initialization
+            if (!scannerRef.current) {
+                try {
+                    scannerRef.current = new Html5Qrcode(qrcodeRegionId)
+                } catch (e) {
+                    console.error("Failed to init Html5Qrcode", e)
+                    return
+                }
+            }
+
             // If locked or component unmounted, stop
-            if (!scannerRef.current || isProcessingRef.current || !mountedRef.current) return
+            if (isProcessingRef.current || !mountedRef.current) return
 
             isProcessingRef.current = true // Lock
 
             try {
                 const devices = await Html5Qrcode.getCameras()
                 if (devices && devices.length) {
+                    if (!scannerRef.current) return // Safety check
+
                     await scannerRef.current.start(
                         { facingMode: "environment" },
                         {
@@ -64,7 +78,7 @@ export default function QRCodeScanner(props: QRCodeScannerProps) {
                 console.error("Error starting scanner", err)
                 // Ignore the specific "transition" error as it usually means it's working
                 if (mountedRef.current && !err.toString().includes("already under transition")) {
-                    setCameraError("Error al iniciar cámara. Recarga la página.")
+                    setCameraError("Error al iniciar cámara. (Intenta recargar)")
                 }
             } finally {
                 isProcessingRef.current = false // Unlock
@@ -76,13 +90,16 @@ export default function QRCodeScanner(props: QRCodeScannerProps) {
         return () => {
             mountedRef.current = false
             const cleanup = async () => {
-                if (scannerRef.current && scannerRef.current.isScanning) {
+                if (scannerRef.current) {
                     try {
-                        await scannerRef.current.stop()
+                        if (scannerRef.current.isScanning) {
+                            await scannerRef.current.stop()
+                        }
                         scannerRef.current.clear()
                     } catch (err) {
                         console.warn("Failed to stop scanner", err)
                     }
+                    scannerRef.current = null
                 }
             }
             cleanup()

@@ -17,7 +17,7 @@ export default function NuevoSocioClient({ nextCode }: NuevoSocioClientProps) {
     }
 
     return (
-        <div className="min-h-screen bg-base-200 p-8">
+        <div className="min-h-screen bg-white p-8">
             <div className="max-w-4xl mx-auto">
                 <div className="flex items-center gap-4 mb-8">
                     <button onClick={() => router.back()} className="btn btn-ghost btn-circle">

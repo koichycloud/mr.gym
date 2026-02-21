@@ -8,7 +8,7 @@ export default async function CajaPage() {
     const resumenMensual = await getResumenMensual()
 
     return (
-        <main className="min-h-screen bg-base-200">
+        <main className="min-h-screen bg-white">
             <div className="p-4 md:p-8 max-w-7xl mx-auto">
                 <CajaClient
                     pagosIniciales={pagos}

@@ -46,7 +46,7 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
     }, [activeTab, socio.id, asistenciasData])
 
     return (
-        <div className="min-h-screen bg-base-200 p-4 md:p-8">
+        <div className="min-h-screen bg-white p-4 md:p-8">
             <div className="max-w-5xl mx-auto space-y-8">
                 {/* Header */}
                 <div className="flex justify-between items-center">
@@ -54,6 +54,23 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                         <Link href="/socios" className="btn btn-ghost btn-circle">
                             <ArrowLeft />
                         </Link>
+
+                        <div className="avatar placeholder">
+                            {socio.fotoUrl ? (
+                                <div className="w-20 h-20 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2">
+                                    <img
+                                        src={socio.fotoUrl}
+                                        alt={socio.nombres}
+                                        className="w-full h-full object-cover"
+                                    />
+                                </div>
+                            ) : (
+                                <div className="bg-neutral-focus text-neutral-content rounded-full w-20">
+                                    <span className="text-3xl">{socio.nombres[0]}</span>
+                                </div>
+                            )}
+                        </div>
+
                         <div>
                             <h1 className="text-3xl font-bold">{socio.nombres} {socio.apellidos}</h1>
                             <p className="opacity-60 font-mono">{socio.codigo}</p>

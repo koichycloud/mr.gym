@@ -23,7 +23,7 @@ export default async function EditarSocio({
     }
 
     return (
-        <div className="min-h-screen bg-base-200 p-8">
+        <div className="min-h-screen bg-white p-8">
             <div className="max-w-4xl mx-auto">
                 <SocioForm
                     title="Editar Socio"

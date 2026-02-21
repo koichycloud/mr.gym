@@ -18,7 +18,7 @@ export default async function UsersPage() {
     const { success, data: users } = await getUsers()
 
     return (
-        <div className="container mx-auto p-4">
+        <div className="container mx-auto p-4 min-h-screen bg-white">
             <h1 className="text-3xl font-bold mb-6 text-primary">Gestión de Usuarios</h1>
 
             <div className="mb-8 p-4 bg-base-200 rounded-lg shadow-md">
