@@ -46,7 +46,7 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
     }, [activeTab, socio.id, asistenciasData])
 
     return (
-        <div className="min-h-screen bg-white p-4 md:p-8">
+        <div className="min-h-screen bg-transparent p-4 md:p-8">
             <div className="max-w-5xl mx-auto space-y-8">
                 {/* Header */}
                 <div className="flex justify-between items-center">

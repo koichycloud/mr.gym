@@ -123,10 +123,10 @@ export async function getSocioById(id: string) {
         where: { id },
         include: {
             suscripciones: {
-                orderBy: { fechaFin: 'desc' }
+                orderBy: { codigo: 'desc' } // Higher code = more recent boleta, shown first
             },
             historialCodigos: {
-                orderBy: { fechaCambio: 'desc' }
+                orderBy: { codigo: 'desc' } // Same logic for code history
             }
         }
     })

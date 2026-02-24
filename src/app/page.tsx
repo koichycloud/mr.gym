@@ -16,7 +16,7 @@ export default async function Home() {
   const ingresosHoy = await getTotalIngresosHoy()
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-transparent">
 
       <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6 md:space-y-8">
 

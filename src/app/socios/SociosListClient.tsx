@@ -132,7 +132,7 @@ export default function SociosListClient({ initialSocios, isAdmin }: { initialSo
     }
 
     return (
-        <div className="min-h-screen bg-white p-8">
+        <div className="min-h-screen bg-transparent p-8">
             <div className="max-w-6xl mx-auto">
                 <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
                     <div className="flex items-center gap-4">
@@ -222,7 +222,7 @@ export default function SociosListClient({ initialSocios, isAdmin }: { initialSo
                                                 </div>
                                             </td>
                                             <td className="text-center">
-                                                <div className={`w-6 h-6 mx-auto flex items-center justify-center text-[10px] font-bold rounded ${socio.sexo === 'F' ? 'bg-pink-100 text-pink-800' : 'bg-blue-100 text-blue-800'}`}>
+                                                <div translate="no" className={`notranslate w-6 h-6 mx-auto flex items-center justify-center text-[10px] font-bold rounded ${socio.sexo === 'F' ? 'bg-pink-100 text-pink-800' : 'bg-blue-100 text-blue-800'}`}>
                                                     {socio.sexo === 'F' ? 'F' : 'M'}
                                                 </div>
                                             </td>

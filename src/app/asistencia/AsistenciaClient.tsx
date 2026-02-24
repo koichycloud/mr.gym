@@ -242,7 +242,7 @@ export default function AsistenciaClient({ asistenciasIniciales, statsIniciales 
                                             </td>
                                             <td className="font-mono">{a.socio.codigo}</td>
                                             <td>
-                                                <span className={`px-2 py-1 rounded text-sm font-semibold ${a.socio.sexo === 'F' ? 'bg-pink-100 text-pink-800' : 'bg-blue-100 text-blue-800'}`}>
+                                                <span translate="no" className={`notranslate px-2 py-1 rounded text-sm font-semibold ${a.socio.sexo === 'F' ? 'bg-pink-100 text-pink-800' : 'bg-blue-100 text-blue-800'}`}>
                                                     {a.socio.nombres} {a.socio.apellidos}
                                                 </span>
                                             </td>

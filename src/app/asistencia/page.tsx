@@ -8,7 +8,7 @@ export default async function AsistenciaPage() {
     const stats = await getEstadisticasAsistencia()
 
     return (
-        <main className="min-h-screen bg-white">
+        <main className="min-h-screen bg-transparent">
             <div className="p-4 md:p-8 max-w-7xl mx-auto">
                 <AsistenciaClient
                     asistenciasIniciales={asistencias}

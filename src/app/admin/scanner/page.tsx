@@ -135,7 +135,7 @@ export default function ScannerPage() {
                         body: `${validation.socio?.nombres || 'Desconocido'} - ${validation.message}`,
                         icon: validation.socio?.foto || '/icon.png',
                         silent: false,
-                        vibrate: [200, 100, 200]
+                        // vibrate: [200, 100, 200]
                     })
                 })
             }
@@ -212,7 +212,7 @@ export default function ScannerPage() {
     }, [result])
 
     return (
-        <div className="min-h-screen bg-white p-4 flex flex-col items-center">
+        <div className="min-h-screen bg-transparent p-4 flex flex-col items-center">
             <Toaster position="top-right" richColors />
 
             <div className="flex w-full justify-between items-center mb-8 max-w-4xl">
