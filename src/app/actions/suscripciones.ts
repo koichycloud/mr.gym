@@ -73,16 +73,22 @@ export async function createSubscription(
             }
         })
 
-        // Always record the PREVIOUS code to history when creating a new subscription.
-        // This means the history represents the code the socio HAD before this renewal.
-        const previousCode = currentSocio?.suscripciones[0]?.codigo || currentSocio?.codigo
-        if (previousCode) {
+        const previousCode = currentSocio?.codigo
+        const newCode = validData.nuevoCodigo || previousCode
+
+        // If the code is actually changing during this renewal, save history and update main Socio
+        if (previousCode && newCode && previousCode !== newCode) {
             await prisma.codigoHistorial.create({
                 data: {
                     socioId: validData.socioId,
                     codigo: previousCode,
                     fechaCambio: validData.fechaInicio
                 }
+            })
+
+            await prisma.socio.update({
+                where: { id: validData.socioId },
+                data: { codigo: newCode }
             })
         }
 
