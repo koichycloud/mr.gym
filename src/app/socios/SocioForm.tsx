@@ -78,9 +78,9 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
     // Automatic Verification Effect
     useEffect(() => {
         const timer = setTimeout(async () => {
-            // If we have initialData (editing), we are already verified/unlocked.
-            // If new (no initialData or empty id), we check.
-            if (initialData?.id) return
+            // If we have initialData (editing), we allow checking 
+            // but we'll ignore the result if it's the exact same socio id.
+            // if (initialData?.id) return // REMOVED
 
             if (!formData.numeroDocumento) return
 
@@ -102,11 +102,11 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
             try {
                 const s = await checkSocioExists(formData.tipoDocumento, formData.numeroDocumento)
 
-                if (s) {
+                if (s && s.id !== initialData?.id) {
                     setDocumentoError(`El socio ya está registrado.`)
                     setExistingSocio(s)
                 } else {
-                    // Not found -> Unlock
+                    // Not found or belongs to same user -> Unlock
                     setDniVerified(true)
                 }
             } catch (err) {

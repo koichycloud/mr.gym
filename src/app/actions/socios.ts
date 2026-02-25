@@ -151,16 +151,9 @@ export async function updateSocio(id: string, data: z.infer<typeof socioSchema>)
         const { suscripcion, ...socioData } = validation.data
         const formattedCode = socioData.codigo.padStart(6, '0')
 
-        // Check if code is changing to record history
-        const currentSocio = await prisma.socio.findUnique({ where: { id } })
-        if (currentSocio && currentSocio.codigo !== formattedCode) {
-            await prisma.codigoHistorial.create({
-                data: {
-                    socioId: id,
-                    codigo: currentSocio.codigo
-                }
-            })
-        }
+        // The previous behavior of tracking code changes on profile edit
+        // was removed. Profile edits (e.g., correcting typos in code/boleta) 
+        // should NOT create history records. History is only for true renewals.
 
         // Prepare subscription create data if provided
         let suscripcionesCreate = undefined
