@@ -16,9 +16,15 @@ export const metadata: Metadata = {
   title: "Mr. GYM",
   description: "Gestión de Gimnasio Inteligente",
   manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Mr. GYM",
+  },
 };
 
 export const viewport = {
+  themeColor: "#000000",
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,

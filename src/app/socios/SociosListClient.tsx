@@ -12,6 +12,8 @@ import { useRouter } from 'next/navigation'
 
 export default function SociosListClient({ initialSocios, isAdmin }: { initialSocios: any[], isAdmin: boolean }) {
     const [search, setSearch] = useState('')
+    const [currentPage, setCurrentPage] = useState(1)
+    const itemsPerPage = 20
     const router = useRouter()
     const [isDeleting, setIsDeleting] = useState(false)
 
@@ -49,6 +51,10 @@ export default function SociosListClient({ initialSocios, isAdmin }: { initialSo
             socio.historialCodigos?.some((h: any) => h.codigo.toLowerCase().includes(term))
         )
     })
+
+    const totalPages = Math.ceil(filteredSocios.length / itemsPerPage)
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const paginatedSocios = filteredSocios.slice(startIndex, startIndex + itemsPerPage)
 
     const exportToExcel = () => {
         const dataToExport = filteredSocios.map(s => ({
@@ -166,94 +172,171 @@ export default function SociosListClient({ initialSocios, isAdmin }: { initialSo
                                 <input
                                     className="input input-bordered w-full pl-10"
                                     placeholder="Buscar por nombre, DNI o código..."
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
+                                    onChange={(e) => {
+                                        setSearch(e.target.value)
+                                        setCurrentPage(1)
+                                    }}
                                 />
                             </div>
                         </div>
                     </div>
 
-                    <div className="overflow-x-auto">
-                        <table className="table w-full">
-                            <thead>
-                                <tr>
-                                    <th>Código</th>
-                                    <th>Nombre</th>
-                                    <th className="w-10 text-center">Sexo</th>
-                                    <th>Documento</th>
-                                    <th>Suscripción</th>
-                                    <th>Teléfono</th>
-                                    <th className="text-right">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredSocios.length === 0 ? (
+                    <div className="bg-base-100">
+                        {/* Desktop Table View */}
+                        <div className="overflow-x-auto hidden md:block">
+                            <table className="table w-full">
+                                <thead>
                                     <tr>
-                                        <td colSpan={7} className="text-center py-8 text-gray-500">
-                                            No se encontraron socios.
-                                        </td>
+                                        <th>Código</th>
+                                        <th>Nombre</th>
+                                        <th className="w-10 text-center">Sexo</th>
+                                        <th>Documento</th>
+                                        <th>Suscripción</th>
+                                        <th>Teléfono</th>
+                                        <th className="text-right">Acciones</th>
                                     </tr>
-                                ) : (
-                                    filteredSocios.map((socio) => (
-                                        <tr key={socio.id} className="hover">
-                                            <td>
-                                                <div className="flex flex-col">
-                                                    <span className="font-mono font-bold text-primary">{socio.codigo}</span>
-                                                    {socio.historialCodigos && socio.historialCodigos.length > 0 && (
-                                                        <div className="flex items-center gap-1 text-[10px] opacity-40 font-mono">
-                                                            <Clock size={10} />
-                                                            {socio.historialCodigos.map((h: any, i: number) => (
-                                                                <span key={h.id}>
-                                                                    {i > 0 && " ← "}
-                                                                    {h.codigo}
-                                                                </span>
-                                                            )).slice(0, 2)} {/* Limit to last 2 historical codes for UI space */}
-                                                            {socio.historialCodigos.length > 2 && " ..."}
-                                                        </div>
+                                </thead>
+                                <tbody>
+                                    {paginatedSocios.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={7} className="text-center py-8 text-gray-500">
+                                                No se encontraron socios.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        paginatedSocios.map((socio) => (
+                                            <tr key={socio.id} className="hover">
+                                                <td>
+                                                    <div className="flex flex-col">
+                                                        <span className="font-mono font-bold text-primary">{socio.codigo}</span>
+                                                        {socio.historialCodigos && socio.historialCodigos.length > 0 && (
+                                                            <div className="flex items-center gap-1 text-[10px] opacity-40 font-mono">
+                                                                <Clock size={10} />
+                                                                {socio.historialCodigos.map((h: any, i: number) => (
+                                                                    <span key={h.id}>
+                                                                        {i > 0 && " ← "}
+                                                                        {h.codigo}
+                                                                    </span>
+                                                                )).slice(0, 2)} {/* Limit to last 2 historical codes for UI space */}
+                                                                {socio.historialCodigos.length > 2 && " ..."}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div className="font-bold">
+                                                        {socio.nombres} {socio.apellidos}
+                                                    </div>
+                                                    <div className="text-xs opacity-50">
+                                                        Edad: {new Date().getFullYear() - new Date(socio.fechaNacimiento).getFullYear()} años
+                                                    </div>
+                                                </td>
+                                                <td className="text-center">
+                                                    <div translate="no" className={`notranslate w-6 h-6 mx-auto flex items-center justify-center text-[10px] font-bold rounded ${socio.sexo === 'F' ? 'bg-pink-100 text-pink-800' : 'bg-blue-100 text-blue-800'}`}>
+                                                        {socio.sexo === 'F' ? 'F' : 'M'}
+                                                    </div>
+                                                </td>
+                                                <td>{socio.tipoDocumento} {socio.numeroDocumento}</td>
+                                                <td>
+                                                    {getRemainingTime(socio)}
+                                                </td>
+                                                <td>{socio.telefono || '-'}</td>
+                                                <td className="text-right space-x-2">
+                                                    <Link href={`/socios/${socio.id}`} className="btn btn-sm btn-circle btn-ghost" title="Ver detalle">
+                                                        <Eye size={18} />
+                                                    </Link>
+                                                    <Link href={`/socios/${socio.id}/editar`} className="btn btn-sm btn-circle btn-ghost" title="Editar">
+                                                        <Edit size={18} />
+                                                    </Link>
+                                                    {isAdmin && (
+                                                        <button
+                                                            onClick={() => handleDelete(socio.id, `${socio.nombres} ${socio.apellidos}`)}
+                                                            className="btn btn-sm btn-circle btn-ghost text-error"
+                                                            title="Eliminar"
+                                                            disabled={isDeleting}
+                                                        >
+                                                            <Trash2 size={18} />
+                                                        </button>
                                                     )}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Mobile Card View */}
+                        <div className="md:hidden flex flex-col gap-3 p-4 bg-base-200/50">
+                            {paginatedSocios.length === 0 ? (
+                                <div className="text-center py-8 text-gray-500 bg-base-100 rounded-xl shadow-sm">
+                                    No se encontraron socios.
+                                </div>
+                            ) : (
+                                paginatedSocios.map((socio) => (
+                                    <div key={socio.id} className="bg-base-100 p-4 rounded-xl shadow-sm border border-base-200">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div className="flex-1">
+                                                <div className="font-bold text-lg leading-tight">{socio.nombres} {socio.apellidos}</div>
+                                                <div className="text-xs opacity-60 mt-1 flex items-center gap-2">
+                                                    <span>{socio.tipoDocumento} {socio.numeroDocumento}</span>
+                                                    <span>•</span>
+                                                    <span>{new Date().getFullYear() - new Date(socio.fechaNacimiento).getFullYear()} años</span>
                                                 </div>
-                                            </td>
-                                            <td>
-                                                <div className="font-bold">
-                                                    {socio.nombres} {socio.apellidos}
-                                                </div>
-                                                <div className="text-xs opacity-50">
-                                                    Edad: {new Date().getFullYear() - new Date(socio.fechaNacimiento).getFullYear()} años
-                                                </div>
-                                            </td>
-                                            <td className="text-center">
-                                                <div translate="no" className={`notranslate w-6 h-6 mx-auto flex items-center justify-center text-[10px] font-bold rounded ${socio.sexo === 'F' ? 'bg-pink-100 text-pink-800' : 'bg-blue-100 text-blue-800'}`}>
-                                                    {socio.sexo === 'F' ? 'F' : 'M'}
-                                                </div>
-                                            </td>
-                                            <td>{socio.tipoDocumento} {socio.numeroDocumento}</td>
-                                            <td>
+                                            </div>
+                                            <div className="text-right ml-4">
+                                                <span className="font-mono font-bold text-primary block text-lg bg-primary/10 px-2 rounded">{socio.codigo}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex justify-between items-end border-t border-base-200 pt-3">
+                                            <div>
+                                                <div className="text-[10px] uppercase font-bold opacity-50 mb-1">Membresía</div>
                                                 {getRemainingTime(socio)}
-                                            </td>
-                                            <td>{socio.telefono || '-'}</td>
-                                            <td className="text-right space-x-2">
-                                                <Link href={`/socios/${socio.id}`} className="btn btn-sm btn-circle btn-ghost" title="Ver detalle">
-                                                    <Eye size={18} />
+                                            </div>
+                                            <div className="flex space-x-2">
+                                                <Link href={`/socios/${socio.id}`} className="btn btn-sm btn-circle btn-ghost bg-base-200">
+                                                    <Eye size={16} />
                                                 </Link>
-                                                <Link href={`/socios/${socio.id}/editar`} className="btn btn-sm btn-circle btn-ghost" title="Editar">
-                                                    <Edit size={18} />
+                                                <Link href={`/socios/${socio.id}/editar`} className="btn btn-sm btn-circle btn-ghost bg-base-200">
+                                                    <Edit size={16} />
                                                 </Link>
                                                 {isAdmin && (
                                                     <button
                                                         onClick={() => handleDelete(socio.id, `${socio.nombres} ${socio.apellidos}`)}
-                                                        className="btn btn-sm btn-circle btn-ghost text-error"
-                                                        title="Eliminar"
+                                                        className="btn btn-sm btn-circle btn-ghost bg-error/10 text-error"
                                                         disabled={isDeleting}
                                                     >
-                                                        <Trash2 size={18} />
+                                                        <Trash2 size={16} />
                                                     </button>
                                                 )}
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        {/* Pagination Controls */}
+                        {totalPages > 1 && (
+                            <div className="flex justify-center p-6 border-t border-base-200">
+                                <div className="join shadow-sm">
+                                    <button
+                                        className="join-item btn btn-sm bg-base-200 hover:bg-base-300 border-none"
+                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                        disabled={currentPage === 1}
+                                    >« Anterior</button>
+                                    <button className="join-item btn btn-sm bg-base-100 pointer-events-none border-none">
+                                        Página {currentPage} de {totalPages}
+                                    </button>
+                                    <button
+                                        className="join-item btn btn-sm bg-base-200 hover:bg-base-300 border-none"
+                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                        disabled={currentPage === totalPages}
+                                    >Siguiente »</button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

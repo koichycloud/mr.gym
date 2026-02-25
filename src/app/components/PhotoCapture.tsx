@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { Camera, Upload, X } from 'lucide-react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { Camera, Upload, X, RefreshCw } from 'lucide-react'
 
 // No external deps for camera to keep it simple and robust.
 
@@ -15,6 +15,7 @@ export default function PhotoCapture({ currentPhoto, onPhotoCapture }: PhotoCapt
     const [preview, setPreview] = useState<string | null>(currentPhoto || null)
     const videoRef = useRef<HTMLVideoElement>(null)
     const [stream, setStream] = useState<MediaStream | null>(null)
+    const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user')
 
     // Sync preview with prop updates (e.g. when editing loads)
     useEffect(() => {
@@ -23,10 +24,13 @@ export default function PhotoCapture({ currentPhoto, onPhotoCapture }: PhotoCapt
         }
     }, [currentPhoto])
 
-    const startCamera = async () => {
+    const startCamera = async (currentFacingMode = facingMode) => {
         try {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop())
+            }
             const mediaStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 640 } }
+                video: { facingMode: currentFacingMode, width: { ideal: 640 }, height: { ideal: 640 } }
             })
             setStream(mediaStream)
             // Delay setting srcObject slightly to ensure ref is mounted
@@ -49,6 +53,12 @@ export default function PhotoCapture({ currentPhoto, onPhotoCapture }: PhotoCapt
             setStream(null)
         }
         setMode('view')
+    }
+
+    const toggleCamera = () => {
+        const newMode = facingMode === 'user' ? 'environment' : 'user'
+        setFacingMode(newMode)
+        startCamera(newMode)
     }
 
     const takePhoto = () => {
@@ -135,8 +145,14 @@ export default function PhotoCapture({ currentPhoto, onPhotoCapture }: PhotoCapt
                         ref={videoRef}
                         playsInline
                         muted
-                        className="w-full h-full object-cover transform -scale-x-100"
+                        style={{ transform: facingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)' }}
+                        className="w-full h-full object-cover transition-transform duration-300"
                     />
+                    <div className="absolute top-4 right-4 z-10">
+                        <button type="button" onClick={toggleCamera} className="btn btn-circle btn-sm bg-black/60 text-white hover:bg-black border-none backdrop-blur-md" title="Girar Cámara">
+                            <RefreshCw size={18} />
+                        </button>
+                    </div>
                     <div className="absolute bottom-6 left-0 right-0 flex justify-center items-center gap-8">
                         <button type="button" onClick={stopCamera} className="btn btn-circle btn-ghost text-white bg-black/40 hover:bg-black/60 backdrop-blur-sm">
                             <X size={24} />
@@ -172,7 +188,7 @@ export default function PhotoCapture({ currentPhoto, onPhotoCapture }: PhotoCapt
 
             {mode === 'view' && (
                 <div className="flex gap-3 w-full justify-center mt-2">
-                    <button type="button" onClick={startCamera} className="btn btn-primary shadow-lg hover:shadow-primary/30 transition-all gap-2 flex-1">
+                    <button type="button" onClick={() => startCamera(facingMode)} className="btn btn-primary shadow-lg hover:shadow-primary/30 transition-all gap-2 flex-1">
                         <Camera size={20} />
                         Cámara
                     </button>
