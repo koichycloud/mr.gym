@@ -118,3 +118,13 @@ model Pago {
   @@index([socioId])
 }
 
+model AuditLog {
+  id        String   @id @default(uuid())
+  usuario   String   // username de quien ejecutó la acción
+  accion    String   // ej. LOGIN, CREAR_SOCIO, EDITAR_SOCIO, ELIMINAR_SOCIO, RENOVAR
+  detalles  String?  // Descripción humana
+  fecha     DateTime @default(now())
+
+  @@index([usuario, fecha])
+  @@index([accion])
+}

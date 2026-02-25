@@ -42,6 +42,18 @@ export const authOptions: NextAuthOptions = {
                     }
 
                     console.log("[AUTH_DEBUG] 9. Authorization successful for:", user.username)
+
+                    // Log the login to the new AuditLog table
+                    try {
+                        await prisma.auditLog.create({
+                            data: {
+                                usuario: user.username,
+                                accion: 'LOGIN',
+                                detalles: 'Inicio de sesión exitoso'
+                            }
+                        })
+                    } catch (e) { console.error("Could not write login audit log", e) }
+
                     return {
                         id: user.id,
                         name: user.username,

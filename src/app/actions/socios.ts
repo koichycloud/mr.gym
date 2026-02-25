@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { requireAuth } from '@/lib/auth-utils'
 import { socioSchema } from '@/lib/validations'
 import { z } from 'zod'
+import { logAction } from '@/lib/audit'
 
 export async function getNextCode() {
     const lastSocio = await prisma.socio.findFirst({
@@ -75,6 +76,9 @@ export async function createSocio(data: z.infer<typeof socioSchema>) {
                 suscripciones: suscripcionesCreate
             }
         })
+
+        await logAction('CREAR_SOCIO', `Creó al socio ${formattedCode} - ${socioData.nombres} ${socioData.apellidos}`)
+
         revalidatePath('/socios')
         revalidatePath('/')
         return { success: true, socio }
@@ -186,6 +190,9 @@ export async function updateSocio(id: string, data: z.infer<typeof socioSchema>)
         revalidatePath('/socios')
         revalidatePath(`/socios/${id}`)
         revalidatePath('/')
+
+        await logAction('EDITAR_SOCIO', `Editó los datos del socio ${formattedCode} - ${socioData.nombres} ${socioData.apellidos}`)
+
         return { success: true, socio }
     } catch (error) {
         console.error('Error updating socio:', error)
@@ -210,6 +217,11 @@ import { requireAdmin } from '@/lib/auth-utils'
 export async function deleteSocio(id: string) {
     try {
         await requireAdmin() // 🔒 Admin Only
+
+        const socio = await prisma.socio.findUnique({ where: { id } })
+        if (socio) {
+            await logAction('ELIMINAR_SOCIO', `Eliminó al socio ${socio.codigo} - ${socio.nombres} ${socio.apellidos}`)
+        }
 
         await prisma.socio.delete({
             where: { id }

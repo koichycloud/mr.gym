@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { requireAuth } from '@/lib/auth-utils'
 import { suscripcionSchema } from '@/lib/validations'
 import { z } from 'zod'
+import { logAction } from '@/lib/audit'
 
 export async function getExpiringSubscriptions() {
     const today = new Date()
@@ -127,6 +128,8 @@ export async function createSubscription(
         revalidatePath('/caja')
         revalidatePath(`/socios/${validData.socioId}`)
 
+        await logAction('NUEVA_SUSCRIPCION', `Registró ${validData.meses} mes(es) al socio ${currentSocio?.codigo} - ${currentSocio?.nombres} ${currentSocio?.apellidos}`)
+
         return { success: true, subscription }
     } catch (error) {
         console.error('Error creating subscription:', error)
@@ -167,6 +170,8 @@ export async function updateSubscription(id: string, newDate: Date, meses: numbe
         revalidatePath('/')
         revalidatePath('/socios')
         revalidatePath(`/socios/${subscription.socioId}`)
+
+        await logAction('EDITAR_SUSCRIPCION', `Modificó las fechas de una suscripción del socio ID: ${subscription.socioId.slice(0, 8)}`)
 
         return { success: true }
     } catch (error) {
