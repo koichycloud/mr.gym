@@ -55,10 +55,43 @@ body {
 
 /* Force autofill background color to black */
 input:-webkit-autofill,
-input:-webkit-autofill:hover, 
-input:-webkit-autofill:focus, 
-input:-webkit-autofill:active{
-    -webkit-box-shadow: 0 0 0 30px black inset !important;
-    -webkit-text-fill-color: white !important;
-    transition: background-color 5000s ease-in-out 0s;
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px black inset !important;
+  -webkit-text-fill-color: white !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* App-like behavior for mobile */
+html,
+body {
+  /* Prevent bounce effect in mobile browsers */
+  overscroll-behavior-y: none;
+  /* Ensure content doesn't get hidden behind bottom nav or safe-areas */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Base bottom padding for main content so it clears the BottomNav on mobile */
+main {
+  padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 1024px) {
+  main {
+    padding-bottom: 0;
+    /* Desktop doesn't have bottom nav */
+  }
+}
+
+/* Utility to hide scrollbar but keep functionality */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }

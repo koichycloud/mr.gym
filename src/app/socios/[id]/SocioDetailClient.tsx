@@ -46,18 +46,18 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
     }, [activeTab, socio.id, asistenciasData])
 
     return (
-        <div className="min-h-screen bg-transparent p-4 md:p-8">
+        <div className="min-h-screen bg-transparent p-4 md:p-8 pb-24 lg:pb-8">
             <div className="max-w-5xl mx-auto space-y-8">
                 {/* Header */}
-                <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-4">
-                        <Link href="/socios" className="btn btn-ghost btn-circle">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div className="flex flex-row items-center gap-3 w-full">
+                        <Link href="/socios" className="btn btn-ghost btn-circle btn-sm md:btn-md shrink-0">
                             <ArrowLeft />
                         </Link>
 
-                        <div className="avatar placeholder">
+                        <div className="avatar placeholder shrink-0">
                             {socio.fotoUrl ? (
-                                <div className="w-20 h-20 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2">
+                                <div className="w-14 h-14 md:w-20 md:h-20 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2">
                                     <img
                                         src={socio.fotoUrl}
                                         alt={socio.nombres}
@@ -65,54 +65,55 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                     />
                                 </div>
                             ) : (
-                                <div className="bg-neutral-focus text-neutral-content rounded-full w-20">
-                                    <span className="text-3xl">{socio.nombres[0]}</span>
+                                <div className="bg-neutral-focus text-neutral-content rounded-full w-14 h-14 md:w-20 md:h-20 flex items-center justify-center">
+                                    <span className="text-xl md:text-3xl">{socio.nombres[0]}</span>
                                 </div>
                             )}
                         </div>
 
-                        <div>
-                            <h1 className="text-3xl font-bold">{socio.nombres} {socio.apellidos}</h1>
-                            <p className="opacity-60 font-mono">{socio.codigo}</p>
+                        <div className="min-w-0 flex-1">
+                            <h1 className="text-lg md:text-3xl font-bold leading-tight truncate whitespace-normal break-words">{socio.nombres} {socio.apellidos}</h1>
+                            <p className="opacity-60 font-mono text-xs md:text-sm">{socio.codigo}</p>
                         </div>
                     </div>
-                    <Link href={`/socios/${socio.id}/editar`} className="btn btn-outline">
-                        <Edit size={20} className="mr-2" />
+                    <Link href={`/socios/${socio.id}/editar`} className="btn btn-outline btn-sm md:btn-md w-full md:w-auto shrink-0 mt-2 md:mt-0">
+                        <Edit size={16} className="mr-2" />
                         Editar Perfil
                     </Link>
-
                 </div>
 
                 {/* Tabs */}
-                <div role="tablist" className="tabs tabs-boxed">
-                    <a
-                        role="tab"
-                        className={`tab ${activeTab === 'general' ? 'tab-active' : ''}`}
-                        onClick={() => setActiveTab('general')}
-                    >
-                        General & Suscripciones
-                    </a>
-                    <a
-                        role="tab"
-                        className={`tab ${activeTab === 'medidas' ? 'tab-active' : ''}`}
-                        onClick={() => setActiveTab('medidas')}
-                    >
-                        Datos Físicos
-                    </a>
-                    <a
-                        role="tab"
-                        className={`tab ${activeTab === 'carnet' ? 'tab-active' : ''}`}
-                        onClick={() => setActiveTab('carnet')}
-                    >
-                        Carnet Digital
-                    </a>
-                    <a
-                        role="tab"
-                        className={`tab ${activeTab === 'asistencias' ? 'tab-active' : ''}`}
-                        onClick={() => setActiveTab('asistencias')}
-                    >
-                        Asistencias
-                    </a>
+                <div className="w-full">
+                    <div role="tablist" className="tabs tabs-boxed grid grid-cols-2 md:flex md:flex-wrap w-full gap-1 p-1">
+                        <a
+                            role="tab"
+                            className={`tab h-auto py-2.5 text-xs md:text-sm font-medium rounded border border-transparent transition-all ${activeTab === 'general' ? 'tab-active !text-primary !border-primary/40 !bg-primary/10 font-semibold' : 'opacity-70 hover:opacity-100'}`}
+                            onClick={() => setActiveTab('general')}
+                        >
+                            General & Suscripciones
+                        </a>
+                        <a
+                            role="tab"
+                            className={`tab h-auto py-2.5 text-xs md:text-sm font-medium rounded border border-transparent transition-all ${activeTab === 'medidas' ? 'tab-active !text-primary !border-primary/40 !bg-primary/10 font-semibold' : 'opacity-70 hover:opacity-100'}`}
+                            onClick={() => setActiveTab('medidas')}
+                        >
+                            Datos Físicos
+                        </a>
+                        <a
+                            role="tab"
+                            className={`tab h-auto py-2.5 text-xs md:text-sm font-medium rounded border border-transparent transition-all ${activeTab === 'carnet' ? 'tab-active !text-primary !border-primary/40 !bg-primary/10 font-semibold' : 'opacity-70 hover:opacity-100'}`}
+                            onClick={() => setActiveTab('carnet')}
+                        >
+                            Carnet Digital
+                        </a>
+                        <a
+                            role="tab"
+                            className={`tab h-auto py-2.5 text-xs md:text-sm font-medium rounded border border-transparent transition-all ${activeTab === 'asistencias' ? 'tab-active !text-primary !border-primary/40 !bg-primary/10 font-semibold' : 'opacity-70 hover:opacity-100'}`}
+                            onClick={() => setActiveTab('asistencias')}
+                        >
+                            Asistencias
+                        </a>
+                    </div>
                 </div>
 
                 {activeTab === 'carnet' && (
@@ -329,7 +330,8 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                         <span className="text-sm">Códigos de Renovación</span>
                                     </div>
                                     <div className="max-h-[300px] overflow-y-auto">
-                                        <table className="table table-compact table-zebra w-full text-[10px]">
+                                        {/* Desktop View */}
+                                        <table className="hidden md:table table-compact table-zebra w-full text-[10px]">
                                             <thead>
                                                 <tr>
                                                     <th>Fecha</th>
@@ -352,6 +354,21 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                                 )}
                                             </tbody>
                                         </table>
+
+                                        {/* Mobile View */}
+                                        <div className="md:hidden flex flex-col divide-y divide-base-200">
+                                            {socio.historialCodigos?.map((item: any) => (
+                                                <div key={item.id} className="p-3 flex justify-between items-center text-sm">
+                                                    <span className="opacity-70">{format(new Date(item.fechaCambio), 'dd/MM/yyyy')}</span>
+                                                    <span className="font-mono font-bold text-primary">{item.codigo}</span>
+                                                </div>
+                                            ))}
+                                            {(!socio.historialCodigos || socio.historialCodigos.length === 0) && (
+                                                <div className="text-center py-4 opacity-50 text-sm">
+                                                    Sin renovación previa
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -382,7 +399,9 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                             <div className="card bg-base-100 shadow-xl overflow-hidden">
                                 <div className="card-body p-0">
                                     <div className="p-4 bg-base-300 font-bold">Historial de Suscripciones</div>
-                                    <div className="overflow-x-auto">
+
+                                    {/* Desktop Table View */}
+                                    <div className="hidden md:block overflow-x-auto">
                                         <table className="table">
                                             <thead>
                                                 <tr>
@@ -396,8 +415,6 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                             </thead>
                                             <tbody>
                                                 {socio.suscripciones?.map((sub: any, index: number) => {
-                                                    // Logic: Prefer sub.codigo if available (accurate snapshot). 
-                                                    // Fallback to index-based logic for old data (backward compatibility).
                                                     const historicalCodes = socio.historialCodigos || []
                                                     const displayCode = sub.codigo || (index === 0 ? socio.codigo : (historicalCodes[index - 1]?.codigo || socio.codigo))
 
@@ -432,6 +449,52 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                             </tbody>
                                         </table>
                                     </div>
+
+                                    {/* Mobile Card View */}
+                                    <div className="md:hidden grid grid-cols-1 gap-2 p-2">
+                                        {socio.suscripciones?.map((sub: any, index: number) => {
+                                            const historicalCodes = socio.historialCodigos || []
+                                            const displayCode = sub.codigo || (index === 0 ? socio.codigo : (historicalCodes[index - 1]?.codigo || socio.codigo))
+
+                                            return (
+                                                <div key={sub.id} className="bg-base-200 border border-base-300 rounded-lg p-3">
+                                                    <div className="flex justify-between items-center mb-2">
+                                                        <div className={`badge badge-sm ${sub.estado === 'ACTIVA' ? 'badge-success' : 'badge-ghost'}`}>
+                                                            {sub.estado}
+                                                        </div>
+                                                        <button
+                                                            className="btn btn-ghost btn-xs text-primary"
+                                                            onClick={() => setEditingSub(sub)}
+                                                        >
+                                                            <Edit size={14} className="mr-1" /> Editar
+                                                        </button>
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                                        <div>
+                                                            <span className="opacity-50 block">Inicio</span>
+                                                            <span className="font-semibold">{format(new Date(sub.fechaInicio), 'dd/MM/yyyy')}</span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="opacity-50 block">Vencimiento</span>
+                                                            <span className="font-semibold">{format(new Date(sub.fechaFin), 'dd/MM/yyyy')}</span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="opacity-50 block">Duración</span>
+                                                            <span className="font-semibold">{sub.meses} {sub.meses === 1 ? 'mes' : 'meses'}</span>
+                                                        </div>
+                                                        <div>
+                                                            <span className="opacity-50 block">Código</span>
+                                                            <span className="font-mono text-primary font-bold">{displayCode}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                        {(!socio.suscripciones || socio.suscripciones.length === 0) && (
+                                            <div className="text-center py-4 opacity-50 text-sm">No hay historial</div>
+                                        )}
+                                    </div>
+
                                 </div>
                             </div>
                         </div>

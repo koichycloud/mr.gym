@@ -15,7 +15,9 @@ export default function PhotoCapture({ currentPhoto, onPhotoCapture }: PhotoCapt
     const [preview, setPreview] = useState<string | null>(currentPhoto || null)
     const videoRef = useRef<HTMLVideoElement>(null)
     const [stream, setStream] = useState<MediaStream | null>(null)
-    const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user')
+    const [devices, setDevices] = useState<MediaDeviceInfo[]>([])
+    const [activeDeviceIndex, setActiveDeviceIndex] = useState<number>(0)
+    const [facingModeFallback, setFacingModeFallback] = useState<'user' | 'environment'>('user')
 
     // Sync preview with prop updates (e.g. when editing loads)
     useEffect(() => {
@@ -24,16 +26,47 @@ export default function PhotoCapture({ currentPhoto, onPhotoCapture }: PhotoCapt
         }
     }, [currentPhoto])
 
-    const startCamera = async (currentFacingMode = facingMode) => {
+    const startCamera = async (deviceIndex?: number, fallbackMode = facingModeFallback) => {
         try {
             if (stream) {
                 stream.getTracks().forEach(track => track.stop())
             }
+
+            let currentDevices = devices;
+            if (currentDevices.length === 0) {
+                const initialDevices = await navigator.mediaDevices.enumerateDevices()
+                currentDevices = initialDevices.filter(d => d.kind === 'videoinput')
+            }
+
+            let videoConstraints: any = { facingMode: fallbackMode, width: { ideal: 640 }, height: { ideal: 640 } }
+            let newIndex = deviceIndex !== undefined ? deviceIndex : activeDeviceIndex;
+
+            if (currentDevices.length > 0) {
+                newIndex = newIndex % currentDevices.length;
+                const targetDevice = currentDevices[newIndex];
+
+                if (targetDevice.deviceId) {
+                    videoConstraints = {
+                        deviceId: { exact: targetDevice.deviceId },
+                        width: { ideal: 640 }, height: { ideal: 640 }
+                    }
+                }
+                setActiveDeviceIndex(newIndex);
+            }
+
             const mediaStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: currentFacingMode, width: { ideal: 640 }, height: { ideal: 640 } }
+                video: videoConstraints
             })
+
+            if (currentDevices.length === 0 || currentDevices[0].label === "") {
+                const updatedDevices = await navigator.mediaDevices.enumerateDevices()
+                const videoInputs = updatedDevices.filter(d => d.kind === 'videoinput')
+                setDevices(videoInputs)
+            } else {
+                setDevices(currentDevices)
+            }
+
             setStream(mediaStream)
-            // Delay setting srcObject slightly to ensure ref is mounted
             setTimeout(() => {
                 if (videoRef.current) {
                     videoRef.current.srcObject = mediaStream
@@ -56,9 +89,24 @@ export default function PhotoCapture({ currentPhoto, onPhotoCapture }: PhotoCapt
     }
 
     const toggleCamera = () => {
-        const newMode = facingMode === 'user' ? 'environment' : 'user'
-        setFacingMode(newMode)
-        startCamera(newMode)
+        if (devices.length > 1) {
+            startCamera(activeDeviceIndex + 1)
+        } else {
+            const newMode = facingModeFallback === 'user' ? 'environment' : 'user'
+            setFacingModeFallback(newMode)
+            startCamera(undefined, newMode)
+        }
+    }
+
+    const isFrontCamera = () => {
+        if (devices.length > 0 && devices[activeDeviceIndex]) {
+            const currentLabel = devices[activeDeviceIndex].label.toLowerCase()
+            if (currentLabel.includes('back') || currentLabel.includes('trasera') || currentLabel.includes('environment')) {
+                return false
+            }
+            return true
+        }
+        return facingModeFallback === 'user'
     }
 
     const takePhoto = () => {
@@ -145,7 +193,7 @@ export default function PhotoCapture({ currentPhoto, onPhotoCapture }: PhotoCapt
                         ref={videoRef}
                         playsInline
                         muted
-                        style={{ transform: facingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)' }}
+                        style={{ transform: isFrontCamera() ? 'scaleX(-1)' : 'scaleX(1)' }}
                         className="w-full h-full object-cover transition-transform duration-300"
                     />
                     <div className="absolute top-4 right-4 z-10">
@@ -188,7 +236,7 @@ export default function PhotoCapture({ currentPhoto, onPhotoCapture }: PhotoCapt
 
             {mode === 'view' && (
                 <div className="flex gap-3 w-full justify-center mt-2">
-                    <button type="button" onClick={() => startCamera(facingMode)} className="btn btn-primary shadow-lg hover:shadow-primary/30 transition-all gap-2 flex-1">
+                    <button type="button" onClick={() => startCamera()} className="btn btn-primary shadow-lg hover:shadow-primary/30 transition-all gap-2 flex-1">
                         <Camera size={20} />
                         Cámara
                     </button>

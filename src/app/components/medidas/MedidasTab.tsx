@@ -124,36 +124,40 @@ export default function MedidasTab({ socioId, fechaNacimiento, sexo = 'M' }: { s
 
     return (
         <div className="space-y-6 relative">
-            <div className="flex justify-between items-center bg-base-100 p-4 rounded-xl shadow">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-base-100 p-4 rounded-xl shadow gap-4">
                 <div className="flex items-center gap-4">
                     <Activity className="text-primary w-6 h-6" />
                     <h3 className="text-xl font-bold">Evolución Física</h3>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap md:flex-nowrap gap-2 w-full md:w-auto">
                     <button
                         onClick={handleExportPDF}
-                        className="btn btn-outline btn-sm"
+                        className="btn btn-outline btn-sm flex-1 md:flex-none"
                         disabled={medidas.length === 0 || generatingPdf}
                     >
                         {generatingPdf ? <span className="loading loading-spinner loading-xs"></span> : <FileDown size={16} className="mr-1" />}
-                        Exportar PDF
+                        <span className="hidden sm:inline">Exportar PDF</span>
+                        <span className="sm:hidden">PDF</span>
                     </button>
-                    <div className="join">
+                    <div className="join flex-1 md:flex-none">
                         <button
-                            className={`join-item btn btn-sm ${viewMode === 'table' ? 'btn-active' : ''}`}
+                            className={`join-item btn btn-sm w-1/2 md:w-auto ${viewMode === 'table' ? 'btn-active' : ''}`}
                             onClick={() => setViewMode('table')}
                         >
                             Tabla
                         </button>
                         <button
-                            className={`join-item btn btn-sm ${viewMode === 'visual' ? 'btn-active' : ''}`}
+                            className={`join-item btn btn-sm w-1/2 md:w-auto ${viewMode === 'visual' ? 'btn-active' : ''}`}
                             onClick={() => setViewMode('visual')}
                         >
-                            Gráfico / Visual
+                            <span className="hidden sm:inline">Gráfico</span>
+                            <span className="sm:hidden">Gráf</span>
                         </button>
                     </div>
-                    <button onClick={() => setShowModal(true)} className="btn btn-primary btn-sm">
-                        <Plus size={16} className="mr-1" /> Nuevo Registro
+                    <button onClick={() => setShowModal(true)} className="btn btn-primary btn-sm flex-1 md:flex-none">
+                        <Plus size={16} className="mr-1" />
+                        <span className="hidden sm:inline">Nuevo Registro</span>
+                        <span className="sm:hidden">Nuevo</span>
                     </button>
                 </div>
             </div>
@@ -198,50 +202,96 @@ export default function MedidasTab({ socioId, fechaNacimiento, sexo = 'M' }: { s
                 )}
 
                 {viewMode === 'table' && (
-                    <div className="overflow-x-auto">
-                        <table className="table table-xs md:table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Fecha</th>
-                                    <th>Peso</th>
-                                    <th>Talla</th>
-                                    <th>% Grasa</th>
-                                    <th>% Masa</th>
-                                    <th>Pecho</th>
-                                    <th>Cintura</th>
-                                    <th>Vientre Bajo</th>
-                                    <th>Glúteos</th>
-                                    <th>Bíceps</th>
-                                    <th>Cuádriceps</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {medidas.map((m) => (
-                                    <tr key={m.id} className="hover">
-                                        <td className="font-bold">{format(new Date(m.fecha), 'dd/MM/yyyy')}</td>
-                                        <td>{m.peso ? `${m.peso} kg` : '-'}</td>
-                                        <td>{m.altura ? `${Number(m.altura).toFixed(2)} cm` : '-'}</td>
-                                        <td>{m.porcentajeGrasa ? `${m.porcentajeGrasa}%` : '-'}</td>
-                                        <td>{m.porcentajeMusculo ? `${m.porcentajeMusculo}%` : '-'}</td>
-                                        <td>{m.pecho || '-'}</td>
-                                        <td>{m.cintura || '-'}</td>
-                                        <td>{m.vientreBajo || '-'}</td>
-                                        <td>{m.gluteos || '-'}</td>
-                                        <td>{m.biceps || '-'}</td>
-                                        <td>{m.cuadriceps || '-'}</td>
-                                        <td>
-                                            <button
-                                                onClick={() => handleDelete(m.id)}
-                                                className="btn btn-ghost btn-xs text-error"
-                                            >
-                                                <Trash size={14} />
-                                            </button>
-                                        </td>
+                    <div className="w-full">
+                        {/* Desktop Table View */}
+                        <div className="hidden md:block overflow-x-auto">
+                            <table className="table table-xs md:table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Peso</th>
+                                        <th>Talla</th>
+                                        <th>% Grasa</th>
+                                        <th>% Masa</th>
+                                        <th>Pecho</th>
+                                        <th>Cintura</th>
+                                        <th>Vientre Bajo</th>
+                                        <th>Glúteos</th>
+                                        <th>Bíceps</th>
+                                        <th>Cuádriceps</th>
+                                        <th>Acciones</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {medidas.map((m) => (
+                                        <tr key={m.id} className="hover">
+                                            <td className="font-bold">{format(new Date(m.fecha), 'dd/MM/yyyy')}</td>
+                                            <td>{m.peso ? `${m.peso} kg` : '-'}</td>
+                                            <td>{m.altura ? `${Number(m.altura).toFixed(2)} cm` : '-'}</td>
+                                            <td>{m.porcentajeGrasa ? `${m.porcentajeGrasa}%` : '-'}</td>
+                                            <td>{m.porcentajeMusculo ? `${m.porcentajeMusculo}%` : '-'}</td>
+                                            <td>{m.pecho || '-'}</td>
+                                            <td>{m.cintura || '-'}</td>
+                                            <td>{m.vientreBajo || '-'}</td>
+                                            <td>{m.gluteos || '-'}</td>
+                                            <td>{m.biceps || '-'}</td>
+                                            <td>{m.cuadriceps || '-'}</td>
+                                            <td>
+                                                <button
+                                                    onClick={() => handleDelete(m.id)}
+                                                    className="btn btn-ghost btn-xs text-error"
+                                                >
+                                                    <Trash size={14} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Mobile Card View */}
+                        <div className="md:hidden flex flex-col gap-4">
+                            {medidas.map((m) => (
+                                <div key={m.id} className="bg-base-200 border border-base-300 rounded-xl p-4">
+                                    <div className="flex justify-between items-center mb-3 pb-3 border-b border-base-300">
+                                        <div className="font-bold text-primary flex items-center gap-2">
+                                            <Activity size={16} />
+                                            {format(new Date(m.fecha), 'dd/MM/yyyy')}
+                                        </div>
+                                        <button
+                                            onClick={() => handleDelete(m.id)}
+                                            className="btn btn-ghost btn-xs text-error btn-square"
+                                        >
+                                            <Trash size={16} />
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-sm">
+                                        <div className="bg-base-100 p-2 rounded">
+                                            <span className="opacity-60 block text-[10px] uppercase">Peso</span>
+                                            <span className="font-semibold">{m.peso ? `${m.peso} kg` : '-'}</span>
+                                        </div>
+                                        <div className="bg-base-100 p-2 rounded">
+                                            <span className="opacity-60 block text-[10px] uppercase">% Grasa</span>
+                                            <span className="font-semibold">{m.porcentajeGrasa ? `${m.porcentajeGrasa}%` : '-'}</span>
+                                        </div>
+                                        <div className="bg-base-100 p-2 rounded">
+                                            <span className="opacity-60 block text-[10px] uppercase">Pecho / Cintura</span>
+                                            <span className="font-semibold">{m.pecho || '-'} / {m.cintura || '-'}</span>
+                                        </div>
+                                        <div className="bg-base-100 p-2 rounded">
+                                            <span className="opacity-60 block text-[10px] uppercase">Glúteos / Piernas</span>
+                                            <span className="font-semibold">{m.gluteos || '-'} / {m.cuadriceps || '-'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                            {medidas.length === 0 && (
+                                <div className="text-center py-8 opacity-50">
+                                    No hay registros físicos aún.
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>

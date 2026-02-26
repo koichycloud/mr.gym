@@ -112,7 +112,9 @@ export default async function Home() {
                 <AlertTriangle />
                 Atención: Suscripciones por Vencer
               </h2>
-              <div className="overflow-x-auto">
+
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="table">
                   <thead>
                     <tr>
@@ -150,6 +152,41 @@ export default async function Home() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Mobile Card View */}
+              <div className="grid grid-cols-1 gap-4 md:hidden">
+                {expiring.map(sub => (
+                  <div key={sub.id} className="bg-base-200 rounded-lg p-4 border border-base-300">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-8 h-8 flex items-center justify-center text-xs font-bold rounded-full ${sub.socio.sexo === 'F' ? 'bg-pink-100 text-pink-800' : 'bg-blue-100 text-blue-800'}`}>
+                          {sub.socio.sexo === 'F' ? 'F' : 'M'}
+                        </div>
+                        <div>
+                          <p className="font-bold leading-tight">{sub.socio.nombres}</p>
+                          <p className="font-bold leading-tight">{sub.socio.apellidos}</p>
+                        </div>
+                      </div>
+                      <div className="badge badge-warning text-xs">Por Vencer</div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm mt-3 bg-base-100 p-2 rounded">
+                      <div>
+                        <span className="opacity-60 block text-xs">Código</span>
+                        <span className="font-mono font-medium">{sub.socio.codigo}</span>
+                      </div>
+                      <div>
+                        <span className="opacity-60 block text-xs">Vence</span>
+                        <span className="text-warning font-semibold">{format(new Date(sub.fechaFin), 'dd/MM/yyyy')}</span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="opacity-60 block text-xs">Teléfono</span>
+                        <span>{sub.socio.telefono || '-'}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
             </div>
           </div>
         )}
@@ -162,7 +199,9 @@ export default async function Home() {
                 <AlertTriangle />
                 Atención: Suscripciones Vencidas
               </h2>
-              <div className="overflow-x-auto">
+
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="table">
                   <thead>
                     <tr>
@@ -200,6 +239,41 @@ export default async function Home() {
                   </tbody>
                 </table>
               </div>
+
+              {/* Mobile Card View */}
+              <div className="grid grid-cols-1 gap-4 md:hidden">
+                {expired.map(sub => (
+                  <div key={sub.id} className="bg-base-200 rounded-lg p-4 border border-base-300">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-8 h-8 flex items-center justify-center text-xs font-bold rounded-full ${sub.socio.sexo === 'F' ? 'bg-pink-100 text-pink-800' : 'bg-blue-100 text-blue-800'}`}>
+                          {sub.socio.sexo === 'F' ? 'F' : 'M'}
+                        </div>
+                        <div>
+                          <p className="font-bold leading-tight">{sub.socio.nombres}</p>
+                          <p className="font-bold leading-tight">{sub.socio.apellidos}</p>
+                        </div>
+                      </div>
+                      <div className="badge badge-error text-white text-xs">Vencida</div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm mt-3 bg-base-100 p-2 rounded">
+                      <div>
+                        <span className="opacity-60 block text-xs">Código</span>
+                        <span className="font-mono font-medium">{sub.socio.codigo}</span>
+                      </div>
+                      <div>
+                        <span className="opacity-60 block text-xs">Venció</span>
+                        <span className="text-error font-semibold">{format(new Date(sub.fechaFin), 'dd/MM/yyyy')}</span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="opacity-60 block text-xs">Teléfono</span>
+                        <span>{sub.socio.telefono || '-'}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
             </div>
           </div>
         )}

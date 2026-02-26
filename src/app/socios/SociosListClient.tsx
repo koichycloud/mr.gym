@@ -286,6 +286,15 @@ export default function SociosListClient({ initialSocios, isAdmin }: { initialSo
                                             </div>
                                             <div className="text-right ml-4">
                                                 <span className="font-mono font-bold text-primary block text-lg bg-primary/10 px-2 rounded">{socio.codigo}</span>
+                                                {socio.historialCodigos && socio.historialCodigos.length > 0 && (
+                                                    <div className="flex items-center justify-end gap-1 text-[9px] opacity-40 font-mono mt-0.5">
+                                                        <Clock size={9} />
+                                                        {socio.historialCodigos.slice(0, 2).map((h: any, i: number) => (
+                                                            <span key={h.id}>{i > 0 && " ← "}{h.codigo}</span>
+                                                        ))}
+                                                        {socio.historialCodigos.length > 2 && " ..."}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 

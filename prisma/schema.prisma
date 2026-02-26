@@ -11,6 +11,8 @@ model User {
   id        String   @id @default(uuid())
   username  String   @unique
   password  String
+  fullName  String?  // Nombre a mostrar en la plataforma
+  fotoUrl   String?  // URL del avatar del perfil (Base64 o Link)
   role      String   @default("ADMIN")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

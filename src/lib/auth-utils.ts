@@ -14,7 +14,7 @@ export async function requireAuth() {
 export async function requireAdmin() {
     const session = await requireAuth()
 
-    if (session.user.role !== 'ADMIN') {
+    if (session.user.role !== 'ADMIN' && session.user.role !== 'SUPERADMIN') {
         throw new Error("Forbidden: Solo administradores pueden realizar esta acción.")
     }
 

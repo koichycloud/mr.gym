@@ -220,42 +220,67 @@ export default function AsistenciaClient({ asistenciasIniciales, statsIniciales 
                             <p className="text-lg">No hay registros para esta fecha</p>
                         </div>
                     ) : (
-                        <div className="overflow-x-auto">
-                            <table className="table table-zebra">
-                                <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Hora</th>
-                                        <th>Código</th>
-                                        <th>Socio</th>
-                                        <th>Tipo</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {asistencias.map((a, index) => (
-                                        <tr key={a.id} className="hover">
-                                            <td className="font-mono text-sm opacity-60">
-                                                {asistencias.length - index}
-                                            </td>
-                                            <td className="font-bold text-primary">
-                                                {format(new Date(a.fecha), 'HH:mm:ss')}
-                                            </td>
-                                            <td className="font-mono">{a.socio.codigo}</td>
-                                            <td>
-                                                <span translate="no" className={`notranslate px-2 py-1 rounded text-sm font-semibold ${a.socio.sexo === 'F' ? 'bg-pink-100 text-pink-800' : 'bg-blue-100 text-blue-800'}`}>
-                                                    {a.socio.nombres} {a.socio.apellidos}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <div className="badge badge-success badge-sm">
-                                                    {a.tipo}
-                                                </div>
-                                            </td>
+                        <>
+                            {/* Desktop Table View */}
+                            <div className="hidden md:block overflow-x-auto">
+                                <table className="table table-zebra">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Hora</th>
+                                            <th>Código</th>
+                                            <th>Socio</th>
+                                            <th>Tipo</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                    </thead>
+                                    <tbody>
+                                        {asistencias.map((a, index) => (
+                                            <tr key={a.id} className="hover">
+                                                <td className="font-mono text-sm opacity-60">
+                                                    {asistencias.length - index}
+                                                </td>
+                                                <td className="font-bold text-primary">
+                                                    {format(new Date(a.fecha), 'HH:mm:ss')}
+                                                </td>
+                                                <td className="font-mono">{a.socio.codigo}</td>
+                                                <td>
+                                                    <span translate="no" className={`notranslate px-2 py-1 rounded text-sm font-semibold ${a.socio.sexo === 'F' ? 'bg-pink-100 text-pink-800' : 'bg-blue-100 text-blue-800'}`}>
+                                                        {a.socio.nombres} {a.socio.apellidos}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <div className="badge badge-success badge-sm">
+                                                        {a.tipo}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Mobile Card View */}
+                            <div className="md:hidden flex flex-col gap-2">
+                                {asistencias.map((a, index) => (
+                                    <div key={a.id} className="flex items-center gap-3 bg-base-200 rounded-lg p-3 border border-base-300">
+                                        <div className="text-xs font-mono opacity-40 w-6 text-center shrink-0">
+                                            {asistencias.length - index}
+                                        </div>
+                                        <div className={`w-9 h-9 flex items-center justify-center text-xs font-bold rounded-full shrink-0 ${a.socio.sexo === 'F' ? 'bg-pink-100 text-pink-800' : 'bg-blue-100 text-blue-800'}`}>
+                                            {a.socio.sexo === 'F' ? 'F' : 'M'}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-semibold text-sm leading-tight truncate">{a.socio.nombres} {a.socio.apellidos}</p>
+                                            <p className="font-mono text-xs text-primary opacity-80">{a.socio.codigo}</p>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <p className="font-bold text-primary text-sm">{format(new Date(a.fecha), 'HH:mm')}</p>
+                                            <div className="badge badge-success badge-xs">{a.tipo}</div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
                     )}
                 </div>
             </div>

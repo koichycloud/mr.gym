@@ -32,14 +32,15 @@ export default async function BitacoraPage() {
             </div>
 
             <div className="bg-base-100 rounded-xl shadow-xl overflow-hidden border border-base-200">
-                <div className="overflow-x-auto">
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
                     <table className="table w-full">
                         <thead className="bg-base-200">
                             <tr>
-                                <th className="Tracking-wider"><Calendar size={16} className="inline mr-2" />Fecha y Hora</th>
-                                <th className="Tracking-wider"><UserCircle size={16} className="inline mr-2" />Usuario</th>
-                                <th className="Tracking-wider"><Activity size={16} className="inline mr-2" />Acción</th>
-                                <th className="Tracking-wider w-1/2">Detalles</th>
+                                <th><Calendar size={16} className="inline mr-2" />Fecha y Hora</th>
+                                <th><UserCircle size={16} className="inline mr-2" />Usuario</th>
+                                <th><Activity size={16} className="inline mr-2" />Acción</th>
+                                <th className="w-1/2">Detalles</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -72,6 +73,38 @@ export default async function BitacoraPage() {
                             )}
                         </tbody>
                     </table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden flex flex-col divide-y divide-base-200">
+                    {logs.length > 0 ? (
+                        logs.map((log: any) => (
+                            <div key={log.id} className="p-4 space-y-1.5">
+                                <div className="flex justify-between items-start gap-2">
+                                    <span className={`font-mono font-bold text-xs ${getActionColor(log.accion)}`}>
+                                        {log.accion}
+                                    </span>
+                                    <span className="text-xs opacity-50 whitespace-nowrap shrink-0">
+                                        {log.fecha.toLocaleDateString()} {log.fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <UserCircle size={14} className="opacity-50 shrink-0" />
+                                    <span className="font-semibold text-sm">{log.usuario}</span>
+                                    {log.usuario.toLowerCase().includes('admin') && (
+                                        <span className="badge badge-error badge-xs">Admin</span>
+                                    )}
+                                </div>
+                                {log.detalles && (
+                                    <p className="text-xs opacity-70 pl-5">{log.detalles}</p>
+                                )}
+                            </div>
+                        ))
+                    ) : (
+                        <div className="text-center py-12 text-base-content/50">
+                            No hay registros en la bitácora aún.
+                        </div>
+                    )}
                 </div>
             </div>
             <div className="mt-4 text-center text-xs opacity-50">
