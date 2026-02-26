@@ -34,6 +34,22 @@
       "purpose": "maskable"
     }
   ],
+  "screenshots": [
+    {
+      "src": "/screenshots/screenshot-dashboard.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Dashboard principal con estadísticas del gimnasio"
+    },
+    {
+      "src": "/screenshots/screenshot-socios.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Lista de socios registrados"
+    }
+  ],
   "shortcuts": [
     {
       "name": "Ver Socios",
