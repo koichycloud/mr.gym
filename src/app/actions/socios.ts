@@ -155,9 +155,10 @@ export async function updateSocio(id: string, data: z.infer<typeof socioSchema>)
         const { suscripcion, ...socioData } = validation.data
         const formattedCode = socioData.codigo.padStart(6, '0')
 
-        // The previous behavior of tracking code changes on profile edit
-        // was removed. Profile edits (e.g., correcting typos in code/boleta) 
-        // should NOT create history records. History is only for true renewals.
+        // We need to fetch the existing socio to compare the old code and see if
+        // history needs to be saved (only save if code changed AND we are adding a subscription)
+        const oldSocio = await prisma.socio.findUnique({ where: { id } })
+        if (!oldSocio) return { success: false, error: 'Socio no encontrado' }
 
         // Prepare subscription create data if provided
         let suscripcionesCreate = undefined
@@ -179,12 +180,25 @@ export async function updateSocio(id: string, data: z.infer<typeof socioSchema>)
             }
         }
 
+        // If a new subscription is being added AND the code is different from the previous one,
+        // it means it's a true renewal with a new boleta, so we save the old code to history.
+        let historialCreate = undefined
+        if (suscripcion && suscripcion.meses > 0 && oldSocio.codigo !== formattedCode) {
+            historialCreate = {
+                create: [{
+                    codigo: oldSocio.codigo,
+                    fechaCambio: new Date()
+                }]
+            }
+        }
+
         const socio = await prisma.socio.update({
             where: { id },
             data: {
                 ...socioData,
                 codigo: formattedCode,
-                suscripciones: suscripcionesCreate
+                suscripciones: suscripcionesCreate,
+                historialCodigos: historialCreate
             }
         })
         revalidatePath('/socios')
