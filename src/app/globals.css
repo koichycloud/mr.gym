@@ -1,5 +1,60 @@
 @import "tailwindcss";
-@plugin "daisyui";
+
+@plugin "daisyui" {
+  themes: [ {
+    mrgym: {
+      "color-scheme": "dark",
+
+        /* Primary - Orange/Amber brand color */
+        "primary": "#e67e22",
+        "primary-content": "#ffffff",
+
+        /* Secondary - Warm copper */
+        "secondary": "#d4a017",
+        "secondary-content":"#1a0f00",
+
+        /* Accent - Lighter amber for highlights */
+        "accent": "#f39c12",
+        "accent-content": "#1a0f00",
+
+        /* Neutral - Dark surfaces */
+        "neutral": "#1e1e1e",
+        "neutral-content": "#c9c9c9",
+
+        /* Base palette - Very dark backgrounds */
+        "base-100": "#111111",
+        "base-200": "#1a1a1a",
+        "base-300": "#242424",
+        "base-content": "#e8e8e8",
+
+        /* Semantic */
+        "info": "#3b82f6",
+        "info-content": "#ffffff",
+        "success": "#16a34a",
+        "success-content": "#ffffff",
+        "warning": "#d97706",
+        "warning-content": "#ffffff",
+        "error": "#dc2626",
+        "error-content": "#ffffff",
+
+        /* Borders and radius */
+        "--rounded-box": "0.75rem",
+        "--rounded-btn": "0.5rem",
+        "--rounded-badge": "1rem",
+        "--animation-btn": "0.2s",
+        "--animation-input": "0.2s",
+        "--btn-focus-scale": "0.97",
+        "--border-btn": "1px",
+        "--tab-border": "1px",
+        "--tab-radius": "0.5rem"
+    }
+  }
+
+  ];
+  defaultTheme: "mrgym";
+  darkTheme: "mrgym";
+}
+
 
 
 

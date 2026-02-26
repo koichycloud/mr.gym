@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport = {
-  themeColor: "#000000",
+  themeColor: "#3f2009",
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -44,7 +44,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="es" data-theme="mrgym" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-base-200 text-base-content`}
       >
