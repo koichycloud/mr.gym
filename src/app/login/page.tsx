@@ -12,6 +12,31 @@ export default function LoginPage() {
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
 
+    const handleClearCache = async () => {
+        try {
+            // Unregister Service Workers
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (const registration of registrations) {
+                    await registration.unregister();
+                }
+            }
+            // Clear Storage
+            localStorage.clear();
+            sessionStorage.clear();
+            // Clear Cookies
+            document.cookie.split(";").forEach((c) => {
+                document.cookie = c
+                    .replace(/^ +/, "")
+                    .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+            window.location.reload();
+        } catch (err) {
+            console.error(err);
+            window.location.reload();
+        }
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
@@ -102,6 +127,16 @@ export default function LoginPage() {
                                 disabled={loading}
                             >
                                 {loading ? 'Entrando...' : 'Entrar'}
+                            </button>
+                        </div>
+
+                        <div className="mt-4 text-center">
+                            <button
+                                type="button"
+                                onClick={handleClearCache}
+                                className="text-xs text-gray-500 hover:text-white underline decoration-dotted"
+                            >
+                                ¿Problemas para entrar? Limpiar App
                             </button>
                         </div>
                     </form>
