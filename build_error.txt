@@ -1,0 +1,56 @@
+﻿
+> mr_gym@0.1.0 build
+> next build
+
+Ôû▓ Next.js 16.1.4 (Turbopack)
+- Environments: .env.production.local, .env.production, .env
+
+node.exe : ÔÜá The "middleware" file convention is 
+deprecated. Please use "proxy" instead. Learn more: 
+https://nextjs.org/docs/messages/middleware-to-proxy
+En línea: 1 Carácter: 1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (ÔÜá The " 
+   middle...leware-to-proxy:String) [], RemoteExcepti  
+  on
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  Creating an optimized production build ...
+/*! ­ƒî╝ daisyUI 5.5.14 */
+Found 1 warning while optimizing generated CSS:
+
+[2mÔöé }[22m
+[2mÔöé @layer base {[22m
+[2mÔöé[22m   @property --radialprogress {
+[2mÔöå[22m            [33m[2m^--[22m Unknown at 
+rule: @property[39m
+[2mÔöå[22m
+[2mÔöé     syntax: "<percentage>";[22m
+[2mÔöé     inherits: true;[22m
+
+Ô£ô Compiled successfully in 19.3s
+  Running TypeScript ...
+Failed to compile.
+
+./src/app/manifest.ts:41:17
+Type error: Unused '@ts-expect-error' directive.
+
+[0m [90m 39 |[39m                 sizes[33m:[39m 
+[32m'1080x1920'[39m[33m,[39m
+ [90m 40 |[39m                 type[33m:[39m 
+[32m'image/png'[39m[33m,[39m
+[31m[1m>[22m[39m[90m 41 |[39m                 
+[90m// @ts-expect-error - form_factor is valid PWA 
+spec but not in Next.js types yet[39m
+ [90m    |[39m                 [31m[1m^[22m[39m
+ [90m 42 |[39m                 
+form_factor[33m:[39m [32m'narrow'[39m[33m,[39m
+ [90m 43 |[39m                 label[33m:[39m 
+[32m'Dashboard con estad├¡sticas del 
+gimnasio'[39m[33m,[39m
+ [90m 44 |[39m             }[33m,[39m[0m
+Next.js build worker exited with code: 1 and signal: 
+null

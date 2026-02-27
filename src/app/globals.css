@@ -49,7 +49,7 @@ body {
    Overrides DaisyUI CSS variables globally
    ============================================ */
 :root,
-[data-theme="mrgym"] {
+[data-theme="dark"] {
   /* Primary: Gym orange */
   --color-primary: oklch(65% 0.175 46);
   --color-primary-content: oklch(98% 0 0);

@@ -14,8 +14,6 @@ export async function GET(
             select: {
                 id: true,
                 username: true,
-                fullName: true,
-                fotoUrl: true,
                 role: true,
                 createdAt: true
             }

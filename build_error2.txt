@@ -1,0 +1,71 @@
+﻿
+> mr_gym@0.1.0 build
+> next build
+
+Ôû▓ Next.js 16.1.4 (Turbopack)
+- Environments: .env.production.local, .env.production, .env
+
+node.exe : ÔÜá The "middleware" file convention is 
+deprecated. Please use "proxy" instead. Learn more: 
+https://nextjs.org/docs/messages/middleware-to-proxy
+En línea: 1 Carácter: 1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (ÔÜá The " 
+   middle...leware-to-proxy:String) [], RemoteExcepti  
+  on
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  Creating an optimized production build ...
+/*! ­ƒî╝ daisyUI 5.5.14 */
+Found 1 warning while optimizing generated CSS:
+
+[2mÔöé }[22m
+[2mÔöé @layer base {[22m
+[2mÔöé[22m   @property --radialprogress {
+[2mÔöå[22m            [33m[2m^--[22m Unknown at 
+rule: @property[39m
+[2mÔöå[22m
+[2mÔöé     syntax: "<percentage>";[22m
+[2mÔöé     inherits: true;[22m
+
+Ô£ô Compiled successfully in 22.9s
+  Running TypeScript ...
+  Collecting page data using 7 workers ...
+  Generating static pages using 7 workers (0/9) ...
+  Generating static pages using 7 workers (2/9) 
+  Generating static pages using 7 workers (4/9) 
+  Generating static pages using 7 workers (6/9) 
+Ô£ô Generating static pages using 7 workers (9/9) in 600.6ms
+  Finalizing page optimization ...
+
+Route (app)
+Ôöî ãÆ /
+Ôö£ Ôùï /_not-found
+Ôö£ ãÆ /admin/bitacora
+Ôö£ Ôùï /admin/scanner
+Ôö£ Ôùï /admin/scanner/cliente
+Ôö£ ãÆ /api/auth/[...nextauth]
+Ôö£ ãÆ /api/users/[id]
+Ôö£ ãÆ /api/users/perfil
+Ôö£ ãÆ /asistencia
+Ôö£ ãÆ /caja
+Ôö£ ãÆ /debug
+Ôö£ Ôùï /login
+Ôö£ Ôùï /manifest.webmanifest
+Ôö£ ãÆ /perfil
+Ôö£ ãÆ /socios
+Ôö£ ãÆ /socios/[id]
+Ôö£ ãÆ /socios/[id]/editar
+Ôö£ Ôùï /socios/importar
+Ôö£ ãÆ /socios/nuevo
+Ôöö ãÆ /users
+
+
+ãÆ Proxy (Middleware)
+
+Ôùï  (Static)   prerendered as static content
+ãÆ  (Dynamic)  server-rendered on demand
+

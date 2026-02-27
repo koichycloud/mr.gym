@@ -11,8 +11,6 @@ model User {
   id        String   @id @default(uuid())
   username  String   @unique
   password  String
-  fullName  String?  // Nombre a mostrar en la plataforma
-  fotoUrl   String?  // URL del avatar del perfil (Base64 o Link)
   role      String   @default("ADMIN")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -36,7 +34,6 @@ model Socio {
   medidas          MedidaFisica[]
   asistencias      Asistencia[]
   pagos            Pago[]
-  fotoUrl          String?      // URL de la foto del socio
 
   @@index([nombres, apellidos]) // Optimize name search
   @@map("Socio")
@@ -120,13 +117,4 @@ model Pago {
   @@index([socioId])
 }
 
-model AuditLog {
-  id        String   @id @default(uuid())
-  usuario   String   // username de quien ejecutó la acción
-  accion    String   // ej. LOGIN, CREAR_SOCIO, EDITAR_SOCIO, ELIMINAR_SOCIO, RENOVAR
-  detalles  String?  // Descripción humana
-  fecha     DateTime @default(now())
 
-  @@index([usuario, fecha])
-  @@index([accion])
-}
