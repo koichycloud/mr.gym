@@ -15,9 +15,14 @@ export const config = {
          * - _next/static (static files)
          * - _next/image (image optimization files)
          * - favicon.ico (favicon file)
-         * - manifest.json (PWA)
-         * - icons (PWA)
+         * - manifest.webmanifest (PWA - dynamic route from manifest.ts)
+         * - manifest.json (PWA - legacy static)
+         * - sw.js (Service Worker)
+         * - workbox-* (Workbox SW chunks)
+         * - icons (PWA icons)
+         * - screenshots (PWA screenshots)
+         * - .well-known (assetlinks.json for APK verification)
          */
-        "/((?!login|api/auth|_next/static|_next/image|favicon.ico|manifest.json|icons).*)",
+        "/((?!login|api/auth|_next/static|_next/image|favicon.ico|manifest.webmanifest|manifest.json|sw.js|workbox-|icons|screenshots|\\.well-known).*)",
     ]
 }
