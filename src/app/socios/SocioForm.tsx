@@ -18,7 +18,6 @@ interface SocioFormProps {
         fechaNacimiento: Date
         sexo?: string
         telefono?: string | null
-        fotoUrl?: string | null
     }
     onSubmit: (data: any) => Promise<{ success: boolean; error?: string }>
     title: string
@@ -48,8 +47,7 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
             ? format(new Date(initialData.fechaNacimiento), 'yyyy-MM-dd')
             : '',
         sexo: initialData?.sexo || 'M',
-        telefono: initialData?.telefono || '',
-        fotoUrl: initialData?.fotoUrl || ''
+        telefono: initialData?.telefono || ''
     })
 
     // Subscription State
@@ -127,8 +125,7 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
             nombres: '',
             apellidos: '',
             numeroDocumento: '',
-            telefono: '',
-            fotoUrl: ''
+            telefono: ''
         }))
     }
 
@@ -176,9 +173,7 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
         }
     }
 
-    const handlePhotoCapture = (photoDataUrl: string | null) => {
-        setFormData(prev => ({ ...prev, fotoUrl: photoDataUrl || '' }))
-    }
+
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -232,19 +227,8 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
 
                 <form onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-8">
 
-                    {/* Left Column: Photo */}
-                    <div className={`w-full md:w-1/3 flex flex-col items-center ${!dniVerified ? 'opacity-50 pointer-events-none' : ''}`}>
-                        <PhotoCapture
-                            currentPhoto={formData.fotoUrl}
-                            onPhotoCapture={handlePhotoCapture}
-                        />
-                        <p className="text-xs text-center mt-2 opacity-50">
-                            La foto se usará para el control de acceso en pantalla.
-                        </p>
-                    </div>
-
-                    {/* Right Column: Form Fields */}
-                    <div className="w-full md:w-2/3 space-y-4">
+                    {/* Form Fields */}
+                    <div className="w-full space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="form-control">
                                 <label className="label">

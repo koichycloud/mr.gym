@@ -47,7 +47,7 @@ export async function validateAccess(codigo: string): Promise<AccessResult> {
                 socio: {
                     nombres: socio.nombres || '',
                     apellidos: socio.apellidos || '',
-                    foto: socio.fotoUrl, // Map photo
+                    foto: null, // Map photo
                     estado: 'INACTIVO'
                 }
             }
@@ -65,7 +65,7 @@ export async function validateAccess(codigo: string): Promise<AccessResult> {
                 socio: {
                     nombres: socio.nombres || '',
                     apellidos: socio.apellidos || '',
-                    foto: socio.fotoUrl, // Map photo
+                    foto: null, // Map photo
                     estado: 'VENCIDO',
                     diasVencimiento: Math.abs(diffDays),
                     ultimoPago: suscripcion.fechaInicio
@@ -91,7 +91,7 @@ export async function validateAccess(codigo: string): Promise<AccessResult> {
             socio: {
                 nombres: socio.nombres || '',
                 apellidos: socio.apellidos || '',
-                foto: socio.fotoUrl, // Map photo
+                foto: null, // Map photo
                 estado: 'ACTIVO',
                 diasVencimiento: diffDays,
                 ultimoPago: suscripcion.fechaInicio

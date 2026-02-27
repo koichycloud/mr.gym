@@ -10,13 +10,7 @@ export async function PUT(request: Request) {
 
         const updateData: any = {}
 
-        if (data.fullName !== undefined) {
-            updateData.fullName = data.fullName
-        }
 
-        if (data.fotoUrl !== undefined) {
-            updateData.fotoUrl = data.fotoUrl
-        }
 
         if (data.password && data.password.trim() !== '') {
             updateData.password = await bcrypt.hash(data.password, 10)
@@ -33,20 +27,18 @@ export async function PUT(request: Request) {
             select: {
                 id: true,
                 username: true,
-                fullName: true,
-                fotoUrl: true,
                 role: true
             }
         })
 
         // Registrar en bitácora
-        await prisma.auditLog.create({
+        /* await prisma.auditLog.create({
             data: {
                 usuario: session.user.name || (session.user as any).username || 'System',
                 accion: 'ACTUALIZAR_PERFIL',
                 detalles: 'El usuario actualizó su propio perfil'
             }
-        })
+        }) */
 
         return NextResponse.json({ success: true, user })
 

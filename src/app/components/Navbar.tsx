@@ -10,18 +10,13 @@ import { useSession, signOut } from "next-auth/react"
 export default function Navbar() {
     const pathname = usePathname()
     const { data: session, status } = useSession()
-    const [fotoUrl, setFotoUrl] = useState<string | null>(null)
-    const [fullName, setFullName] = useState<string | null>(null)
 
     useEffect(() => {
         if (session?.user?.id) {
             fetch(`/api/users/${session.user.id}`)
                 .then(res => res.json())
                 .then(data => {
-                    if (data.user) {
-                        setFotoUrl(data.user.fotoUrl)
-                        setFullName(data.user.fullName)
-                    }
+                    // Do nothing for now
                 })
                 .catch(err => console.error("Could not fetch user profile", err))
         }
@@ -97,18 +92,14 @@ export default function Navbar() {
                         <div className="dropdown dropdown-end">
                             <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar placeholder">
                                 <div className="bg-neutral text-neutral-content rounded-full w-10 overflow-hidden">
-                                    {fotoUrl ? (
-                                        <img src={fotoUrl} alt="Avatar" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <span className="text-xl flex h-full items-center justify-center">
-                                            {fullName?.[0]?.toUpperCase() || session.user.name?.[0].toUpperCase() || "U"}
-                                        </span>
-                                    )}
+                                    <span className="text-xl flex h-full items-center justify-center">
+                                        {session.user.name?.[0].toUpperCase() || "U"}
+                                    </span>
                                 </div>
                             </div>
                             <ul tabIndex={0} className="mt-3 z-[1] p-2 shadow menu menu-sm dropdown-content bg-base-100 rounded-box w-52 border border-base-200">
                                 <li className="menu-title px-4 py-2 border-b border-base-200 mb-2">
-                                    <span className="font-bold text-base-content block truncate">{fullName || session.user.name}</span>
+                                    <span className="font-bold text-base-content block truncate">{session.user.name}</span>
                                     <span className="text-[10px] uppercase opacity-60 mt-0.5 block">{session.user.role}</span>
                                 </li>
                                 <li><Link href="/perfil" className="justify-between">Mi Perfil <span className="badge badge-sm badge-primary">Nuevo</span></Link></li>

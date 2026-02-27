@@ -13,8 +13,6 @@ export default async function PerfilPage() {
             id: true,
             username: true,
             role: true,
-            fullName: true,
-            fotoUrl: true,
             createdAt: true
         }
     })
