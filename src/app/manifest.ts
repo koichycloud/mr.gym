@@ -38,7 +38,6 @@ export default function manifest(): MetadataRoute.Manifest {
                 src: '/screenshots/screenshot-dashboard.png',
                 sizes: '1080x1920',
                 type: 'image/png',
-                // @ts-expect-error - form_factor is valid PWA spec but not in Next.js types yet
                 form_factor: 'narrow',
                 label: 'Dashboard con estadísticas del gimnasio',
             },
@@ -46,7 +45,6 @@ export default function manifest(): MetadataRoute.Manifest {
                 src: '/screenshots/screenshot-socios.png',
                 sizes: '1080x1920',
                 type: 'image/png',
-                // @ts-expect-error - form_factor is valid PWA spec but not in Next.js types yet
                 form_factor: 'narrow',
                 label: 'Lista de socios registrados',
             },
