@@ -22,7 +22,13 @@ export const authOptions: NextAuthOptions = {
                 try {
                     console.log("[AUTH_DEBUG] 3. Searching for user in DB...")
                     const user = await prisma.user.findUnique({
-                        where: { username: credentials.username }
+                        where: { username: credentials.username },
+                        select: {
+                            id: true,
+                            username: true,
+                            password: true,
+                            role: true
+                        }
                     })
 
                     console.log("[AUTH_DEBUG] 4. User found in DB:", user ? "YES (ID: " + user.id + ")" : "NO")
