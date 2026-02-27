@@ -33,8 +33,8 @@ export default function LoginPage() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-base-200 p-4">
-            <div className="card w-full max-w-sm shadow-2xl bg-base-100">
+        <div className="min-h-screen flex items-center justify-center bg-[#111111] p-4">
+            <div className="card w-full max-w-sm shadow-2xl bg-zinc-900 border border-zinc-800">
                 <div className="card-body">
                     <div className="text-center mb-4">
                         <h2 className="card-title justify-center text-5xl font-bold text-[#3f2009]" style={{ WebkitTextStroke: '4px black', paintOrder: 'stroke fill' }}>Mr. Gym</h2>
