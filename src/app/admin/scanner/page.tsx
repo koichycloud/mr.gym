@@ -133,7 +133,7 @@ export default function ScannerPage() {
                 navigator.serviceWorker.ready.then(registration => {
                     registration.showNotification(validation.success ? '✅ Acceso PERMITIDO' : '❌ Acceso DENEGADO', {
                         body: `${validation.socio?.nombres || 'Desconocido'} - ${validation.message}`,
-                        icon: validation.socio?.foto || '/icon.png',
+                        icon: validation.socio?.fotoUrl || '/icon.png',
                         silent: false,
                         // vibrate: [200, 100, 200]
                     })
@@ -240,7 +240,7 @@ export default function ScannerPage() {
                             socio: {
                                 nombres: "Usuario",
                                 apellidos: "Prueba",
-                                foto: "https://daisyui.com/images/stock/photo-1534528741775-53994a69daeb.jpg",
+                                fotoUrl: "https://daisyui.com/images/stock/photo-1534528741775-53994a69daeb.jpg",
                                 estado: "ACTIVO",
                                 diasVencimiento: 30
                             }
@@ -405,10 +405,10 @@ export default function ScannerPage() {
                         </div>
 
                         {/* Photo (Right Side) */}
-                        {result.socio?.foto ? (
+                        {result.socio?.fotoUrl ? (
                             <div className="avatar mr-4">
                                 <div className="w-24 h-24 rounded-full ring-4 ring-white/20 ring-offset-base-100 ring-offset-0">
-                                    <img src={result.socio.foto} alt="avatar" className="object-cover" />
+                                    <img src={result.socio.fotoUrl} alt="avatar" className="object-cover" />
                                 </div>
                             </div>
                         ) : (

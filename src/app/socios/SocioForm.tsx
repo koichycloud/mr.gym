@@ -18,6 +18,7 @@ interface SocioFormProps {
         fechaNacimiento: Date
         sexo?: string
         telefono?: string | null
+        fotoUrl?: string | null
     }
     onSubmit: (data: any) => Promise<{ success: boolean; error?: string }>
     title: string
@@ -47,7 +48,8 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
             ? format(new Date(initialData.fechaNacimiento), 'yyyy-MM-dd')
             : '',
         sexo: initialData?.sexo || 'M',
-        telefono: initialData?.telefono || ''
+        telefono: initialData?.telefono || '',
+        fotoUrl: initialData?.fotoUrl || null
     })
 
     // Subscription State
@@ -125,7 +127,8 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
             nombres: '',
             apellidos: '',
             numeroDocumento: '',
-            telefono: ''
+            telefono: '',
+            fotoUrl: null
         }))
     }
 
@@ -225,10 +228,18 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
                     </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-8">
+                <form onSubmit={handleSubmit} className="flex flex-col lg:flex-row gap-8">
+
+                    {/* Camera Module */}
+                    <fieldset disabled={!dniVerified && !initialData?.id} className={`w-full lg:w-1/3 flex-shrink-0 flex flex-col items-center ${(!dniVerified && !initialData?.id) ? 'opacity-50' : ''}`}>
+                        <PhotoCapture
+                            currentPhoto={formData.fotoUrl}
+                            onPhotoCapture={(photo) => setFormData(prev => ({ ...prev, fotoUrl: photo }))}
+                        />
+                    </fieldset>
 
                     {/* Form Fields */}
-                    <div className="w-full space-y-4">
+                    <div className="w-full lg:w-2/3 space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="form-control">
                                 <label className="label">

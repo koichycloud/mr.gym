@@ -54,10 +54,10 @@ export default function CustomerViewClient() {
             }`}>
             <div className="bg-white/10 backdrop-blur-md rounded-3xl p-16 shadow-2xl max-w-5xl w-full border-4 border-white/20 animate-scale-in">
 
-                {socio?.foto ? (
+                {socio?.fotoUrl ? (
                     <div className="relative mx-auto mb-8 w-64 h-64">
                         <img
-                            src={socio.foto}
+                            src={socio.fotoUrl}
                             alt={socio.nombres}
                             className={`w-full h-full object-cover rounded-full border-8 shadow-2xl ${isSuccess ? 'border-success' : 'border-error'}`}
                         />

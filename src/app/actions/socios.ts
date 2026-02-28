@@ -72,6 +72,7 @@ export async function createSocio(data: z.infer<typeof socioSchema>) {
                 nombres: socioData.nombres,
                 apellidos: socioData.apellidos,
                 telefono: socioData.telefono,
+                fotoUrl: socioData.fotoUrl,
                 suscripciones: suscripcionesCreate
             }
         })
