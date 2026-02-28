@@ -1,0 +1,105 @@
+Retrieving project…
+Deploying albertoarias55-5471s-projects/mr-gym-dev
+Uploading [--------------------] (0.0B/368.1KB)
+Uploading [=====---------------] (101.8KB/368.1KB)
+Uploading [==========----------] (197.8KB/368.1KB)
+Uploading [===============-----] (277.8KB/368.1KB)
+Uploading [====================] (368.1KB/368.1KB)
+Inspect: https://vercel.com/albertoarias55-5471s-projects/mr-gym-dev/75oZZb2Ge6tQHcDCQHyPp7W6bzfo [6s]
+Production: https://mr-gym-l98ngvh1x-albertoarias55-5471s-projects.vercel.app [6s]
+https://mr-gym-l98ngvh1x-albertoarias55-5471s-projects.vercel.appBuilding...
+Building...
+Building: Running build in Washington, D.C., USA (East) – iad1
+Building: Build machine configuration: 2 cores, 8 GB
+Building: Retrieving list of deployment files...
+Building: Downloading 3758 deployment files...
+Building: Restored build cache from previous deployment (6MZtwxxF9YFZA6p7FnfzCmDABerm)
+Building: Warning: "vercel" found in project dependencies and will be ignored.
+Building: Running "vercel build"
+Building: Vercel CLI 50.23.2
+Building: Installing dependencies...
+Building: > mr_gym@0.1.0 postinstall
+Building: > prisma generate
+Building: Environment variables loaded from .env
+Building: Prisma schema loaded from prisma/schema.prisma
+Building: ✔ Generated Prisma Client (v6.2.1) to ./node_modules/@prisma/client in 212ms
+Building: Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+Building: Tip: Want real-time updates to your database without manual polling? Discover how with Pulse: https://pris.ly/tip-0-pulse
+Building: up to date in 3s
+Building: 204 packages are looking for funding
+Building: run `npm fund` for details
+Building: Detected Next.js version: 16.1.4
+Building: Running "npm run build"
+Building: > mr_gym@0.1.0 build
+Building: > prisma generate && next build
+Building: Environment variables loaded from .env
+Building: Prisma schema loaded from prisma/schema.prisma
+Building: ✔ Generated Prisma Client (v6.2.1) to ./node_modules/@prisma/client in 162ms
+Building: Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
+Building: Tip: Want real-time updates to your database without manual polling? Discover how with Pulse: https://pris.ly/tip-0-pulse
+Building: ┌──────────────────────────────────────���──────────────────┐
+Building: │  Update available 6.2.1 -> 7.4.2                        │
+Building: │                                                         │
+Building: │  This is a major update - please follow the guide at    │
+Building: │  https://pris.ly/d/major-version-upgrade                │
+Building: │                                                         │
+Building: │  Run the following to update                            │
+Building: │    npm i --save-dev prisma@latest                       │
+Building: │    npm i @prisma/client@latest                          │
+Building: └─────────────────────────────────────────────────────────┘
+Building: ▲ Next.js 16.1.4 (Turbopack)
+Building: - Environments: .env.production, .env
+Building: ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+Building: Creating an optimized production build ...
+Building: /*! 🌼 daisyUI 5.5.14 */
+Building: Found 1 warning while optimizing generated CSS:
+Building: │ }
+Building: │ @layer base {
+Building: │   @property --radialprogress {
+Building: ┆            ^-- Unknown at rule: @property
+Building: ┆
+Building: │     syntax: "<percentage>";
+Building: │     inherits: true;
+Building: ✓ Compiled successfully in 25.2s
+Building: Running TypeScript ...
+Building: Collecting page data using 1 worker ...
+Building: Generating static pages using 1 worker (0/9) ...
+Building: Generating static pages using 1 worker (2/9)
+Building: Generating static pages using 1 worker (4/9)
+Building: Generating static pages using 1 worker (6/9)
+Building: ✓ Generating static pages using 1 worker (9/9) in 265.9ms
+Building: Finalizing page optimization ...
+Building: Route (app)
+Building: ┌ ƒ /
+Building: ├ ○ /_not-found
+Building: ├ ƒ /admin/bitacora
+Building: ├ ○ /admin/scanner
+Building: ├ ○ /admin/scanner/cliente
+Building: ├ ƒ /api/auth/[...nextauth]
+Building: ├ ƒ /api/users/[id]
+Building: ├ ƒ /api/users/perfil
+Building: ├ ƒ /asistencia
+Building: ├ ƒ /caja
+Building: ├ ƒ /debug
+Building: ├ ○ /login
+Building: ├ ○ /manifest.webmanifest
+Building: ├ ƒ /perfil
+Building: ├ ƒ /socios
+Building: ├ ƒ /socios/[id]
+Building: ├ ƒ /socios/[id]/editar
+Building: ├ ○ /socios/importar
+Building: ├ ƒ /socios/nuevo
+Building: └ ƒ /users
+Building: ƒ Proxy (Middleware)
+Building: ○  (Static)   prerendered as static content
+Building: ƒ  (Dynamic)  server-rendered on demand
+Building: Traced Next.js server files in: 70.844ms
+Building: Created all serverless functions in: 347.349ms
+Building: Collected static files (public/, static/, .next/static): 6.982ms
+Building: Build Completed in /vercel/output [42s]
+Building: Deploying outputs...
+Building: Deployment completed
+Building: Creating build cache...
+[2K[1A[2K[GProduction: https://mr-gym-l98ngvh1x-albertoarias55-5471s-projects.vercel.app [1m]
+Completing...
+Aliased: https://mr-gym-dev.vercel.app [1m]
