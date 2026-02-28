@@ -224,11 +224,28 @@ export default function SociosListClient({ initialSocios, isAdmin }: { initialSo
                                                     </div>
                                                 </td>
                                                 <td>
-                                                    <div className="font-bold">
-                                                        {socio.nombres} {socio.apellidos}
-                                                    </div>
-                                                    <div className="text-xs opacity-50">
-                                                        Edad: {new Date().getFullYear() - new Date(socio.fechaNacimiento).getFullYear()} años
+                                                    <div className="flex items-center gap-3">
+                                                        {socio.fotoUrl ? (
+                                                            <div className="avatar">
+                                                                <div className="w-10 h-10 rounded-full shadow-sm">
+                                                                    <img src={socio.fotoUrl} alt="Avatar" className="object-cover" />
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="avatar placeholder">
+                                                                <div className="bg-neutral text-neutral-content rounded-full w-10 h-10 flex items-center justify-center shadow-sm">
+                                                                    <span className="text-lg font-bold">{socio.nombres?.[0] || 'S'}</span>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                        <div>
+                                                            <div className="font-bold">
+                                                                {socio.nombres} {socio.apellidos}
+                                                            </div>
+                                                            <div className="text-xs opacity-50">
+                                                                Edad: {new Date().getFullYear() - new Date(socio.fechaNacimiento).getFullYear()} años
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </td>
                                                 <td className="text-center">
@@ -276,12 +293,27 @@ export default function SociosListClient({ initialSocios, isAdmin }: { initialSo
                                 paginatedSocios.map((socio) => (
                                     <div key={socio.id} className="bg-base-100 p-4 rounded-xl shadow-sm border border-base-200">
                                         <div className="flex justify-between items-start mb-3">
-                                            <div className="flex-1">
-                                                <div className="font-bold text-lg leading-tight">{socio.nombres} {socio.apellidos}</div>
-                                                <div className="text-xs opacity-60 mt-1 flex items-center gap-2">
-                                                    <span>{socio.tipoDocumento} {socio.numeroDocumento}</span>
-                                                    <span>•</span>
-                                                    <span>{new Date().getFullYear() - new Date(socio.fechaNacimiento).getFullYear()} años</span>
+                                            <div className="flex items-center gap-3 flex-1">
+                                                {socio.fotoUrl ? (
+                                                    <div className="avatar">
+                                                        <div className="w-10 h-10 rounded-full shadow-sm">
+                                                            <img src={socio.fotoUrl} alt="Avatar" className="object-cover" />
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="avatar placeholder">
+                                                        <div className="bg-neutral text-neutral-content rounded-full w-10 h-10 flex items-center justify-center shadow-sm">
+                                                            <span className="text-lg font-bold">{socio.nombres?.[0] || 'S'}</span>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <div className="font-bold text-lg leading-tight">{socio.nombres} {socio.apellidos}</div>
+                                                    <div className="text-xs opacity-60 mt-1 flex items-center gap-2">
+                                                        <span>{socio.tipoDocumento} {socio.numeroDocumento}</span>
+                                                        <span>•</span>
+                                                        <span>{new Date().getFullYear() - new Date(socio.fechaNacimiento).getFullYear()} años</span>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div className="text-right ml-4">

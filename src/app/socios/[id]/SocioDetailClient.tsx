@@ -55,11 +55,19 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                             <ArrowLeft />
                         </Link>
 
-                        <div className="avatar placeholder shrink-0">
-                            <div className="bg-neutral text-neutral-content rounded-full w-14 h-14 md:w-20 md:h-20 flex items-center justify-center">
-                                <span className="text-xl md:text-3xl">{socio.nombres?.[0] || 'S'}</span>
+                        {socio.fotoUrl ? (
+                            <div className="avatar shrink-0 border-4 border-base-200 rounded-full shadow-lg">
+                                <div className="w-14 h-14 md:w-20 md:h-20 rounded-full overflow-hidden">
+                                    <img src={socio.fotoUrl} alt="Avatar de Socio" className="object-cover" />
+                                </div>
                             </div>
-                        </div>
+                        ) : (
+                            <div className="avatar placeholder shrink-0 shadow-lg border-2 border-base-200 rounded-full">
+                                <div className="bg-neutral text-neutral-content rounded-full w-14 h-14 md:w-20 md:h-20 flex items-center justify-center">
+                                    <span className="text-xl md:text-3xl font-bold">{socio.nombres?.[0] || 'S'}</span>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="min-w-0 flex-1">
                             <h1 className="text-lg md:text-3xl font-bold leading-tight truncate whitespace-normal break-words">{socio.nombres} {socio.apellidos}</h1>
