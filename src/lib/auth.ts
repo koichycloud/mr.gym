@@ -89,3 +89,10 @@ export const authOptions: NextAuthOptions = {
     secret: process.env.NEXTAUTH_SECRET || "secret_default_change_me",
 
 }
+
+// Solución para Vercel Preview URLs
+if (process.env.VERCEL_URL) {
+    const protocol = process.env.NODE_ENV === "development" ? "http" : "https"
+    // Set the authentication URL to Vercel's generated URL for this preview
+    process.env.NEXTAUTH_URL = `${protocol}://${process.env.VERCEL_URL}`
+}
