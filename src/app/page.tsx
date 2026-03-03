@@ -195,10 +195,15 @@ export default async function Home() {
         {expired.length > 0 && (
           <div className="card bg-base-100 shadow-xl border-l-4 border-error">
             <div className="card-body">
-              <h2 className="card-title text-error mb-4 flex items-center gap-2">
-                <AlertTriangle />
-                Atención: Suscripciones Vencidas
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="card-title text-error flex items-center gap-2">
+                  <AlertTriangle />
+                  Atención: Suscripciones Vencidas
+                </h2>
+                <Link href="/socios/vencidos" className="btn btn-error btn-sm text-white">
+                  Ver todos →
+                </Link>
+              </div>
 
               {/* Desktop Table View */}
               <div className="hidden md:block overflow-x-auto">

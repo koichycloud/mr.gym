@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Home, Users, Upload, CalendarDays, DollarSign, ScanLine, Menu, FileText, UserCog, LogOut } from 'lucide-react'
+import { Home, Users, Upload, CalendarDays, DollarSign, ScanLine, Menu, FileText, UserCog, LogOut, AlertTriangle } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 
 import { useSession, signOut } from "next-auth/react"
@@ -56,6 +56,11 @@ export default function Navbar() {
                         <li>
                             <Link href="/asistencia" className={isActive('/asistencia')}>
                                 <CalendarDays size={18} /> Asistencia
+                            </Link>
+                        </li>
+                        <li>
+                            <Link href="/socios/vencidos" className={isActive('/socios/vencidos')}>
+                                <AlertTriangle size={18} /> Vencidos
                             </Link>
                         </li>
                         {isAdmin && (
@@ -141,7 +146,7 @@ export default function Navbar() {
                         {/* Botón "Más" */}
                         <div className={`dropdown dropdown-top dropdown-end flex-1`}>
                             <div tabIndex={0} role="button"
-                                className={`flex flex-col items-center justify-center w-full h-16 gap-1 text-[10px] font-medium transition-colors cursor-pointer ${pathname.startsWith('/caja') || pathname.startsWith('/users') || pathname.startsWith('/admin/bitacora') ? 'text-primary' : 'text-base-content/60 hover:text-base-content'}`}>
+                                className={`flex flex-col items-center justify-center w-full h-16 gap-1 text-[10px] font-medium transition-colors cursor-pointer ${pathname.startsWith('/caja') || pathname.startsWith('/users') || pathname.startsWith('/admin/bitacora') || pathname.startsWith('/socios/vencidos') ? 'text-primary' : 'text-base-content/60 hover:text-base-content'}`}>
                                 <Menu size={22} />
                                 <span>Más</span>
                             </div>
@@ -151,6 +156,7 @@ export default function Navbar() {
                                         <li><Link href="/caja"><DollarSign size={16} /> Caja</Link></li>
                                         <li><Link href="/users"><UserCog size={16} /> Usuarios</Link></li>
                                         <li><Link href="/admin/bitacora"><FileText size={16} /> Bitácora</Link></li>
+                                        <li><Link href="/socios/vencidos"><AlertTriangle size={16} /> Vencidos</Link></li>
                                         <div className="divider my-0"></div>
                                     </>
                                 )}

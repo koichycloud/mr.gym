@@ -179,3 +179,31 @@ export async function updateSubscription(id: string, newDate: Date, meses: numbe
         return { success: false, error: 'Error al actualizar la suscripción.' }
     }
 }
+
+export async function getExpiredSubscriptionsDetailed() {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const subscriptions = await prisma.suscripcion.findMany({
+        where: {
+            estado: 'ACTIVA',
+            fechaFin: {
+                lt: today
+            }
+        },
+        include: {
+            socio: {
+                include: {
+                    historialCodigos: {
+                        orderBy: { fechaCambio: 'desc' }
+                    }
+                }
+            }
+        },
+        orderBy: {
+            fechaFin: 'desc'
+        }
+    })
+
+    return subscriptions
+}
