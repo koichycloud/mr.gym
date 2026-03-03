@@ -38,10 +38,15 @@ export async function getExpiredSubscriptions() {
 
     const subscriptions = await prisma.suscripcion.findMany({
         where: {
-            estado: 'ACTIVA',
-            fechaFin: {
-                lt: today
-            }
+            OR: [
+                // Subscriptions explicitly marked as VENCIDA
+                { estado: 'VENCIDA' },
+                // Subscriptions still marked ACTIVA but past their end date
+                {
+                    estado: 'ACTIVA',
+                    fechaFin: { lt: today }
+                }
+            ]
         },
         include: {
             socio: true
@@ -186,10 +191,15 @@ export async function getExpiredSubscriptionsDetailed() {
 
     const subscriptions = await prisma.suscripcion.findMany({
         where: {
-            estado: 'ACTIVA',
-            fechaFin: {
-                lt: today
-            }
+            OR: [
+                // Subscriptions explicitly marked as VENCIDA
+                { estado: 'VENCIDA' },
+                // Subscriptions still marked ACTIVA but past their end date
+                {
+                    estado: 'ACTIVA',
+                    fechaFin: { lt: today }
+                }
+            ]
         },
         include: {
             socio: {
