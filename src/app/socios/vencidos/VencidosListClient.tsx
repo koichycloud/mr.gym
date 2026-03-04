@@ -36,7 +36,7 @@ export default function VencidosListClient({ suscripciones }: { suscripciones: S
     const [search, setSearch] = useState('')
     const [filterDays, setFilterDays] = useState<string>('all')
     const [currentPage, setCurrentPage] = useState(1)
-    const ITEMS_PER_PAGE = 10
+    const ITEMS_PER_PAGE = 20
 
     const today = new Date()
     today.setHours(0, 0, 0, 0)
