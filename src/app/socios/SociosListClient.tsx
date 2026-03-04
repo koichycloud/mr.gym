@@ -40,11 +40,13 @@ export default function SociosListClient({ initialSocios, isAdmin }: { initialSo
 
     const filteredSocios = initialSocios.filter(socio => {
         const term = search.toLowerCase()
-        const fullName = `${socio.nombres} ${socio.apellidos}`.toLowerCase()
+        const nombres = (socio.nombres || '').toLowerCase()
+        const apellidos = (socio.apellidos || '').toLowerCase()
+        const fullName = `${nombres} ${apellidos}`
 
         return (
-            socio.nombres.toLowerCase().includes(term) ||
-            socio.apellidos.toLowerCase().includes(term) ||
+            nombres.includes(term) ||
+            apellidos.includes(term) ||
             fullName.includes(term) ||
             socio.numeroDocumento.includes(search) ||
             socio.codigo.toLowerCase().includes(term) ||
