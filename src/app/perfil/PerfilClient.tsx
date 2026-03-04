@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Camera, Save, User, ArrowLeft, Lock } from 'lucide-react'
+import { Save, ArrowLeft, Lock, Sun, Moon } from 'lucide-react'
 import Link from 'next/link'
+import { useTheme } from '@/app/components/ThemeProvider'
 
 interface PerfilClientProps {
     user: {
@@ -16,6 +17,7 @@ interface PerfilClientProps {
 
 export default function PerfilClient({ user }: PerfilClientProps) {
     const router = useRouter()
+    const { theme, toggleTheme } = useTheme()
 
     const [password, setPassword] = useState('')
 
@@ -63,7 +65,7 @@ export default function PerfilClient({ user }: PerfilClientProps) {
                         <ArrowLeft size={24} />
                     </Link>
                     <h1 className="text-3xl font-black font-heading mb-2">Mi Perfil</h1>
-                    <p className="opacity-80">Configura tu contraseña</p>
+                    <p className="opacity-80">Configura tu cuenta</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-8">
@@ -74,6 +76,34 @@ export default function PerfilClient({ user }: PerfilClientProps) {
                     )}
 
                     <div className="space-y-6">
+                        {/* Theme Toggle */}
+                        <div className="form-control">
+                            <label className="label">
+                                <span className="label-text font-bold text-base flex items-center gap-2">
+                                    {theme === 'dark' ? <Moon size={16} className="text-primary" /> : <Sun size={16} className="text-primary" />}
+                                    Apariencia
+                                </span>
+                            </label>
+                            <div className="flex items-center gap-4 bg-base-200/50 p-4 rounded-xl">
+                                <button
+                                    type="button"
+                                    onClick={() => theme !== 'dark' && toggleTheme()}
+                                    className={`flex-1 btn btn-sm gap-2 ${theme === 'dark' ? 'btn-primary' : 'btn-ghost'}`}
+                                >
+                                    <Moon size={16} />
+                                    Oscuro
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => theme !== 'light' && toggleTheme()}
+                                    className={`flex-1 btn btn-sm gap-2 ${theme === 'light' ? 'btn-primary' : 'btn-ghost'}`}
+                                >
+                                    <Sun size={16} />
+                                    Claro
+                                </button>
+                            </div>
+                        </div>
+
                         {/* Password */}
                         <div className="form-control">
                             <label className="label">

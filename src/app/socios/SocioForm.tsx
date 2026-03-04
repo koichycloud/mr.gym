@@ -71,7 +71,7 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
             const end = addMonths(start, Number(subscriptionData.meses))
             if (isNaN(end.getTime())) return
 
-            setFechaFin(format(end, 'yyyy-MM-dd'))
+            setFechaFin(format(end, 'dd/MM/yyyy'))
         }
     }, [subscriptionData.fechaInicio, subscriptionData.meses, includeSubscription])
 

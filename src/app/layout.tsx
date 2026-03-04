@@ -44,9 +44,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" data-theme="dark" className="dark bg-[#111111]" suppressHydrationWarning>
+    <html lang="es" data-theme="dark" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#111111] text-base-content min-h-screen`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}
       >
         <Providers>
           <Navbar />

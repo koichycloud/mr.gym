@@ -7,6 +7,12 @@ import { socioSchema } from '@/lib/validations'
 import { z } from 'zod'
 import { logAction } from '@/lib/audit'
 
+/** Capitalizes the first letter of each word */
+function toTitleCase(str: string | null | undefined): string | null {
+    if (!str) return null
+    return str.trim().toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
+}
+
 export async function getNextCode() {
     const lastSocio = await prisma.socio.findFirst({
         orderBy: {
@@ -69,8 +75,8 @@ export async function createSocio(data: z.infer<typeof socioSchema>) {
                 numeroDocumento: socioData.numeroDocumento,
                 fechaNacimiento: socioData.fechaNacimiento,
                 sexo: socioData.sexo,
-                nombres: socioData.nombres,
-                apellidos: socioData.apellidos,
+                nombres: toTitleCase(socioData.nombres),
+                apellidos: toTitleCase(socioData.apellidos),
                 telefono: socioData.telefono,
                 fotoUrl: socioData.fotoUrl,
                 suscripciones: suscripcionesCreate
@@ -196,6 +202,8 @@ export async function updateSocio(id: string, data: z.infer<typeof socioSchema>)
             where: { id },
             data: {
                 ...socioData,
+                nombres: toTitleCase(socioData.nombres),
+                apellidos: toTitleCase(socioData.apellidos),
                 codigo: formattedCode,
                 suscripciones: suscripcionesCreate,
                 historialCodigos: historialCreate

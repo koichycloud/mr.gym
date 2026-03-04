@@ -153,9 +153,38 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                 }}>
                                     Descargar QR ⬇️
                                 </button>
-                                <button className="btn btn-outline btn-sm" onClick={() => {
-                                    const text = `Hola ${socio.nombres}, aquí tienes tu código de acceso para Mr. Gym: ${socio.codigo}`;
-                                    window.open(`https://wa.me/${socio.telefono}?text=${encodeURIComponent(text)}`, '_blank');
+                                <button className="btn btn-outline btn-sm" onClick={async () => {
+                                    const svg = document.getElementById("socio-qr-svg");
+                                    if (!svg) return;
+                                    const svgData = new XMLSerializer().serializeToString(svg);
+                                    const canvas = document.createElement("canvas");
+                                    const ctx = canvas.getContext("2d");
+                                    const img = new Image();
+                                    img.onload = async () => {
+                                        canvas.width = img.width;
+                                        canvas.height = img.height;
+                                        ctx?.drawImage(img, 0, 0);
+                                        canvas.toBlob(async (blob) => {
+                                            if (!blob) return;
+                                            const file = new File([blob], `QR-${socio.nombres}-${socio.codigo}.png`, { type: 'image/png' });
+                                            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                                                try {
+                                                    await navigator.share({
+                                                        title: `QR de Acceso - ${socio.nombres}`,
+                                                        text: `Código de acceso para Mr. Gym: ${socio.codigo}`,
+                                                        files: [file]
+                                                    });
+                                                } catch (err) {
+                                                    // User cancelled or error — silent
+                                                }
+                                            } else {
+                                                // Fallback: open WhatsApp with text
+                                                const text = `Hola ${socio.nombres}, aquí tienes tu código de acceso para Mr. Gym: ${socio.codigo}`;
+                                                window.open(`https://wa.me/${socio.telefono}?text=${encodeURIComponent(text)}`, '_blank');
+                                            }
+                                        }, 'image/png');
+                                    };
+                                    img.src = "data:image/svg+xml;base64," + btoa(svgData);
                                 }}>
                                     Enviar por WhatsApp 💬
                                 </button>
