@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
-import { Search, Download, FileText, ArrowLeft, AlertTriangle, Users, Calendar, CalendarDays, Clock } from 'lucide-react'
+import { Search, Download, FileText, ArrowLeft, AlertTriangle, Users, Calendar, CalendarDays, Clock, ChevronLeft, ChevronRight } from 'lucide-react'
 import { format, differenceInDays } from 'date-fns'
 import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
@@ -35,6 +35,8 @@ function getSeverity(days: number) {
 export default function VencidosListClient({ suscripciones }: { suscripciones: Suscripcion[] }) {
     const [search, setSearch] = useState('')
     const [filterDays, setFilterDays] = useState<string>('all')
+    const [currentPage, setCurrentPage] = useState(1)
+    const ITEMS_PER_PAGE = 10
 
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -61,6 +63,12 @@ export default function VencidosListClient({ suscripciones }: { suscripciones: S
             return matchesSearch && matchesFilter
         })
     }, [suscripciones, search, filterDays])
+
+    // Reset page when search or filter changes
+    useEffect(() => { setCurrentPage(1) }, [search, filterDays])
+
+    const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE))
+    const paginatedItems = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
 
     const stats = useMemo(() => {
         const total = suscripciones.length
@@ -209,7 +217,7 @@ export default function VencidosListClient({ suscripciones }: { suscripciones: S
                         </tr>
                     </thead>
                     <tbody>
-                        {filtered.map(sub => {
+                        {paginatedItems.map(sub => {
                             const days = differenceInDays(today, new Date(sub.fechaFin))
                             const severity = getSeverity(days)
                             return (
@@ -247,6 +255,51 @@ export default function VencidosListClient({ suscripciones }: { suscripciones: S
                     </div>
                 )}
             </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4 bg-base-100 rounded-xl border border-base-200 p-3">
+                    <span className="text-sm opacity-60">
+                        Mostrando {(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)} de {filtered.length}
+                    </span>
+                    <div className="join">
+                        <button
+                            className="join-item btn btn-sm"
+                            disabled={currentPage <= 1}
+                            onClick={() => setCurrentPage(p => p - 1)}
+                        >
+                            <ChevronLeft size={16} />
+                        </button>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                            .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                            .reduce<(number | string)[]>((acc, p, i, arr) => {
+                                if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push('...')
+                                acc.push(p)
+                                return acc
+                            }, [])
+                            .map((p, i) =>
+                                typeof p === 'string' ? (
+                                    <button key={`ellipsis-${i}`} className="join-item btn btn-sm btn-disabled">…</button>
+                                ) : (
+                                    <button
+                                        key={p}
+                                        className={`join-item btn btn-sm ${currentPage === p ? 'btn-primary' : ''}`}
+                                        onClick={() => setCurrentPage(p)}
+                                    >
+                                        {p}
+                                    </button>
+                                )
+                            )}
+                        <button
+                            className="join-item btn btn-sm"
+                            disabled={currentPage >= totalPages}
+                            onClick={() => setCurrentPage(p => p + 1)}
+                        >
+                            <ChevronRight size={16} />
+                        </button>
+                    </div>
+                </div>
+            )}
         </main>
     )
 }

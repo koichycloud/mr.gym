@@ -199,6 +199,7 @@ export default async function Home() {
                 <h2 className="card-title text-error flex items-center gap-2">
                   <AlertTriangle />
                   Atención: Suscripciones Vencidas
+                  <div className="badge badge-error text-white">{expired.length}</div>
                 </h2>
                 <Link href="/socios/vencidos" className="btn btn-error btn-sm text-white">
                   Ver todos →
@@ -219,7 +220,7 @@ export default async function Home() {
                     </tr>
                   </thead>
                   <tbody>
-                    {expired.map(sub => (
+                    {expired.slice(0, 5).map(sub => (
                       <tr key={sub.id} className="hover">
                         <td className="font-bold">
                           <span>{sub.socio.nombres} {sub.socio.apellidos}</span>
@@ -247,7 +248,7 @@ export default async function Home() {
 
               {/* Mobile Card View */}
               <div className="grid grid-cols-1 gap-4 md:hidden">
-                {expired.map(sub => (
+                {expired.slice(0, 5).map(sub => (
                   <div key={sub.id} className="bg-base-200 rounded-lg p-4 border border-base-300">
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-2">
@@ -278,6 +279,14 @@ export default async function Home() {
                   </div>
                 ))}
               </div>
+
+              {expired.length > 5 && (
+                <div className="text-center mt-4">
+                  <Link href="/socios/vencidos" className="btn btn-ghost btn-sm text-error">
+                    Ver {expired.length - 5} socios más →
+                  </Link>
+                </div>
+              )}
 
             </div>
           </div>
