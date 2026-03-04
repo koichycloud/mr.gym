@@ -50,3 +50,8 @@ export async function POST() {
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
 }
+
+// GET handler for easy browser invocation
+export async function GET() {
+    return POST()
+}
