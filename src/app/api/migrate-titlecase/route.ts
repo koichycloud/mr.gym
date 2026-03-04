@@ -4,7 +4,9 @@ import { requireAuth } from '@/lib/auth-utils'
 
 function toTitleCase(str: string | null | undefined): string | null {
     if (!str) return null
-    return str.trim().toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
+    return str.trim().toLowerCase().split(/\s+/).map(word =>
+        word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ')
 }
 
 export async function POST() {
