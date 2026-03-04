@@ -35,7 +35,7 @@ export default function Navbar() {
     return (
         <>
             {/* TOP NAVBAR (Desktop & Mobile Header) */}
-            <div className="navbar bg-[#111111] shadow-sm border-b border-base-200">
+            <div className="navbar bg-base-100 shadow-sm border-b border-base-200">
                 <div className="navbar-start">
                     <Link href="/" className="btn btn-ghost text-4xl font-black text-[#3f2009]" style={{ WebkitTextStroke: '4px black', paintOrder: 'stroke fill' }}>Mr. GYM</Link>
                 </div>
@@ -119,7 +119,7 @@ export default function Navbar() {
 
             {/* BOTTOM NAVIGATION BAR (Mobile Only) */}
             {session?.user && (
-                <div className="fixed bottom-0 left-0 right-0 lg:hidden border-t border-base-200 bg-[#111111] z-50"
+                <div className="fixed bottom-0 left-0 right-0 lg:hidden border-t border-base-200 bg-base-100 z-50"
                     style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
                     <div className="flex flex-row items-stretch justify-around w-full h-16">
 
