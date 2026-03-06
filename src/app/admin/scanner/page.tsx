@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import QRCodeScanner from '@/app/components/scanner/QRCodeScanner'
 import { validateAccess, AccessResult } from '@/app/actions/access'
 import { CheckCircle, XCircle, User, AlertTriangle, Monitor } from 'lucide-react'
 import Link from 'next/link'
@@ -346,22 +345,13 @@ export default function ScannerPage() {
             {/* Scanner Container */}
             {
                 scanning && !result && (
-                    <div className="flex flex-col gap-6 w-full max-w-sm items-center">
-                        {/* Camera Scanner */}
-                        <div className="w-full bg-base-100 rounded-xl overflow-hidden shadow-2xl relative">
-                            <QRCodeScanner
-                                fps={10}
-                                qrbox={250}
-                                disableFlip={false}
-                                qrCodeSuccessCallback={handleScan}
-                                verbose={false}
-                            />
-                            <div className="p-4 text-center">
-                                <p className="animate-pulse text-sm">Apunte la cámara al código QR</p>
-                            </div>
+                    <div className="flex flex-col gap-8 w-full max-w-lg items-center mt-12">
+                        {/* Hardware Scanner Status Banner */}
+                        <div className="w-full bg-primary/10 text-primary rounded-2xl p-8 border-2 border-primary/20 text-center flex flex-col items-center gap-4 shadow-lg">
+                            <Monitor size={64} className="opacity-80" />
+                            <h2 className="text-3xl font-black">Sistema Kiosco Activo</h2>
+                            <p className="opacity-80 text-lg">Pase el carnet o código QR del socio por el lector óptico.</p>
                         </div>
-
-                        <div className="divider">O USA LECTOR USB / TECLADO</div>
 
                         {/* Manual / USB Input */}
                         <div className="w-full flex flex-col gap-2">
@@ -394,8 +384,8 @@ export default function ScannerPage() {
                                     }
                                 }}
                             />
-                            <p className="text-xs text-center mt-2 opacity-60">
-                                Funciona con lectores de código de barras/QR USB (Pistola o Mesa)
+                            <p className="text-sm text-center mt-4 opacity-60">
+                                ℹ️ Escáner Global Activo. Puede minimizar esta ventana.
                             </p>
                         </div>
                     </div>
