@@ -1,12 +1,81 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { CheckCircle, XCircle, User } from 'lucide-react'
+import { validateAccess, AccessResult } from '@/app/actions/access'
 
 export default function CustomerViewClient() {
-    const [lastScan, setLastScan] = useState<any>(null)
+    const [lastScan, setLastScan] = useState<AccessResult | null>(null)
     const [showWelcome, setShowWelcome] = useState(false)
+    const [loading, setLoading] = useState(false)
 
+    // Auto-hide scanner effect
+    useEffect(() => {
+        let timer: NodeJS.Timeout
+        if (showWelcome) {
+            timer = setTimeout(() => {
+                setShowWelcome(false)
+                setLastScan(null)
+            }, 5000)
+        }
+        return () => clearTimeout(timer)
+    }, [showWelcome])
+
+    // Global keyboard listener for hardware scanners
+    useEffect(() => {
+        let barcodeBuffer = '';
+        let lastKeyTime = Date.now();
+
+        const handleGlobalKeyDown = async (e: KeyboardEvent) => {
+            // Do not listen to inputs if we're focused on an actual input element (unlikely on this screen, but good practice)
+            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+                return;
+            }
+
+            const currentTime = Date.now();
+
+            // hardware scanners type very fast. Reset buffer if typing is too slow.
+            if (currentTime - lastKeyTime > 50) {
+                barcodeBuffer = '';
+            }
+
+            if (e.key === 'Enter') {
+                if (barcodeBuffer.length > 0) {
+                    // Prevent default to stop scrolling
+                    e.preventDefault();
+
+                    const codeToScan = barcodeBuffer;
+                    barcodeBuffer = '';
+
+                    // Don't scan if currently loading
+                    if (loading) return;
+
+                    setLoading(true);
+                    try {
+                        const validation = await validateAccess(codeToScan)
+                        setLastScan(validation)
+                        setShowWelcome(true)
+                    } catch (error) {
+                        console.error('Error validating access:', error)
+                    } finally {
+                        setLoading(false);
+                    }
+                }
+            } else if (e.key.length === 1) {
+                barcodeBuffer += e.key;
+            }
+
+            lastKeyTime = currentTime;
+        };
+
+        window.addEventListener('keydown', handleGlobalKeyDown);
+
+        return () => {
+            window.removeEventListener('keydown', handleGlobalKeyDown);
+        };
+    }, [loading]);
+
+    // Backward compatibility: Still listen to BroadcastChannel if admin is using the other screen
     useEffect(() => {
         const channel = new BroadcastChannel('scanner_channel')
 
@@ -14,12 +83,6 @@ export default function CustomerViewClient() {
             if (event.data.type === 'SCAN_RESULT') {
                 setLastScan(event.data.payload)
                 setShowWelcome(true)
-
-                // Auto hide after 5 seconds
-                setTimeout(() => {
-                    setShowWelcome(false)
-                    // Optional: clear lastScan after animation
-                }, 5000)
             }
         }
 
@@ -28,7 +91,7 @@ export default function CustomerViewClient() {
         }
     }, [])
 
-    if (!showWelcome) {
+    if (!showWelcome && !loading) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center animate-fade-in" style={{ backgroundColor: '#3f2009' }}>
                 <div className="max-w-4xl w-full">
@@ -42,6 +105,15 @@ export default function CustomerViewClient() {
                         <p className="text-[28px] text-white font-bold">Por favor, escanea tu código para ingresar 👋</p>
                     </div>
                 </div>
+            </div>
+        )
+    }
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center" style={{ backgroundColor: '#3f2009' }}>
+                <span className="loading loading-spinner text-white" style={{ width: '5rem', height: '5rem' }}></span>
+                <p className="text-white text-2xl mt-8 font-bold animate-pulse">Procesando código...</p>
             </div>
         )
     }
