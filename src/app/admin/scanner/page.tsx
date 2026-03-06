@@ -178,6 +178,50 @@ export default function ScannerPage() {
         }
     }
 
+    // Global keyboard listener for hardware scanners
+    useEffect(() => {
+        if (!handsFree) return; // Only apply if hands-free is enabled
+
+        // Use a ref to accumulate keystrokes
+        let barcodeBuffer = '';
+        let lastKeyTime = Date.now();
+
+        const handleGlobalKeyDown = (e: KeyboardEvent) => {
+            // Ignore if we are typing in an input field other than our scanner input
+            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+                if (e.target !== inputRef.current) return;
+            }
+
+            const currentTime = Date.now();
+
+            // hardware scanners type very fast. If > 50ms between keystrokes, it's probably a human typing. 
+            // Reset the buffer.
+            if (currentTime - lastKeyTime > 50) {
+                barcodeBuffer = '';
+            }
+
+            if (e.key === 'Enter') {
+                if (barcodeBuffer.length > 0) {
+                    // We have a scanned barcode
+                    e.preventDefault();
+                    handleScan(barcodeBuffer);
+                    barcodeBuffer = '';
+                }
+            } else if (e.key.length === 1) {
+                // It's a printable character
+                barcodeBuffer += e.key;
+            }
+
+            lastKeyTime = currentTime;
+        };
+
+        window.addEventListener('keydown', handleGlobalKeyDown);
+
+        return () => {
+            window.removeEventListener('keydown', handleGlobalKeyDown);
+        };
+    }, [handsFree, handleScan]);
+
     // Keep focus in hands-free mode
     useEffect(() => {
         if (handsFree && !result) {
