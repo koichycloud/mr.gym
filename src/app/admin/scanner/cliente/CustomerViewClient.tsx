@@ -93,15 +93,25 @@ export default function CustomerViewClient() {
 
     if (!showWelcome && !loading) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center animate-fade-in" style={{ backgroundColor: '#3f2009' }}>
-                <div className="max-w-4xl w-full">
-                    <h1 className="text-[110px] font-black text-white mb-8 tracking-tighter uppercase drop-shadow-lg" style={{ WebkitTextStroke: '4px black', paintOrder: 'stroke fill' }}>
+            <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center animate-fade-in relative overflow-hidden bg-black">
+                {/* Background Image */}
+                <div
+                    className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-40 blur-sm flex justify-center items-center"
+                    style={{
+                        backgroundImage: "url('/gym_background.png')",
+                        transform: "scale(1.05)"
+                    }}
+                />
+
+                <div className="max-w-4xl w-full z-10 flex flex-col items-center">
+                    <img src="/icons/icon-512x512.png" alt="Mr. Gym Logo" className="w-[300px] h-[300px] mb-8 object-contain drop-shadow-2xl" />
+                    <h1 className="text-[110px] font-black text-white mb-4 tracking-tighter uppercase drop-shadow-lg" style={{ WebkitTextStroke: '4px black', paintOrder: 'stroke fill' }}>
                         Mr. Gym
                     </h1>
-                    <p className="text-[51px] font-light" style={{ color: '#cc99ff', opacity: 0.7 }}>
+                    <p className="text-[51px] font-light text-white/90 drop-shadow-lg">
                         Bienvenido al mejor lugar para entrenar.
                     </p>
-                    <div className="mt-16 animate-pulse">
+                    <div className="mt-16 animate-pulse bg-black/50 px-8 py-4 rounded-full border border-white/20 backdrop-blur-md">
                         <p className="text-[28px] text-white font-bold">Por favor, escanea tu código para ingresar 👋</p>
                     </div>
                 </div>
@@ -111,9 +121,10 @@ export default function CustomerViewClient() {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center" style={{ backgroundColor: '#3f2009' }}>
-                <span className="loading loading-spinner text-white" style={{ width: '5rem', height: '5rem' }}></span>
-                <p className="text-white text-2xl mt-8 font-bold animate-pulse">Procesando código...</p>
+            <div className="min-h-screen flex flex-col items-center justify-center p-8 text-center relative overflow-hidden bg-black">
+                <div className="absolute inset-0 z-0 bg-cover bg-center opacity-30 blur-md" style={{ backgroundImage: "url('/gym_background.png')", transform: "scale(1.05)" }} />
+                <span className="loading loading-spinner text-white z-10" style={{ width: '5rem', height: '5rem' }}></span>
+                <p className="text-white text-2xl mt-8 font-bold animate-pulse z-10">Procesando código...</p>
             </div>
         )
     }
