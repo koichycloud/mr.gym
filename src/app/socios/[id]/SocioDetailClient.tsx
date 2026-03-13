@@ -118,21 +118,19 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                     <div className="card bg-base-100 shadow-xl">
                         <div className="card-body items-center text-center">
                             <h2 className="card-title text-2xl mb-2">Carnet de Acceso</h2>
-                            <div className="p-4 bg-white rounded-lg border-2 border-base-300" id="qr-code-container">
+                            <div className="p-4 bg-white rounded-lg border-2 border-base-300 relative overflow-hidden" id="qr-code-container" style={{ width: '288px', height: '288px', margin: '0 auto' }}>
+                                {/* Marca de agua de fondo */}
+                                <div className="absolute inset-0 flex items-center justify-center opacity-15 pointer-events-none">
+                                    <img src="/icons/icon-192x192.png" alt="Watermark" style={{ width: '80%', height: '80%', objectFit: 'contain' }} />
+                                </div>
                                 <QRCodeSVG
                                     value={socio.codigo}
-                                    size={256}
+                                    size={252}
                                     level="H"
-                                    includeMargin
+                                    includeMargin={false}
+                                    bgColor="transparent"
                                     id="socio-qr-svg"
-                                    imageSettings={{
-                                        src: "/icons/icon-192x192.png",
-                                        x: undefined,
-                                        y: undefined,
-                                        height: 48,
-                                        width: 48,
-                                        excavate: true,
-                                    }}
+                                    className="relative z-10 mx-auto mt-0.5"
                                 />
                             </div>
                             <p className="mt-4 font-mono text-xl tracking-widest font-bold">{socio.codigo}</p>
@@ -212,10 +210,11 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                                             if (ctx) {
                                                                 ctx.fillStyle = "#FFFFFF";
                                                                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                                                                ctx.drawImage(img, 0, 0);
 
                                                                 const logoImg = new Image();
                                                                 const copyToClipboard = () => {
+                                                                    ctx.globalAlpha = 1.0;
+                                                                    ctx.drawImage(img, 0, 0);
                                                                     canvas.toBlob(async (blob) => {
                                                                         if (blob) {
                                                                             try {
@@ -232,7 +231,8 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                                                 };
 
                                                                 logoImg.onload = () => {
-                                                                    const logoSize = 48;
+                                                                    ctx.globalAlpha = 0.15;
+                                                                    const logoSize = canvas.width * 0.8;
                                                                     const x = (canvas.width - logoSize) / 2;
                                                                     const y = (canvas.height - logoSize) / 2;
                                                                     ctx.drawImage(logoImg, x, y, logoSize, logoSize);
