@@ -153,14 +153,89 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                 }}>
                                     Descargar QR ⬇️
                                 </button>
-                                <button className="btn btn-outline btn-sm" onClick={() => {
+                                <button className="btn btn-outline btn-sm" onClick={async () => {
                                     if (!socio.telefono) {
                                         alert("El socio no tiene un número de teléfono registrado.");
                                         return;
                                     }
                                     const phone = socio.telefono.replace(/\D/g, '');
                                     const text = `Hola ${socio.nombres}, aquí tienes tu código de acceso para Mr. Gym: ${socio.codigo}`;
-                                    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
+                                    const targetUrl = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+
+                                    try {
+                                        const svg = document.getElementById("socio-qr-svg");
+                                        if (svg) {
+                                            const svgData = new XMLSerializer().serializeToString(svg);
+                                            const canvas = document.createElement("canvas");
+                                            const ctx = canvas.getContext("2d");
+                                            const img = new Image();
+
+                                            // Creamos una promesa para manejar la carga de la imagen
+                                            await new Promise((resolve) => {
+                                                img.onload = async () => {
+                                                    canvas.width = img.width;
+                                                    canvas.height = img.height;
+
+                                                    // Fondo blanco para el QR (para evitar transparencias en PNG)
+                                                    if (ctx) {
+                                                        ctx.fillStyle = "#FFFFFF";
+                                                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                                                        ctx.drawImage(img, 0, 0);
+                                                    }
+
+                                                    canvas.toBlob(async (blob) => {
+                                                        if (!blob) {
+                                                            window.open(targetUrl, '_blank');
+                                                            resolve(null);
+                                                            return;
+                                                        }
+
+                                                        // 1. Intentar usar Web Share API (Nativo en móviles y tablets actuales)
+                                                        const file = new File([blob], `QR-${socio.nombres}-${socio.codigo}.png`, { type: "image/png" });
+
+                                                        // Verificamos si podemos compartir archivos y texto
+                                                        const shareData = {
+                                                            title: 'Código QR de Acceso',
+                                                            text: text,
+                                                            files: [file]
+                                                        };
+
+                                                        if (navigator.canShare && navigator.canShare(shareData)) {
+                                                            try {
+                                                                await navigator.share(shareData);
+                                                                resolve(null);
+                                                                return; // Éxito compartiendo de forma nativa
+                                                            } catch (err: any) {
+                                                                console.log("Compartir nativo cancelado o falló, cayendo al portapapeles...", err.message);
+                                                                // Si falla, ignoramos y caemos al portapapeles (puede ser que el usuario canceló)
+                                                            }
+                                                        }
+
+                                                        // 2. Fallback antiguo: Copiar al portapapeles
+                                                        try {
+                                                            const item = new ClipboardItem({ "image/png": blob });
+                                                            await navigator.clipboard.write([item]);
+                                                            alert("✅ Imagen QR copiada al portapapeles.\n\nCuando se abra WhatsApp, mantén presionado y dale a PEGAR en el chat para enviar la imagen.");
+                                                        } catch (e) {
+                                                            console.error("No se pudo copiar", e);
+                                                            alert("❌ Tu navegador no permite copiar imágenes automáticamente. Puedes descargar la imagen manualmente y enviarla.");
+                                                        }
+
+                                                        // En el fallback siempre abrimos WhatsApp Web/App
+                                                        window.open(targetUrl, '_blank');
+                                                        resolve(null);
+                                                    }, 'image/png');
+                                                };
+                                                img.src = "data:image/svg+xml;base64," + window.btoa(unescape(encodeURIComponent(svgData)));
+                                            });
+                                            return;
+                                        }
+                                    } catch (err) {
+                                        console.error("Error general generando QR:", err);
+                                    }
+
+                                    // Fallback final si todo el proceso de imagen falla
+                                    window.open(targetUrl, '_blank');
                                 }}>
                                     Enviar por WhatsApp 💬
                                 </button>
