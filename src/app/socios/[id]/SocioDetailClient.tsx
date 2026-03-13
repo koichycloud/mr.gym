@@ -125,6 +125,14 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                     level="H"
                                     includeMargin
                                     id="socio-qr-svg"
+                                    imageSettings={{
+                                        src: "/icons/icon-192x192.png",
+                                        x: undefined,
+                                        y: undefined,
+                                        height: 48,
+                                        width: 48,
+                                        excavate: true,
+                                    }}
                                 />
                             </div>
                             <p className="mt-4 font-mono text-xl tracking-widest font-bold">{socio.codigo}</p>
