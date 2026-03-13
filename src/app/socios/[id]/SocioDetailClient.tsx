@@ -149,12 +149,35 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                         img.onload = () => {
                                             canvas.width = img.width;
                                             canvas.height = img.height;
-                                            ctx?.drawImage(img, 0, 0);
-                                            const pngFile = canvas.toDataURL("image/png");
-                                            const downloadLink = document.createElement("a");
-                                            downloadLink.download = `QR-${socio.nombres}-${socio.codigo}.png`;
-                                            downloadLink.href = pngFile;
-                                            downloadLink.click();
+                                            if (ctx) {
+                                                ctx.fillStyle = "#FFFFFF";
+                                                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                                                ctx.drawImage(img, 0, 0);
+
+                                                // Dibujar logo manualmente
+                                                const logoImg = new Image();
+                                                logoImg.onload = () => {
+                                                    const logoSize = 48; // El mismo tamaño que en imageSettings
+                                                    const x = (canvas.width - logoSize) / 2;
+                                                    const y = (canvas.height - logoSize) / 2;
+                                                    ctx.drawImage(logoImg, x, y, logoSize, logoSize);
+
+                                                    const pngFile = canvas.toDataURL("image/png");
+                                                    const downloadLink = document.createElement("a");
+                                                    downloadLink.download = `QR-${socio.nombres}-${socio.codigo}.png`;
+                                                    downloadLink.href = pngFile;
+                                                    downloadLink.click();
+                                                };
+                                                logoImg.onerror = () => {
+                                                    // Si falla, decargar sin logo
+                                                    const pngFile = canvas.toDataURL("image/png");
+                                                    const downloadLink = document.createElement("a");
+                                                    downloadLink.download = `QR-${socio.nombres}-${socio.codigo}.png`;
+                                                    downloadLink.href = pngFile;
+                                                    downloadLink.click();
+                                                };
+                                                logoImg.src = "/icons/icon-192x192.png";
+                                            }
                                         };
                                         img.src = "data:image/svg+xml;base64," + btoa(svgData);
                                     }
@@ -190,21 +213,36 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                                                 ctx.fillStyle = "#FFFFFF";
                                                                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                                                                 ctx.drawImage(img, 0, 0);
-                                                            }
 
-                                                            canvas.toBlob(async (blob) => {
-                                                                if (blob) {
-                                                                    try {
-                                                                        const item = new ClipboardItem({ "image/png": blob });
-                                                                        await navigator.clipboard.write([item]);
-                                                                        alert("✅ Imagen QR copiada.\n\nSe abrirá el chat del socio.\nMantén presionado en el chat y selecciona PEGAR para enviar el código.");
-                                                                    } catch (e) {
-                                                                        console.error("No se pudo copiar", e);
-                                                                    }
-                                                                }
-                                                                window.open(targetUrl, '_blank');
+                                                                const logoImg = new Image();
+                                                                const copyToClipboard = () => {
+                                                                    canvas.toBlob(async (blob) => {
+                                                                        if (blob) {
+                                                                            try {
+                                                                                const item = new ClipboardItem({ "image/png": blob });
+                                                                                await navigator.clipboard.write([item]);
+                                                                                alert("✅ Imagen QR copiada.\n\nSe abrirá el chat del socio.\nMantén presionado en el chat y selecciona PEGAR para enviar el código.");
+                                                                            } catch (e) {
+                                                                                console.error("No se pudo copiar", e);
+                                                                            }
+                                                                        }
+                                                                        window.open(targetUrl, '_blank');
+                                                                        resolve(null);
+                                                                    }, 'image/png');
+                                                                };
+
+                                                                logoImg.onload = () => {
+                                                                    const logoSize = 48;
+                                                                    const x = (canvas.width - logoSize) / 2;
+                                                                    const y = (canvas.height - logoSize) / 2;
+                                                                    ctx.drawImage(logoImg, x, y, logoSize, logoSize);
+                                                                    copyToClipboard();
+                                                                };
+                                                                logoImg.onerror = copyToClipboard;
+                                                                logoImg.src = "/icons/icon-192x192.png";
+                                                            } else {
                                                                 resolve(null);
-                                                            }, 'image/png');
+                                                            }
                                                         };
                                                         img.src = "data:image/svg+xml;base64," + window.btoa(unescape(encodeURIComponent(svgData)));
                                                     });
@@ -238,33 +276,48 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                                                 ctx.fillStyle = "#FFFFFF";
                                                                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                                                                 ctx.drawImage(img, 0, 0);
-                                                            }
 
-                                                            canvas.toBlob(async (blob) => {
-                                                                if (!blob) {
-                                                                    alert("Error al generar la imagen.");
-                                                                    resolve(null);
-                                                                    return;
-                                                                }
+                                                                const logoImg = new Image();
+                                                                const shareCanvas = () => {
+                                                                    canvas.toBlob(async (blob) => {
+                                                                        if (!blob) {
+                                                                            alert("Error al generar la imagen.");
+                                                                            resolve(null);
+                                                                            return;
+                                                                        }
 
-                                                                const file = new File([blob], `QR-${socio.nombres}-${socio.codigo}.png`, { type: "image/png" });
-                                                                const shareData = {
-                                                                    title: 'Código QR de Acceso',
-                                                                    text: text,
-                                                                    files: [file]
+                                                                        const file = new File([blob], `QR-${socio.nombres}-${socio.codigo}.png`, { type: "image/png" });
+                                                                        const shareData = {
+                                                                            title: 'Código QR de Acceso',
+                                                                            text: text,
+                                                                            files: [file]
+                                                                        };
+
+                                                                        if (navigator.canShare && navigator.canShare(shareData)) {
+                                                                            try {
+                                                                                await navigator.share(shareData);
+                                                                            } catch (err: any) {
+                                                                                console.log("Compartir cancelado o falló", err.message);
+                                                                            }
+                                                                        } else {
+                                                                            alert("Tu dispositivo no soporta compartir nativamente. Usa 'Chat Directo'.");
+                                                                        }
+                                                                        resolve(null);
+                                                                    }, 'image/png');
                                                                 };
 
-                                                                if (navigator.canShare && navigator.canShare(shareData)) {
-                                                                    try {
-                                                                        await navigator.share(shareData);
-                                                                    } catch (err: any) {
-                                                                        console.log("Compartir cancelado o falló", err.message);
-                                                                    }
-                                                                } else {
-                                                                    alert("Tu dispositivo no soporta compartir nativamente. Usa 'Chat Directo'.");
-                                                                }
+                                                                logoImg.onload = () => {
+                                                                    const logoSize = 48;
+                                                                    const x = (canvas.width - logoSize) / 2;
+                                                                    const y = (canvas.height - logoSize) / 2;
+                                                                    ctx.drawImage(logoImg, x, y, logoSize, logoSize);
+                                                                    shareCanvas();
+                                                                };
+                                                                logoImg.onerror = shareCanvas;
+                                                                logoImg.src = "/icons/icon-192x192.png";
+                                                            } else {
                                                                 resolve(null);
-                                                            }, 'image/png');
+                                                            }
                                                         };
                                                         img.src = "data:image/svg+xml;base64," + window.btoa(unescape(encodeURIComponent(svgData)));
                                                     });
