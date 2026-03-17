@@ -120,7 +120,7 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                             <h2 className="card-title text-2xl mb-2">Carnet de Acceso</h2>
                             <div className="p-4 bg-white rounded-lg border-2 border-base-300 relative overflow-hidden" id="qr-code-container" style={{ width: '288px', height: '288px', margin: '0 auto' }}>
                                 {/* Marca de agua de fondo */}
-                                <div className="absolute inset-0 flex items-center justify-center opacity-15 pointer-events-none">
+                                <div className="absolute inset-0 flex items-center justify-center opacity-30 pointer-events-none">
                                     <img src="/icons/icon-192x192.png" alt="Watermark" style={{ width: '80%', height: '80%', objectFit: 'contain' }} />
                                 </div>
                                 <QRCodeSVG
@@ -231,7 +231,7 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                                                 };
 
                                                                 logoImg.onload = () => {
-                                                                    ctx.globalAlpha = 0.15;
+                                                                    ctx.globalAlpha = 0.30;
                                                                     const logoSize = canvas.width * 0.8;
                                                                     const x = (canvas.width - logoSize) / 2;
                                                                     const y = (canvas.height - logoSize) / 2;
