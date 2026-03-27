@@ -102,7 +102,7 @@ export default function Navbar() {
                                     </span>
                                 </div>
                             </div>
-                            <ul tabIndex={0} className="mt-3 z-[1] p-2 shadow menu menu-sm dropdown-content bg-base-100 rounded-box w-52 border border-base-200">
+                            <ul tabIndex={0} onClick={() => { const el = document.activeElement as HTMLElement; if(el) el.blur(); }} className="mt-3 z-[1] p-2 shadow menu menu-sm dropdown-content bg-base-100 rounded-box w-52 border border-base-200">
                                 <li className="menu-title px-4 py-2 border-b border-base-200 mb-2">
                                     <span className="font-bold text-base-content block truncate">{session.user.name}</span>
                                     <span className="text-[10px] uppercase opacity-60 mt-0.5 block">{session.user.role}</span>
@@ -150,7 +150,7 @@ export default function Navbar() {
                                 <Menu size={22} />
                                 <span>Más</span>
                             </div>
-                            <ul tabIndex={0} className="dropdown-content z-[100] menu p-2 shadow bg-base-100 rounded-box w-52 mb-2 border border-base-200">
+                            <ul tabIndex={0} onClick={() => { const el = document.activeElement as HTMLElement; if(el) el.blur(); }} className="dropdown-content z-[100] menu p-2 shadow bg-base-100 rounded-box w-52 mb-2 border border-base-200">
                                 <li><Link href="/socios/vencidos"><AlertTriangle size={16} /> Vencidos</Link></li>
                                 {isAdmin && (
                                     <>
