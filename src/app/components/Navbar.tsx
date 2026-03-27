@@ -151,12 +151,12 @@ export default function Navbar() {
                                 <span>Más</span>
                             </div>
                             <ul tabIndex={0} className="dropdown-content z-[100] menu p-2 shadow bg-base-100 rounded-box w-52 mb-2 border border-base-200">
+                                <li><Link href="/socios/vencidos"><AlertTriangle size={16} /> Vencidos</Link></li>
                                 {isAdmin && (
                                     <>
                                         <li><Link href="/caja"><DollarSign size={16} /> Caja</Link></li>
                                         <li><Link href="/users"><UserCog size={16} /> Usuarios</Link></li>
                                         <li><Link href="/admin/bitacora"><FileText size={16} /> Bitácora</Link></li>
-                                        <li><Link href="/socios/vencidos"><AlertTriangle size={16} /> Vencidos</Link></li>
                                         <div className="divider my-0"></div>
                                     </>
                                 )}
