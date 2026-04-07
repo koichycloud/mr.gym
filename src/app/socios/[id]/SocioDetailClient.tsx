@@ -26,8 +26,8 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
         ? socio.suscripciones[0]
         : null
 
-    const handleNewSubscription = async (data: any) => {
-        return await createSubscription(data)
+    const handleNewSubscription = async (data: any, pagoInfo?: any) => {
+        return await createSubscription(data, pagoInfo)
     }
 
     const handleEditSubscription = async (id: string, newDate: Date, meses: number) => {
@@ -120,7 +120,7 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                             <h2 className="card-title text-2xl mb-2">Carnet de Acceso</h2>
                             <div className="p-4 bg-white rounded-lg border-2 border-base-300 relative overflow-hidden" id="qr-code-container" style={{ width: '288px', height: '288px', margin: '0 auto' }}>
                                 {/* Marca de agua de fondo */}
-                                <div className="absolute inset-0 flex items-center justify-center opacity-30 pointer-events-none">
+                                <div className="absolute inset-0 flex items-center justify-center opacity-45 pointer-events-none">
                                     <img src="/icons/icon-192x192.png" alt="Watermark" style={{ width: '80%', height: '80%', objectFit: 'contain' }} />
                                 </div>
                                 <QRCodeSVG
@@ -231,7 +231,7 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                                                 };
 
                                                                 logoImg.onload = () => {
-                                                                    ctx.globalAlpha = 0.30;
+                                                                    ctx.globalAlpha = 0.45;
                                                                     const logoSize = canvas.width * 0.8;
                                                                     const x = (canvas.width - logoSize) / 2;
                                                                     const y = (canvas.height - logoSize) / 2;
@@ -410,7 +410,7 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                         <h2 className="card-title">Historial de Asistencias (Últimas 50)</h2>
                                         {asistenciasData.asistencias.length === 0 ? (
                                             <div className="text-center py-12 text-base-content/50">
-                                                <CalendarDays size={48} className="mx-auto mb-4 opacity-30" />
+                                                <CalendarDays size={48} className="mx-auto mb-4 opacity-45" />
                                                 <p className="text-lg">Sin registros de asistencia</p>
                                             </div>
                                         ) : (
@@ -591,7 +591,16 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                                     return (
                                                         <tr key={sub.id}>
                                                             <td>{format(new Date(sub.fechaInicio), 'dd/MM/yyyy')}</td>
-                                                            <td>{sub.meses}</td>
+                                                            <td>
+                                        {sub.plan ? (
+                                            <div>
+                                                <div className="font-bold">{sub.plan.nombre}</div>
+                                                <div className="text-xs opacity-70">{sub.meses} {sub.meses === 1 ? 'mes' : 'meses'}</div>
+                                            </div>
+                                        ) : (
+                                            `${sub.meses} ${sub.meses === 1 ? 'mes' : 'meses'}`
+                                        )}
+                                    </td>
                                                             <td>{format(new Date(sub.fechaFin), 'dd/MM/yyyy')}</td>
                                                             <td className="font-mono text-xs text-primary">{displayCode}</td>
                                                             <td>

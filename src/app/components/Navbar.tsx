@@ -78,6 +78,11 @@ export default function Navbar() {
                                     </Link>
                                 </li>
                                 <li>
+                                    <Link href="/planes" className={isActive('/planes')}>
+                                        <FileText size={18} /> Tipos Planes
+                                    </Link>
+                                </li>
+                                <li>
                                     <Link href="/admin/bitacora" className={isActive('/admin/bitacora')}>
                                         <FileText size={18} /> Bitácora
                                     </Link>
@@ -156,6 +161,7 @@ export default function Navbar() {
                                     <>
                                         <li><Link href="/caja"><DollarSign size={16} /> Caja</Link></li>
                                         <li><Link href="/users"><UserCog size={16} /> Usuarios</Link></li>
+                                        <li><Link href="/planes"><FileText size={16} /> Planes</Link></li>
                                         <li><Link href="/admin/bitacora"><FileText size={16} /> Bitácora</Link></li>
                                         <div className="divider my-0"></div>
                                     </>

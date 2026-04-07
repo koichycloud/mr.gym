@@ -18,6 +18,7 @@ export const socioSchema = z.object({
 
 export const suscripcionSchema = z.object({
     socioId: z.string().uuid(),
+    planId: z.string().uuid().optional(),
     meses: z.number().int().positive("Los meses deben ser mayor a 0"),
     fechaInicio: z.coerce.date(),
     fechaFin: z.coerce.date(),

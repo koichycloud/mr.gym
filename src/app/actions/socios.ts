@@ -119,6 +119,7 @@ export async function getSocios() {
                 // REMOVED: where: { estado: 'ACTIVA' }
                 // We want the latest subscription regardless of status to correctly show "Vencida" if applicable
                 orderBy: { fechaFin: 'desc' },
+                include: { plan: true },
                 take: 1
             },
             historialCodigos: {
@@ -135,7 +136,8 @@ export async function getSocioById(id: string) {
         where: { id },
         include: {
             suscripciones: {
-                orderBy: { codigo: 'desc' } // Higher code = more recent boleta, shown first
+                orderBy: { codigo: 'desc' }, // Higher code = more recent boleta, shown first
+                include: { plan: true }
             },
             historialCodigos: {
                 orderBy: { codigo: 'desc' } // Same logic for code history

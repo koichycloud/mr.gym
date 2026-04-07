@@ -51,6 +51,7 @@ model CodigoHistorial {
 model Suscripcion {
   id          String   @id @default(uuid())
   socioId     String
+  planId      String?
   fechaInicio DateTime @default(now())
   meses       Int
   fechaFin    DateTime
@@ -59,9 +60,25 @@ model Suscripcion {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   socio       Socio    @relation(fields: [socioId], references: [id], onDelete: Cascade)
+  plan        Plan?    @relation(fields: [planId], references: [id], onDelete: SetNull)
 
   @@index([fechaFin, estado]) // Optimize expiration queries
   @@index([socioId])        // Optimize lookups by socio
+}
+
+model Plan {
+  id          String   @id @default(uuid())
+  nombre      String
+  descripcion String?
+  meses       Int
+  precio      Float
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  suscripciones Suscripcion[]
+  
+  @@map("Plan")
 }
 
 model MedidaFisica {

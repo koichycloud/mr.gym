@@ -61,7 +61,7 @@ export async function getExpiredSubscriptions() {
 
 export async function createSubscription(
     data: z.infer<typeof suscripcionSchema>,
-    pagoInfo?: { monto: number; metodoPago: string }
+    pagoInfo?: { monto: number; metodoPago: string; nombrePlan?: string }
 ) {
     try {
         await requireAuth() // 🔒 Protected
@@ -101,6 +101,7 @@ export async function createSubscription(
         const subscription = await prisma.suscripcion.create({
             data: {
                 socioId: validData.socioId,
+                planId: validData.planId,
                 meses: validData.meses,
                 fechaInicio: validData.fechaInicio,
                 fechaFin: validData.fechaFin,
@@ -120,7 +121,7 @@ export async function createSubscription(
                         monto: pagoInfo.monto,
                         metodoPago: pagoInfo.metodoPago || 'EFECTIVO',
                         concepto: 'SUSCRIPCION',
-                        descripcion: `Suscripción ${validData.meses} mes(es)`
+                        descripcion: pagoInfo.nombrePlan ? `Venta: ${pagoInfo.nombrePlan} (${validData.meses} mes/es)` : `Suscripción ${validData.meses} mes(es)`
                     }
                 })
             } catch (pagoError) {
