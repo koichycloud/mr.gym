@@ -7,7 +7,6 @@ export async function logAction(accion: string, detalles: string) {
         const usuario = session?.user?.name || 'SISTEMA'
 
         // TEMP FIX: AuditLog is temporarily removed from the DB schema
-        /*
         await prisma.auditLog.create({
             data: {
                 usuario,
@@ -15,7 +14,6 @@ export async function logAction(accion: string, detalles: string) {
                 detalles
             }
         })
-        */
     } catch (error) {
         console.error("Error writing audit log:", error)
         // Silent fail to not break the main transaction if logging fails
