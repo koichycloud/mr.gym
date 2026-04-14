@@ -22,7 +22,7 @@ export default function Navbar() {
         }
     }, [session?.user?.id])
 
-    if (pathname === '/login' || pathname === '/admin/scanner/cliente') return null
+    if (pathname === '/login' || pathname === '/admin/scanner/cliente' || pathname === '/kiosco') return null
 
     const isActive = (path: string) => {
         if (path === '/' && pathname === '/') return 'active text-primary'

@@ -23,6 +23,6 @@ export const config = {
          * - screenshots (PWA screenshots)
          * - .well-known (assetlinks.json for APK verification)
          */
-        "/((?!login|api/auth|_next/static|_next/image|favicon.ico|manifest.webmanifest|manifest.json|sw.js|workbox-|icons|screenshots|\\.well-known).*)",
+        "/((?!login|kiosco|api/auth|_next/static|_next/image|favicon.ico|manifest.webmanifest|manifest.json|sw.js|workbox-|icons|screenshots|\\.well-known).*)",
     ]
 }

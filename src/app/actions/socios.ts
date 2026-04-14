@@ -190,10 +190,10 @@ export async function updateSocio(id: string, data: z.infer<typeof socioSchema>)
             }
         }
 
-        // If a new subscription is being added AND the code is different from the previous one,
-        // it means it's a true renewal with a new boleta, so we save the old code to history.
+        // If the code is modified, we must ALWAYS save the old code to history
+        // independently of whether a new subscription is being created or not.
         let historialCreate = undefined
-        if (suscripcion && suscripcion.meses > 0 && oldSocio.codigo !== formattedCode) {
+        if (oldSocio.codigo !== formattedCode) {
             historialCreate = {
                 create: [{
                     codigo: oldSocio.codigo,
