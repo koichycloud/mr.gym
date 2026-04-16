@@ -6,7 +6,6 @@ export async function logAction(accion: string, detalles: string) {
         const session = await requireAuth().catch(() => null)
         const usuario = session?.user?.name || 'SISTEMA'
 
-        // TEMP FIX: AuditLog is temporarily removed from the DB schema
         await prisma.auditLog.create({
             data: {
                 usuario,

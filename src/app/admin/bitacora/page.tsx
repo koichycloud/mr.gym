@@ -9,8 +9,10 @@ export default async function BitacoraPage() {
     await requireAdmin()
 
     // Fetch the latest 100 logs
-    // TEMP FIX: AuditLog tabla no existe en la BD de Supabase. Desactivado temporalmente.
-    const logs: any[] = []
+    const logs = await prisma.auditLog.findMany({
+        take: 100,
+        orderBy: { fecha: 'desc' }
+    })
 
     const getActionColor = (action: string) => {
         if (action.includes('LOGIN')) return 'text-info'
