@@ -105,7 +105,7 @@ export default function KioscoClient() {
         } finally {
             isProcessingRef.current = false
         }
-    }, [startCountdown])
+    }, [startCountdown, selectedMode])
 
     useEffect(() => {
         resetIdleTimer()
