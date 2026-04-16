@@ -14,6 +14,7 @@ export default function KioscoClient() {
     const [result, setResult] = useState<AccessResult | null>(null)
     const [currentInput, setCurrentInput] = useState('')
     const [timeLeft, setTimeLeft] = useState<number>(0)
+    const [selectedMode, setSelectedMode] = useState<'ENTRADA' | 'SALIDA'>('ENTRADA')
     
     const resetTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const idleTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -26,6 +27,7 @@ export default function KioscoClient() {
         setResult(null)
         setCurrentInput('')
         setTimeLeft(0)
+        setSelectedMode('ENTRADA')
     }, [])
 
     const resetIdleTimer = useCallback(() => {
@@ -76,7 +78,7 @@ export default function KioscoClient() {
         setTimeLeft(0)
         
         try {
-            const scanResult = await validateKioskAccess(code)
+            const scanResult = await validateKioskAccess(code, selectedMode)
             setResult(scanResult)
 
             if (scanResult.success) {
@@ -292,16 +294,33 @@ export default function KioscoClient() {
         }
 
         return (
-            <div className="flex flex-col items-center justify-center text-center opacity-80 transition-opacity hover:opacity-100">
-                <div className="relative mb-16">
-                    <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full"></div>
-                    <ScanLine size={320} className="text-primary relative drop-shadow-2xl" />
-                </div>
-                <h1 className="text-[6.5rem] font-black text-white tracking-tighter leading-none mb-8 drop-shadow-xl" style={{ WebkitTextStroke: '2px rgba(255,255,255,0.1)' }}>
-                    MR. GYM
+            <div className="flex flex-col items-center justify-center text-center opacity-90 transition-opacity hover:opacity-100 w-full max-w-6xl mx-auto px-8 animate-in fade-in duration-500">
+                <h1 className="text-5xl font-semibold text-white/50 tracking-widest uppercase mb-12">
+                    Selecciona tu Acción
                 </h1>
-                <p className="text-5xl font-semibold text-base-content/60 tracking-wider">
-                    ESCANEA TU CÓDIGO
+                
+                <div className="flex gap-12 w-full justify-center mb-16">
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); setSelectedMode('ENTRADA'); resetIdleTimer(); }}
+                        className={`flex-1 py-16 rounded-[4rem] border-8 transition-all duration-300 transform cursor-pointer pointer-events-auto ${selectedMode === 'ENTRADA' ? 'bg-green-600/20 border-green-500 scale-105 shadow-[0_0_80px_rgba(34,197,94,0.3)]' : 'bg-black/40 border-green-900/50 scale-95 opacity-60 hover:opacity-100 hover:border-green-700/80'}`}
+                    >
+                        <h2 className={`text-7xl font-black tracking-widest ${selectedMode === 'ENTRADA' ? 'text-green-400' : 'text-green-800'}`}>ENTRADA</h2>
+                    </button>
+                    
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); setSelectedMode('SALIDA'); resetIdleTimer(); }}
+                        className={`flex-1 py-16 rounded-[4rem] border-8 transition-all duration-300 transform cursor-pointer pointer-events-auto ${selectedMode === 'SALIDA' ? 'bg-blue-600/20 border-blue-500 scale-105 shadow-[0_0_80px_rgba(59,130,246,0.3)]' : 'bg-black/40 border-blue-900/50 scale-95 opacity-60 hover:opacity-100 hover:border-blue-700/80'}`}
+                    >
+                        <h2 className={`text-7xl font-black tracking-widest ${selectedMode === 'SALIDA' ? 'text-blue-400' : 'text-blue-800'}`}>SALIDA</h2>
+                    </button>
+                </div>
+
+                <div className="relative mb-12">
+                    <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-full"></div>
+                    <ScanLine size={120} className="text-white/60 relative drop-shadow-2xl" />
+                </div>
+                <p className="text-5xl font-bold text-white tracking-[0.2em] bg-black/50 px-16 py-8 rounded-full border border-white/10 uppercase drop-shadow-lg">
+                    Escanea tu Código
                 </p>
             </div>
         )

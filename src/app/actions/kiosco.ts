@@ -52,7 +52,7 @@ async function sendTelegramAlert(socioName: string, daysLeft: number) {
     }
 }
 
-export async function validateKioskAccess(codigo: string): Promise<AccessResult> {
+export async function validateKioskAccess(codigo: string, mode: 'ENTRADA' | 'SALIDA' = 'ENTRADA'): Promise<AccessResult> {
     try {
         const socio = await prisma.socio.findUnique({
             where: { codigo },
@@ -126,19 +126,20 @@ export async function validateKioskAccess(codigo: string): Promise<AccessResult>
             orderBy: { fecha: 'desc' }
         })
 
-        let tipoOperacion: 'ENTRADA' | 'SALIDA' = 'ENTRADA'
-        const COOLDOWN_MINUTES = 15
+        const tipoOperacion = mode;
+        const COOLDOWN_MINUTES = 15;
 
+        // Validar anti-passback únicamente si intentan repetir la MISMA acción en menos de 15 minutos
         if (ultimaAsistencia) {
             const minutosTranscurridos = (hoy.getTime() - new Date(ultimaAsistencia.fecha).getTime()) / (1000 * 60)
             
-            if (minutosTranscurridos < COOLDOWN_MINUTES) {
+            if (minutosTranscurridos < COOLDOWN_MINUTES && ultimaAsistencia.tipo === tipoOperacion) {
                 // Bloqueo Anti-Passback
                 return {
                     success: false,
                     message: ultimaAsistencia.tipo === 'ENTRADA' 
-                               ? `Acabas de entrar hace ${Math.floor(minutosTranscurridos)} min.` 
-                               : `Acabas de salir hace ${Math.floor(minutosTranscurridos)} min.`,
+                               ? `Ya registraste entrada hace ${Math.floor(minutosTranscurridos)} min.` 
+                               : `Ya registraste salida hace ${Math.floor(minutosTranscurridos)} min.`,
                     reason: 'PASSBACK',
                     socio: {
                         nombres: socio.nombres || '',
@@ -148,10 +149,6 @@ export async function validateKioskAccess(codigo: string): Promise<AccessResult>
                         diasVencimiento: diffDays
                     }
                 }
-            }
-
-            if (ultimaAsistencia.tipo === 'ENTRADA') {
-                tipoOperacion = 'SALIDA'
             }
         }
 
