@@ -155,11 +155,11 @@ export default function KioscoClient() {
     }, [currentInput, handleScan, resetIdleTimer])
 
     const renderPhotoCircle = (colorClass: string) => (
-        <div className={`w-64 h-64 rounded-full flex items-center justify-center overflow-hidden border-8 shadow-[0_0_40px_currentColor] mb-8 bg-black/40 ${colorClass}`}>
+        <div className={`w-[26rem] h-[26rem] rounded-full flex items-center justify-center overflow-hidden border-8 shadow-[0_0_60px_currentColor] mb-10 bg-black/40 ${colorClass}`}>
             <img 
                 src={result?.socio?.fotoUrl || '/icons/icon-512x512.png'} 
                 alt="Foto" 
-                className={`w-full h-full ${result?.socio?.fotoUrl ? 'object-cover' : 'object-contain p-4'}`} 
+                className={`w-full h-full ${result?.socio?.fotoUrl ? 'object-cover' : 'object-contain p-6'}`} 
             />
         </div>
     )
