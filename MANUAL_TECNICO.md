@@ -49,6 +49,12 @@ Para darle mantenimiento sin conectar teclados, se debe estar en la misma red Wi
 *   **Usuario**: `jenny`
 *   **Contraseña**: `Mr-gym-jenny`
 
+### Acceso Remoto Global Sin Fronteras (Tailscale)
+Si el administrador se encuentra fuera de la red local del gimnasio (ej. otro país o ciudad), la Raspberry Pi cuenta con un túnel **Tailscale** activo que atraviesa NAT y routers de forma encriptada sin requerir apertura de puertos.
+1. El técnico debe tener Tailscale encendido en su PC de viaje e iniciar sesión con la misma cuenta administradora de Google/Microsoft.
+2. Desde la App de Tailscale se obtendrá la "IP Global" de la máquina.
+*   **Comando Global**: `ssh jenny@<IP_GLOBAL_DE_TAILSCALE>` *(Se usa la misma clave mencionada arriba).*
+
 ### Reglas de Mantenimiento de la Raspberry Pi
 La memoria de la Raspberry está **Congelada (OverlayFS)**. Esto significa que está protegida contra escritura; si la desconectan de la electricidad de golpe, nunca se dañará el sistema operativo.
 
