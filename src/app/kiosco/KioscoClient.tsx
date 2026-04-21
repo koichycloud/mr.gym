@@ -337,20 +337,35 @@ export default function KioscoClient() {
     }
 
     return (
-        <div className={`min-h-screen w-full flex flex-col items-center justify-center overflow-hidden transition-colors duration-1000 select-none ${getBgColor()}`}>
+        <div className={`min-h-screen w-full relative flex flex-col items-center justify-center overflow-hidden transition-colors duration-1000 select-none ${getBgColor()}`}>
             
-            {/* Countdown helper para el siguiente en la fila */}
-            {timeLeft > 0 && state !== 'IDLE' && state !== 'SCREENSAVER' && state !== 'LOADING' && (
-                <div className="absolute top-10 right-10 bg-black/40 backdrop-blur-md px-8 py-4 rounded-3xl border border-white/10 flex items-center gap-4 text-white/50 z-50 animate-in fade-in slide-in-from-top-4">
-                    <span className="text-2xl font-medium tracking-wide uppercase">Cerrando en</span>
-                    <span className="text-5xl font-black font-mono w-10 text-center">{timeLeft}</span>
+            {/* Marca de agua gigante de fondo para iluminar la pantalla oscura */}
+            {(state === 'IDLE' || state === 'SCREENSAVER') && (
+                <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-0 opacity-20 mix-blend-screen transition-opacity duration-1000">
+                    <img 
+                        src="/icons/icon-512x512.png" 
+                        alt="Logo Mr Gym Fondo" 
+                        className="w-[90vw] h-[90vh] max-w-[1000px] max-h-[1000px] object-contain drop-shadow-[0_0_120px_rgba(255,255,255,0.15)] grayscale" 
+                    />
                 </div>
             )}
 
-            {renderContent()}
-            
-            <div className="fixed bottom-4 right-4 text-white/5 text-[10px]">
-                Modo Kiosco Activo
+            {/* Contenido principal en capa superior */}
+            <div className="relative z-10 w-full flex flex-col items-center justify-center">
+                
+                {/* Countdown helper para el siguiente en la fila */}
+                {timeLeft > 0 && state !== 'IDLE' && state !== 'SCREENSAVER' && state !== 'LOADING' && (
+                    <div className="absolute top-10 right-10 bg-black/40 backdrop-blur-md px-8 py-4 rounded-3xl border border-white/10 flex items-center gap-4 text-white/50 z-50 animate-in fade-in slide-in-from-top-4">
+                        <span className="text-2xl font-medium tracking-wide uppercase">Cerrando en</span>
+                        <span className="text-5xl font-black font-mono w-10 text-center">{timeLeft}</span>
+                    </div>
+                )}
+
+                {renderContent()}
+                
+                <div className="fixed bottom-4 right-4 text-white/5 text-[10px] z-50">
+                    Modo Kiosco Activo
+                </div>
             </div>
         </div>
     )
