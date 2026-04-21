@@ -333,7 +333,7 @@ export default function KioscoClient() {
         if (state === 'ERROR_NOT_FOUND') return 'bg-gradient-to-b from-orange-950 via-orange-900 to-black'
         if (state === 'ERROR_PASSBACK') return 'bg-gradient-to-b from-yellow-950 via-yellow-900 to-black'
         if (state === 'SCREENSAVER') return 'bg-black'
-        return 'bg-gradient-to-br from-[#1a0e05] to-black'
+        return 'bg-gradient-to-br from-[#4a2e15] via-[#241306] to-[#0a0502]'
     }
 
     return (
@@ -341,11 +341,11 @@ export default function KioscoClient() {
             
             {/* Marca de agua gigante de fondo para iluminar la pantalla oscura */}
             {(state === 'IDLE' || state === 'SCREENSAVER') && (
-                <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-0 opacity-20 mix-blend-screen transition-opacity duration-1000">
+                <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-0 opacity-40 transition-opacity duration-1000">
                     <img 
                         src="/icons/icon-512x512.png" 
                         alt="Logo Mr Gym Fondo" 
-                        className="w-[90vw] h-[90vh] max-w-[1000px] max-h-[1000px] object-contain drop-shadow-[0_0_120px_rgba(255,255,255,0.15)] grayscale" 
+                        className="w-[90vw] h-[90vh] max-w-[1000px] max-h-[1000px] object-contain drop-shadow-[0_0_120px_rgba(255,165,0,0.3)]" 
                     />
                 </div>
             )}
