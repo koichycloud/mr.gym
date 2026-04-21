@@ -341,7 +341,7 @@ export default function KioscoClient() {
             
             {/* Marca de agua gigante de fondo para iluminar la pantalla oscura */}
             {(state === 'IDLE' || state === 'SCREENSAVER') && (
-                <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-0 opacity-40 transition-opacity duration-1000 -translate-y-[12%]">
+                <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-0 opacity-40 transition-opacity duration-1000 -translate-y-[5%]">
                     <img 
                         src="/icons/icon-512x512.png" 
                         alt="Logo Mr Gym Fondo" 
