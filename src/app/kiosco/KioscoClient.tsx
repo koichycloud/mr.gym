@@ -299,17 +299,17 @@ export default function KioscoClient() {
                     Selecciona tu Acción
                 </h1>
                 
-                <div className="flex gap-12 w-full justify-center mb-16">
+                <div className="flex gap-[80px] w-full max-w-5xl justify-center mb-16">
                     <button 
                         onClick={(e) => { e.stopPropagation(); setSelectedMode('ENTRADA'); resetIdleTimer(); }}
-                        className={`flex-1 py-16 rounded-[4rem] border-8 transition-all duration-300 transform cursor-pointer pointer-events-auto ${selectedMode === 'ENTRADA' ? 'bg-black/95 backdrop-blur-xl border-green-500 scale-105 shadow-[0_0_80px_rgba(34,197,94,0.6)]' : 'bg-black/70 backdrop-blur-md border-green-900/80 scale-95 opacity-90 hover:opacity-100 hover:border-green-700'}`}
+                        className={`flex-1 py-16 rounded-[4rem] border-8 transition-all duration-300 transform cursor-pointer pointer-events-auto ${selectedMode === 'ENTRADA' ? 'bg-zinc-900/90 backdrop-blur-xl border-green-500 scale-105 shadow-[0_0_80px_rgba(34,197,94,0.6)]' : 'bg-zinc-900/60 backdrop-blur-md border-green-900/80 scale-95 opacity-90 hover:opacity-100 hover:border-green-700'}`}
                     >
                         <h2 className={`text-7xl font-black tracking-widest ${selectedMode === 'ENTRADA' ? 'text-green-400 drop-shadow-[0_0_15px_rgba(34,197,94,0.8)]' : 'text-green-700'}`}>ENTRADA</h2>
                     </button>
                     
                     <button 
                         onClick={(e) => { e.stopPropagation(); setSelectedMode('SALIDA'); resetIdleTimer(); }}
-                        className={`flex-1 py-16 rounded-[4rem] border-8 transition-all duration-300 transform cursor-pointer pointer-events-auto ${selectedMode === 'SALIDA' ? 'bg-black/95 backdrop-blur-xl border-blue-500 scale-105 shadow-[0_0_80px_rgba(59,130,246,0.6)]' : 'bg-black/70 backdrop-blur-md border-blue-900/80 scale-95 opacity-90 hover:opacity-100 hover:border-blue-700'}`}
+                        className={`flex-1 py-16 rounded-[4rem] border-8 transition-all duration-300 transform cursor-pointer pointer-events-auto ${selectedMode === 'SALIDA' ? 'bg-zinc-900/90 backdrop-blur-xl border-blue-500 scale-105 shadow-[0_0_80px_rgba(59,130,246,0.6)]' : 'bg-zinc-900/60 backdrop-blur-md border-blue-900/80 scale-95 opacity-90 hover:opacity-100 hover:border-blue-700'}`}
                     >
                         <h2 className={`text-7xl font-black tracking-widest ${selectedMode === 'SALIDA' ? 'text-blue-400 drop-shadow-[0_0_15px_rgba(59,130,246,0.8)]' : 'text-blue-700'}`}>SALIDA</h2>
                     </button>
