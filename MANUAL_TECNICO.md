@@ -71,10 +71,40 @@ La memoria de la Raspberry está **Congelada (OverlayFS)**. Esto significa que e
 
 ---
 
-## 5. Comandos Locales Diarios
+## 5. Guía de Instalación y Desarrollo Local
 
-Para quien reciba el proyecto y desee arrancar el entorno en su PC:
+Para cualquier desarrollador que reciba el código fuente y desee levantar el sistema en su propia máquina desde cero:
 
-*   **Levantar el Sistema de Prueba**: `npm run dev`
-*   **Ver/Editar Usuarios de Prueba (Base local)**: `npx prisma studio`
-*   **Empujar Base de Datos a la Nube**: Consultar documentación oficial de Prisma y Supabase.
+### Requisitos Previos
+*   Instalar **Node.js** (v18 o superior).
+*   Tener **Git** instalado.
+
+### Pasos de Instalación Inicial
+1. Clonar el repositorio: `git clone https://github.com/koichycloud/mr.gym.git`
+2. Entrar a la carpeta: `cd mr.gym`
+3. Instalar las dependencias de código: `npm install`
+4. Generar el cliente de la base de datos local: `npx prisma generate`
+5. Crear y sincronizar la base de datos local (SQLite): `npx prisma db push`
+6. Levantar el servidor de desarrollo: `npm run dev`
+
+### Comandos de Uso Diario
+*   `npm run dev` -> Levanta la web en `http://localhost:3000`
+*   `npx prisma studio` -> Abre un panel visual para ver/editar todos los datos de la base de datos local.
+
+---
+
+## 6. Onboarding para Inteligencia Artificial (Prompting para IA)
+
+Si un administrador futuro necesita pedirle a un Agente de Inteligencia Artificial (como ChatGPT, Claude o Antigravity) que modifique, repare o mejore este sistema, debe proporcionarle el siguiente contexto para evitar que la IA dañe la arquitectura.
+
+**Copia y pega este texto a la IA antes de pedirle cambios:**
+
+> "Eres un Arquitecto de Software Experto. Vas a trabajar en mi proyecto 'Mr. Gym'. 
+> **Contexto de Arquitectura Obligatorio:**
+> 1. Es un proyecto de Next.js 14+ usando App Router (`src/app`).
+> 2. NO usamos API Routes. Toda la lógica de servidor y conexión a base de datos se maneja exclusivamente a través de **Server Actions** ubicados en la carpeta `src/app/actions/`.
+> 3. Usamos Prisma como ORM. La base de datos local es SQLite y la de producción en Vercel es PostgreSQL (Supabase). No debes cambiar el `provider` en `schema.prisma` manualmente, el archivo `scripts/vercel-build.js` lo hace de forma automática durante el despliegue.
+> 4. Los estilos deben seguir estrictamente TailwindCSS.
+> 5. El Kiosco físico lee de la ruta `/kiosco`. Está excluida del login obligatorio dentro de `src/middleware.ts`.
+> 
+> Te adjunto los archivos `MANUAL_TECNICO.md` y `prisma/schema.prisma` para que comprendas el esquema. Con esta base, mi petición es la siguiente: [Inserta aquí tu petición...]"
