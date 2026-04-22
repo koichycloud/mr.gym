@@ -164,38 +164,28 @@ export default function KioscoClient() {
         </div>
     )
 
-    const renderScreensaver = () => (
-        <div className="fixed inset-0 bg-black flex flex-col items-center justify-center overflow-hidden z-[100] animate-in fade-in duration-1000">
-            <style dangerouslySetInnerHTML={{__html: `
-                @keyframes slowFloat {
-                    0%, 100% { transform: translateY(0) rotate(-10deg); }
-                    50% { transform: translateY(-40px) rotate(10deg); }
-                }
-                @keyframes logoFloat {
-                    0%, 100% { transform: translateY(0) scale(1); opacity: 0.25; }
-                    50% { transform: translateY(-30px) scale(1.03); opacity: 0.35; }
-                }
-            `}} />
-            {/* Logo flotante de fondo en el screensaver */}
-            <img
-                src="/mr_gym_logo.png"
-                alt=""
-                style={{ animation: 'logoFloat 10s ease-in-out infinite', opacity: 0.3 }}
-                className="absolute w-[75vmin] h-[75vmin] object-contain pointer-events-none"
-            />
-            <div style={{ animation: 'slowFloat 8s ease-in-out infinite' }} className="flex flex-col items-center relative z-10">
-                <Dumbbell size={380} strokeWidth={1} className="text-primary opacity-20 mb-16 drop-shadow-[0_0_80px_rgba(255,255,255,0.1)]" />
-                <h2 className="text-4xl text-white/30 font-light tracking-[0.4em] uppercase text-center mb-6">
-                    Mr. Gym
-                </h2>
-                <div className="animate-pulse bg-primary/20 text-primary px-8 py-3 rounded-full border border-primary/30">
-                    <p className="text-xl tracking-widest font-bold uppercase">Escanea para continuar</p>
-                </div>
-            </div>
-        </div>
-    )
-
     const renderContent = () => {
+        if (state === 'SCREENSAVER') {
+            return (
+                <div className="absolute inset-0 bg-black flex flex-col items-center justify-center overflow-hidden z-50 animate-in fade-in duration-1000">
+                    <style dangerouslySetInnerHTML={{__html: `
+                        @keyframes slowFloat {
+                            0%, 100% { transform: translateY(0) rotate(-10deg); }
+                            50% { transform: translateY(-40px) rotate(10deg); }
+                        }
+                    `}} />
+                    <div style={{ animation: 'slowFloat 8s ease-in-out infinite' }} className="flex flex-col items-center">
+                        <Dumbbell size={380} strokeWidth={1} className="text-primary opacity-30 mb-16 drop-shadow-[0_0_80px_rgba(255,255,255,0.1)]" />
+                        <h2 className="text-4xl text-white/30 font-light tracking-[0.4em] uppercase text-center mb-6">
+                            Mr. Gym
+                        </h2>
+                        <div className="animate-pulse bg-primary/20 text-primary px-8 py-3 rounded-full border border-primary/30">
+                            <p className="text-xl tracking-widest font-bold uppercase">Escanea para continuar</p>
+                        </div>
+                    </div>
+                </div>
+            )
+        }
 
         if (state === 'LOADING') {
             return (
@@ -349,20 +339,16 @@ export default function KioscoClient() {
     return (
         <div className={`min-h-screen w-full relative flex flex-col items-center justify-center overflow-hidden transition-colors duration-1000 select-none ${getBgColor()}`}>
             
-            {/* Marca de agua logo IDLE — mix-blend-mode screen elimina el fondo gris del PNG */}
-            {state === 'IDLE' && (
-                <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-0">
+            {/* Marca de agua gigante de fondo para iluminar la pantalla oscura */}
+            {(state === 'IDLE' || state === 'SCREENSAVER') && (
+                <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-0 opacity-40 transition-opacity duration-1000 -translate-y-[5%] translate-x-[18px]">
                     <img 
-                        src="/mr_gym_logo.png" 
-                        alt="" 
-                        style={{ opacity: 0.5 }}
-                        className="w-[90vmin] h-[90vmin] max-w-[900px] max-h-[900px] object-contain drop-shadow-[0_0_120px_rgba(255,255,255,0.15)]" 
+                        src="/icons/icon-512x512.png" 
+                        alt="Logo Mr Gym Fondo" 
+                        className="w-[90vw] h-[90vh] max-w-[1000px] max-h-[1000px] object-contain drop-shadow-[0_0_120px_rgba(255,165,0,0.3)]" 
                     />
                 </div>
             )}
-
-            {/* Screensaver a nivel raíz con fixed para cubrir pantalla completa */}
-            {state === 'SCREENSAVER' && renderScreensaver()}
 
             {/* Contenido principal en capa superior */}
             <div className="relative z-10 w-full flex flex-col items-center justify-center">
