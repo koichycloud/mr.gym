@@ -180,7 +180,7 @@ export default function KioscoClient() {
             <img
                 src="/mr_gym_logo.png"
                 alt=""
-                style={{ animation: 'logoFloat 10s ease-in-out infinite', opacity: 0.3 }}
+                style={{ animation: 'logoFloat 10s ease-in-out infinite', opacity: 0.6, mixBlendMode: 'multiply' }}
                 className="absolute w-[75vmin] h-[75vmin] object-contain pointer-events-none"
             />
             <div style={{ animation: 'slowFloat 8s ease-in-out infinite' }} className="flex flex-col items-center relative z-10">
@@ -355,8 +355,8 @@ export default function KioscoClient() {
                     <img 
                         src="/mr_gym_logo.png" 
                         alt="" 
-                        style={{ opacity: 0.5 }}
-                        className="w-[90vmin] h-[90vmin] max-w-[900px] max-h-[900px] object-contain drop-shadow-[0_0_120px_rgba(200,180,255,0.4)]" 
+                        style={{ opacity: 0.75, mixBlendMode: 'multiply' }}
+                        className="w-[90vmin] h-[90vmin] max-w-[900px] max-h-[900px] object-contain" 
                     />
                 </div>
             )}
