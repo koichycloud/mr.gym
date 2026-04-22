@@ -170,7 +170,7 @@ export default function KioscoClient() {
     }, [currentInput, handleScan, resetIdleTimer])
 
     const renderPhotoCircle = (colorClass: string) => (
-        <div className={`w-[26rem] h-[26rem] rounded-full flex items-center justify-center overflow-hidden border-8 shadow-[0_0_60px_currentColor] mb-10 bg-black/40 ${colorClass}`}>
+        <div className={`w-[26rem] h-[26rem] rounded-full flex items-center justify-center overflow-hidden border-8 shadow-2xl mb-10 bg-black/60 ${colorClass}`}>
             <img 
                 src={result?.socio?.fotoUrl || '/icons/icon-512x512.png'} 
                 alt="Foto" 
@@ -190,11 +190,11 @@ export default function KioscoClient() {
                         }
                     `}} />
                     <div style={{ animation: 'slowFloat 8s ease-in-out infinite' }} className="flex flex-col items-center">
-                        <Dumbbell size={380} strokeWidth={1} className="text-primary opacity-30 mb-16 drop-shadow-[0_0_80px_rgba(255,255,255,0.1)]" />
+                        <Dumbbell size={380} strokeWidth={1} className="text-primary opacity-30 mb-16" />
                         <h2 className="text-4xl text-white/30 font-light tracking-[0.4em] uppercase text-center mb-6">
                             Mr. Gym
                         </h2>
-                        <div className="animate-pulse bg-primary/20 text-primary px-8 py-3 rounded-full border border-primary/30">
+                        <div className="bg-primary/20 text-primary px-8 py-3 rounded-full border border-primary/30">
                             <p className="text-xl tracking-widest font-bold uppercase">Escanea para continuar</p>
                         </div>
                     </div>
@@ -222,7 +222,7 @@ export default function KioscoClient() {
                         {result.socio.nombres}<br />{result.socio.apellidos}
                     </h2>
                     {result.socio.diasVencimiento !== undefined && result.socio.diasVencimiento <= 5 && (
-                        <div className="mt-8 bg-black/30 backdrop-blur-md px-12 py-6 rounded-full border-2 border-orange-500/50 flex items-center gap-6">
+                        <div className="mt-8 bg-zinc-900/80 px-12 py-6 rounded-full border-2 border-orange-500/50 flex items-center gap-6">
                             <AlertTriangle size={64} className="text-orange-400" />
                             <p className="text-4xl text-orange-400 font-bold tracking-wide">
                                 Te quedan <span className="text-white text-5xl mx-2 font-black">{result.socio.diasVencimiento}</span> días
@@ -243,7 +243,7 @@ export default function KioscoClient() {
                     <h2 className="text-[4rem] leading-tight font-bold text-white mb-4">
                         {result.socio.nombres}
                     </h2>
-                    <div className="mt-8 bg-black/30 px-12 py-6 rounded-full border-2 border-blue-500/50 flex items-center gap-6">
+                    <div className="mt-8 bg-zinc-900/80 px-12 py-6 rounded-full border-2 border-blue-500/50 flex items-center gap-6">
                         <DoorOpen size={64} className="text-blue-400" />
                         <p className="text-4xl text-blue-300 font-bold tracking-wide uppercase">
                             HASTA PRONTO
@@ -297,11 +297,11 @@ export default function KioscoClient() {
         if (state === 'ERROR_NOT_FOUND') {
             return (
                 <div className="flex flex-col items-center justify-center text-orange-500 text-center animate-in fade-in slide-in-from-top-10 px-8">
-                    <XCircle size={220} className="mb-12 drop-shadow-[0_0_40px_rgba(249,115,22,0.4)]" />
-                    <h1 className="text-[6.5rem] leading-none font-black text-orange-500 drop-shadow-md mb-8">
+                    <XCircle size={180} className="mb-12 shadow-orange-500/20 shadow-2xl" />
+                    <h1 className="text-[6.5rem] leading-none font-black text-orange-500 drop-shadow-sm mb-8">
                         DENEGADO
                     </h1>
-                    <p className="text-5xl font-semibold text-orange-100 bg-black/40 px-10 py-6 rounded-3xl tracking-wide max-w-4xl leading-tight">
+                    <p className="text-5xl font-semibold text-orange-100 bg-zinc-900/80 px-10 py-6 rounded-3xl tracking-wide max-w-4xl leading-tight">
                         {result?.message || 'Código no reconocido o invalido.'}
                     </p>
                 </div>
@@ -317,24 +317,23 @@ export default function KioscoClient() {
                 <div className="flex gap-[80px] w-full max-w-5xl justify-center mb-16">
                     <button 
                         onClick={(e) => { e.stopPropagation(); setSelectedMode('ENTRADA'); resetIdleTimer(); }}
-                        className={`flex-1 py-16 rounded-[4rem] border-8 transition-all duration-300 transform cursor-pointer pointer-events-auto ${selectedMode === 'ENTRADA' ? 'bg-zinc-900/90 backdrop-blur-xl border-green-500 scale-105 shadow-[0_0_80px_rgba(34,197,94,0.6)]' : 'bg-zinc-900/60 backdrop-blur-md border-green-900/80 scale-95 opacity-90 hover:opacity-100 hover:border-green-700'}`}
+                        className={`flex-1 py-16 rounded-[4rem] border-8 transition-colors duration-200 cursor-pointer pointer-events-auto ${selectedMode === 'ENTRADA' ? 'bg-zinc-900 border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.4)]' : 'bg-zinc-900/60 border-green-900/40 opacity-80'}`}
                     >
-                        <h2 className={`text-7xl font-black tracking-widest ${selectedMode === 'ENTRADA' ? 'text-green-400 drop-shadow-[0_0_15px_rgba(34,197,94,0.8)]' : 'text-green-700'}`}>ENTRADA</h2>
+                        <h2 className={`text-7xl font-black tracking-widest ${selectedMode === 'ENTRADA' ? 'text-green-400' : 'text-green-900'}`}>ENTRADA</h2>
                     </button>
                     
                     <button 
                         onClick={(e) => { e.stopPropagation(); setSelectedMode('SALIDA'); resetIdleTimer(); }}
-                        className={`flex-1 py-16 rounded-[4rem] border-8 transition-all duration-300 transform cursor-pointer pointer-events-auto ${selectedMode === 'SALIDA' ? 'bg-zinc-900/90 backdrop-blur-xl border-blue-500 scale-105 shadow-[0_0_80px_rgba(59,130,246,0.6)]' : 'bg-zinc-900/60 backdrop-blur-md border-blue-900/80 scale-95 opacity-90 hover:opacity-100 hover:border-blue-700'}`}
+                        className={`flex-1 py-16 rounded-[4rem] border-8 transition-colors duration-200 cursor-pointer pointer-events-auto ${selectedMode === 'SALIDA' ? 'bg-zinc-900 border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.4)]' : 'bg-zinc-900/60 border-blue-900/40 opacity-80'}`}
                     >
-                        <h2 className={`text-7xl font-black tracking-widest ${selectedMode === 'SALIDA' ? 'text-blue-400 drop-shadow-[0_0_15px_rgba(59,130,246,0.8)]' : 'text-blue-700'}`}>SALIDA</h2>
+                        <h2 className={`text-7xl font-black tracking-widest ${selectedMode === 'SALIDA' ? 'text-blue-400' : 'text-blue-900'}`}>SALIDA</h2>
                     </button>
                 </div>
 
                 <div className="relative mb-12">
-                    <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-full"></div>
-                    <ScanLine size={120} className="text-white/60 relative drop-shadow-2xl" />
+                    <ScanLine size={120} className="text-white/40 relative" />
                 </div>
-                <p className="text-5xl font-bold text-white tracking-[0.2em] bg-black/50 px-16 py-8 rounded-full border border-white/10 uppercase drop-shadow-lg">
+                <p className="text-5xl font-bold text-white tracking-[0.2em] bg-zinc-900/80 px-16 py-8 rounded-full border border-white/10 uppercase">
                     Escanea tu Código
                 </p>
             </div>
@@ -360,7 +359,7 @@ export default function KioscoClient() {
                     <img 
                         src="/icons/icon-512x512.png" 
                         alt="Logo Mr Gym Fondo" 
-                        className="w-[90vw] h-[90vh] max-w-[1000px] max-h-[1000px] object-contain drop-shadow-[0_0_120px_rgba(255,165,0,0.3)]" 
+                        className="w-[90vw] h-[90vh] max-w-[1000px] max-h-[1000px] object-contain" 
                     />
                 </div>
             )}
@@ -386,7 +385,7 @@ export default function KioscoClient() {
                 {renderContent()}
                 
                 <div className="fixed bottom-4 right-4 text-white/5 text-[10px] z-50">
-                    Modo Kiosco Activo | V1.1
+                    Modo Kiosco Activo | V1.2
                 </div>
             </div>
         </div>
