@@ -343,7 +343,7 @@ export default function KioscoClient() {
             {(state === 'IDLE' || state === 'SCREENSAVER') && (
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-0 opacity-40 transition-opacity duration-1000 -translate-y-[5%] translate-x-[18px]">
                     <img 
-                        src="/icons/icon-512x512.png" 
+                        src="/mr_gym_logo.png" 
                         alt="Logo Mr Gym Fondo" 
                         className="w-[90vw] h-[90vh] max-w-[1000px] max-h-[1000px] object-contain drop-shadow-[0_0_120px_rgba(255,165,0,0.3)]" 
                     />
