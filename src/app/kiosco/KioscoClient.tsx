@@ -180,8 +180,8 @@ export default function KioscoClient() {
             <img
                 src="/mr_gym_logo.png"
                 alt=""
-                style={{ animation: 'logoFloat 10s ease-in-out infinite', opacity: 0.35 }}
-                className="absolute w-[75vmin] h-[75vmin] object-contain pointer-events-none drop-shadow-[0_0_60px_rgba(180,140,255,0.3)]"
+                style={{ animation: 'logoFloat 10s ease-in-out infinite', opacity: 0.3 }}
+                className="absolute w-[75vmin] h-[75vmin] object-contain pointer-events-none"
             />
             <div style={{ animation: 'slowFloat 8s ease-in-out infinite' }} className="flex flex-col items-center relative z-10">
                 <Dumbbell size={380} strokeWidth={1} className="text-primary opacity-20 mb-16 drop-shadow-[0_0_80px_rgba(255,255,255,0.1)]" />
@@ -356,7 +356,7 @@ export default function KioscoClient() {
                         src="/mr_gym_logo.png" 
                         alt="" 
                         style={{ opacity: 0.5 }}
-                        className="w-[90vmin] h-[90vmin] max-w-[900px] max-h-[900px] object-contain drop-shadow-[0_0_120px_rgba(180,140,255,0.3)]" 
+                        className="w-[90vmin] h-[90vmin] max-w-[900px] max-h-[900px] object-contain drop-shadow-[0_0_120px_rgba(255,255,255,0.15)]" 
                     />
                 </div>
             )}
