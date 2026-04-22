@@ -355,7 +355,7 @@ export default function KioscoClient() {
                 
                 {/* Countdown helper para el siguiente en la fila */}
                 {timeLeft > 0 && state !== 'IDLE' && state !== 'SCREENSAVER' && state !== 'LOADING' && (
-                    <div className="absolute top-10 right-10 bg-black/40 backdrop-blur-md px-8 py-4 rounded-3xl border border-white/10 flex items-center gap-4 text-white/50 z-50 animate-in fade-in slide-in-from-top-4">
+                    <div className="absolute top-4 right-10 bg-black/40 backdrop-blur-md px-8 py-4 rounded-3xl border border-white/10 flex items-center gap-4 text-white/50 z-50 animate-in fade-in slide-in-from-top-4">
                         <span className="text-2xl font-medium tracking-wide uppercase">Cerrando en</span>
                         <span className="text-5xl font-black font-mono w-10 text-center">{timeLeft}</span>
                     </div>
