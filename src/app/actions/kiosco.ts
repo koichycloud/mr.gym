@@ -53,6 +53,7 @@ async function sendTelegramAlert(socioName: string, daysLeft: number) {
 }
 
 export async function validateKioskAccess(codigo: string, mode: 'ENTRADA' | 'SALIDA' = 'ENTRADA'): Promise<AccessResult> {
+    console.log(`[KIOSCO] Intento de acceso - Código: "${codigo}", Modo: ${mode}`);
     try {
         const socio = await prisma.socio.findUnique({
             where: { codigo },

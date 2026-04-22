@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { validateKioskAccess, AccessResult } from '../actions/kiosco'
-import { CheckCircle, XCircle, AlertTriangle, ScanLine, Dumbbell, DoorOpen, Clock } from 'lucide-react'
+import { CheckCircle, XCircle, AlertTriangle, ScanLine, Dumbbell, DoorOpen, Clock, Keyboard } from 'lucide-react'
 
 type KioskState = 'IDLE' | 'LOADING' | 'SUCCESS' | 'SUCCESS_EXIT' | 'ERROR_NOT_FOUND' | 'ERROR_EXPIRED' | 'ERROR_PASSBACK' | 'SCREENSAVER'
 
@@ -16,8 +16,11 @@ export default function KioscoClient() {
     const [timeLeft, setTimeLeft] = useState<number>(0)
     const [selectedMode, setSelectedMode] = useState<'ENTRADA' | 'SALIDA'>('ENTRADA')
     
+    const [inputFeedback, setInputFeedback] = useState(false)
+    
     const resetTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const idleTimerRef = useRef<NodeJS.Timeout | null>(null)
+    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     
     const isProcessingRef = useRef(false)
     const lastScanDataRef = useRef<{ code: string; time: number } | null>(null)
@@ -134,9 +137,20 @@ export default function KioscoClient() {
 
             if (e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt') return
 
-            if (e.key === 'Enter') {
+            // Feedback visual de que se recibió una tecla
+            setInputFeedback(true)
+            setTimeout(() => setInputFeedback(false), 100)
+
+            // Si pasa mucho tiempo sin completar el escaneo, limpiamos para evitar basura
+            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+            typingTimeoutRef.current = setTimeout(() => {
+                setCurrentInput('')
+            }, 1500)
+
+            if (e.key === 'Enter' || e.key === 'Return') {
                 e.preventDefault() 
                 if (currentInput.length > 0) {
+                    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
                     handleScan(currentInput)
                     setCurrentInput('') 
                 }
@@ -150,6 +164,7 @@ export default function KioscoClient() {
         window.addEventListener('keydown', handleKeyDown)
 
         return () => {
+            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
             window.removeEventListener('keydown', handleKeyDown)
         }
     }, [currentInput, handleScan, resetIdleTimer])
@@ -361,10 +376,17 @@ export default function KioscoClient() {
                     </div>
                 )}
 
+                {/* Indicador visual de entrada (Debug/Feedback) */}
+                {inputFeedback && (
+                    <div className="fixed top-4 left-4 bg-primary text-white p-3 rounded-full shadow-lg z-[60] animate-bounce">
+                        <Keyboard size={24} />
+                    </div>
+                )}
+
                 {renderContent()}
                 
                 <div className="fixed bottom-4 right-4 text-white/5 text-[10px] z-50">
-                    Modo Kiosco Activo
+                    Modo Kiosco Activo | V1.1
                 </div>
             </div>
         </div>
