@@ -27,7 +27,8 @@ export const authOptions: NextAuthOptions = {
                             id: true,
                             username: true,
                             password: true,
-                            role: true
+                            role: true,
+                            permissions: true
                         }
                     })
 
@@ -62,7 +63,8 @@ export const authOptions: NextAuthOptions = {
                     return {
                         id: user.id,
                         name: user.username,
-                        role: user.role
+                        role: user.role,
+                        permissions: user.permissions
                     }
                 } catch (error) {
                     console.error("[AUTH_DEBUG] CRITICAL ERROR in authorize function:", error)
@@ -76,6 +78,7 @@ export const authOptions: NextAuthOptions = {
             if (user) {
                 token.role = user.role
                 token.id = user.id
+                token.permissions = user.permissions
             }
             return token
         },
@@ -83,6 +86,7 @@ export const authOptions: NextAuthOptions = {
             if (session.user) {
                 session.user.role = token.role
                 session.user.id = token.id
+                session.user.permissions = token.permissions
             }
             return session
         }

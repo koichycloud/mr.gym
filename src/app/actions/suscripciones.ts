@@ -7,10 +7,10 @@ import { requireAuth } from '@/lib/auth-utils'
 import { suscripcionSchema } from '@/lib/validations'
 import { z } from 'zod'
 import { logAction } from '@/lib/audit'
+import { getLimaStartOfDay } from '@/lib/date-utils'
 
 export async function getExpiringSubscriptions() {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0) // Start of today
+    const today = getLimaStartOfDay()
     const limitDate = addDays(today, 10)
 
     const subscriptions = await prisma.suscripcion.findMany({
@@ -33,8 +33,7 @@ export async function getExpiringSubscriptions() {
 }
 
 export async function getExpiredSubscriptions() {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0) // Start of today
+    const today = getLimaStartOfDay()
 
     const subscriptions = await prisma.suscripcion.findMany({
         where: {
@@ -134,7 +133,11 @@ export async function createSubscription(
         revalidatePath('/caja')
         revalidatePath(`/socios/${validData.socioId}`)
 
-        await logAction('NUEVA_SUSCRIPCION', `Registró ${validData.meses} mes(es) al socio ${currentSocio?.codigo} - ${currentSocio?.nombres} ${currentSocio?.apellidos}`)
+        const fmtDate = (d: Date) => d.toLocaleDateString('es-PE')
+        const planDesc = pagoInfo?.nombrePlan ? ` | Plan: ${pagoInfo.nombrePlan}` : ''
+        const montoDesc = pagoInfo?.monto ? ` | Monto: S/ ${pagoInfo.monto.toFixed(2)} (${pagoInfo.metodoPago})` : ''
+        const newCodeDesc = validData.nuevoCodigo && validData.nuevoCodigo !== currentSocio?.codigo ? ` | Código anterior: ${currentSocio?.codigo} → ${validData.nuevoCodigo}` : ''
+        await logAction('NUEVA_SUSCRIPCION', `Socio ${currentSocio?.codigo} - ${currentSocio?.nombres} ${currentSocio?.apellidos}: ${validData.meses} mes(es) desde ${fmtDate(validData.fechaInicio)} hasta ${fmtDate(validData.fechaFin)}${planDesc}${montoDesc}${newCodeDesc}`)
 
         return { success: true, subscription }
     } catch (error) {
@@ -177,7 +180,14 @@ export async function updateSubscription(id: string, newDate: Date, meses: numbe
         revalidatePath('/socios')
         revalidatePath(`/socios/${subscription.socioId}`)
 
-        await logAction('EDITAR_SUSCRIPCION', `Modificó las fechas de una suscripción del socio ID: ${subscription.socioId.slice(0, 8)}`)
+        const socioOwner = await prisma.socio.findUnique({ where: { id: subscription.socioId }, select: { codigo: true, nombres: true, apellidos: true } })
+        const fmtD = (d: Date) => d.toLocaleDateString('es-PE')
+        const oldFechaIn = fmtD(subscription.fechaInicio)
+        const oldFechaFin = fmtD(subscription.fechaFin)
+        const newFechaIn = fmtD(fechaInicio)
+        const newFechaFin = fmtD(fechaFin)
+        const mesesDesc = subscription.meses !== meses ? ` | Meses: ${subscription.meses} → ${meses}` : ''
+        await logAction('EDITAR_SUSCRIPCION', `Socio ${socioOwner?.codigo} - ${socioOwner?.nombres} ${socioOwner?.apellidos}: Inicio ${oldFechaIn} → ${newFechaIn} | Fin ${oldFechaFin} → ${newFechaFin}${mesesDesc}`)
 
         return { success: true }
     } catch (error) {
@@ -187,8 +197,7 @@ export async function updateSubscription(id: string, newDate: Date, meses: numbe
 }
 
 export async function getExpiredSubscriptionsDetailed() {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const today = getLimaStartOfDay()
 
     const subscriptions = await prisma.suscripcion.findMany({
         where: {
@@ -213,6 +222,34 @@ export async function getExpiredSubscriptionsDetailed() {
         },
         orderBy: {
             fechaFin: 'desc'
+        }
+    })
+
+    return subscriptions
+}
+export async function getExpiringSubscriptionsDetailed() {
+    const today = getLimaStartOfDay()
+    const limitDate = addDays(today, 10)
+
+    const subscriptions = await prisma.suscripcion.findMany({
+        where: {
+            estado: 'ACTIVA',
+            fechaFin: {
+                lte: limitDate,
+                gte: today
+            }
+        },
+        include: {
+            socio: {
+                include: {
+                    historialCodigos: {
+                        orderBy: { fechaCambio: 'desc' }
+                    }
+                }
+            }
+        },
+        orderBy: {
+            fechaFin: 'asc'
         }
     })
 

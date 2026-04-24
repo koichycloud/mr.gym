@@ -82,8 +82,43 @@ export async function createSocio(data: z.infer<typeof socioSchema>) {
                 telefono: socioData.telefono,
                 fotoUrl: socioData.fotoUrl,
                 suscripciones: suscripcionesCreate
+            },
+            include: {
+                suscripciones: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 1
+                }
             }
         })
+
+        // If subscription was created, register payment
+        if (socio.suscripciones.length > 0 && (suscripcion?.planId || (suscripcion?.monto ?? 0) > 0)) {
+            let monto = (suscripcion?.monto ?? 0)
+            let nombrePlan = 'Personalizado'
+
+            if (suscripcion?.planId) {
+                const plan = await prisma.plan.findUnique({
+                    where: { id: suscripcion.planId }
+                })
+                if (plan) {
+                    monto = plan.precio
+                    nombrePlan = plan.nombre
+                }
+            }
+
+            if (monto > 0) {
+                await prisma.pago.create({
+                    data: {
+                        socioId: socio.id,
+                        suscripcionId: socio.suscripciones[0].id,
+                        monto: monto,
+                        metodoPago: suscripcion?.metodoPago || 'EFECTIVO',
+                        concepto: 'SUSCRIPCION',
+                        descripcion: `Suscripción inicial: ${nombrePlan}`
+                    }
+                })
+            }
+        }
 
         await logAction('CREAR_SOCIO', `Creó al socio ${formattedCode} - ${socioData.nombres} ${socioData.apellidos}`)
 
@@ -217,7 +252,40 @@ export async function updateSocio(id: string, data: z.infer<typeof socioSchema>)
         revalidatePath(`/socios/${id}`)
         revalidatePath('/')
 
-        await logAction('EDITAR_SOCIO', `Editó los datos del socio ${formattedCode} - ${socioData.nombres} ${socioData.apellidos}`)
+        // Build a detailed field-level diff for the audit log
+        const labelMap: Record<string, string> = {
+            nombres: 'Nombres',
+            apellidos: 'Apellidos',
+            codigo: 'Código',
+            tipoDocumento: 'Tipo Doc.',
+            numeroDocumento: 'Nro. Doc.',
+            telefono: 'Teléfono',
+            sexo: 'Sexo',
+        }
+        const formatDate = (d: Date | string | null | undefined) =>
+            d ? new Date(d).toLocaleDateString('es-PE') : '—'
+
+        const changes: string[] = []
+
+        for (const key of Object.keys(labelMap)) {
+            const oldVal = (oldSocio as Record<string, unknown>)[key]
+            const newVal = key === 'codigo' ? formattedCode : (socioData as Record<string, unknown>)[key] ?? null
+            const oldStr = oldVal != null ? String(oldVal) : '—'
+            const newStr = newVal != null ? String(newVal) : '—'
+            if (oldStr !== newStr) {
+                changes.push(`${labelMap[key]}: "${oldStr}" → "${newStr}"`)
+            }
+        }
+
+        // Check fechaNacimiento separately
+        const oldFecha = formatDate(oldSocio.fechaNacimiento)
+        const newFecha = formatDate(socioData.fechaNacimiento)
+        if (oldFecha !== newFecha) {
+            changes.push(`Fecha Nac.: "${oldFecha}" → "${newFecha}"`)
+        }
+
+        const diffStr = changes.length > 0 ? changes.join(' | ') : 'Sin cambios detectados'
+        await logAction('EDITAR_SOCIO', `Socio ${formattedCode} - ${socioData.nombres} ${socioData.apellidos}: ${diffStr}`)
 
         return { success: true, socio }
     } catch (error) {

@@ -21,8 +21,11 @@ export default function NewSubscriptionModal({ socioId, socioNombre, socioCodigo
 
     const [planes, setPlanes] = useState<any[]>([])
     const [selectedPlanId, setSelectedPlanId] = useState<string>('')
-    const [registrarPago, setRegistrarPago] = useState(true)
+    const registrarPago = true
     const [metodoPago, setMetodoPago] = useState('EFECTIVO')
+
+    const [customMeses, setCustomMeses] = useState(1)
+    const [customMonto, setCustomMonto] = useState(0)
 
     const [formData, setFormData] = useState<{
         fechaInicio: string
@@ -49,12 +52,12 @@ export default function NewSubscriptionModal({ socioId, socioNombre, socioCodigo
         const start = new Date(formData.fechaInicio)
         if (isNaN(start.getTime())) return
 
-        const meses = selectedPlan ? selectedPlan.meses : 1
+        const meses = selectedPlan ? selectedPlan.meses : customMeses
         const end = addMonths(start, meses)
         if (isNaN(end.getTime())) return
 
         setFechaFin(format(end, 'yyyy-MM-dd'))
-    }, [formData.fechaInicio, selectedPlan])
+    }, [formData.fechaInicio, selectedPlan, customMeses])
 
     const formatCode = (val: string) => {
         return val.length > 6 ? val.slice(0, 6) : val
@@ -71,7 +74,7 @@ export default function NewSubscriptionModal({ socioId, socioNombre, socioCodigo
                 formattedCode = formattedCode.padStart(6, '0')
             }
 
-            const meses = selectedPlan ? selectedPlan.meses : 1
+            const meses = selectedPlan ? selectedPlan.meses : customMeses
 
             const subData = {
                 socioId,
@@ -83,11 +86,11 @@ export default function NewSubscriptionModal({ socioId, socioNombre, socioCodigo
             }
 
             let pagoInfo = undefined
-            if (registrarPago && selectedPlan) {
+            if (registrarPago) {
                 pagoInfo = {
-                    monto: selectedPlan.precio,
+                    monto: selectedPlan ? selectedPlan.precio : customMonto,
                     metodoPago: metodoPago,
-                    nombrePlan: selectedPlan.nombre
+                    nombrePlan: selectedPlan ? selectedPlan.nombre : 'Personalizado'
                 }
             }
 
@@ -126,7 +129,7 @@ export default function NewSubscriptionModal({ socioId, socioNombre, socioCodigo
                             <div className="text-sm opacity-60 p-2 bg-base-200 rounded">Cargando planes...</div>
                         ) : (
                             <select 
-                                className="select select-bordered w-full"
+                                className="select select-bordered select-primary w-full transition-transform active:scale-[0.98]"
                                 value={selectedPlanId}
                                 onChange={e => setSelectedPlanId(e.target.value)}
                                 required
@@ -136,6 +139,7 @@ export default function NewSubscriptionModal({ socioId, socioNombre, socioCodigo
                                         {p.nombre} ({p.meses} {p.meses === 1 ? 'mes' : 'meses'}) - S/ {p.precio.toFixed(2)}
                                     </option>
                                 ))}
+                                <option value="custom">Personalizado (Manual)</option>
                             </select>
                         )}
                         {selectedPlan?.descripcion && (
@@ -162,6 +166,36 @@ export default function NewSubscriptionModal({ socioId, socioNombre, socioCodigo
                             className="input input-bordered w-full"
                         />
                     </div>
+
+                    {selectedPlanId === 'custom' && (
+                        <div className="grid grid-cols-2 gap-4 p-4 bg-base-200 rounded-lg border border-base-300">
+                             <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text font-bold">Meses</span>
+                                </label>
+                                <input
+                                    type="number"
+                                    value={customMeses}
+                                    onChange={(e) => setCustomMeses(Math.max(1, parseInt(e.target.value) || 1))}
+                                    className="input input-bordered w-full"
+                                    min="1"
+                                />
+                            </div>
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text font-bold text-success">Monto S/</span>
+                                </label>
+                                <input
+                                    type="number"
+                                    value={customMonto}
+                                    onChange={(e) => setCustomMonto(Math.max(0, parseFloat(e.target.value) || 0))}
+                                    className="input input-bordered w-full font-bold text-success"
+                                    step="0.01"
+                                    min="0"
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="form-control">
@@ -194,34 +228,28 @@ export default function NewSubscriptionModal({ socioId, socioNombre, socioCodigo
                     <div className="divider my-0"></div>
 
                     <div className="form-control">
-                        <label className="cursor-pointer label justify-start gap-4">
-                            <input 
-                                type="checkbox" 
-                                className="toggle toggle-success" 
-                                checked={registrarPago}
-                                onChange={e => setRegistrarPago(e.target.checked)}
-                            />
-                            <span className="label-text font-bold flex items-center gap-2">
-                                <Wallet size={16}/> Ingresar Pago en Caja (S/ {selectedPlan?.precio.toFixed(2) || '0.00'})
-                            </span>
-                        </label>
+                        <div className="bg-success/10 p-3 rounded-lg flex items-center gap-3 border border-success/20">
+                            <Wallet className="text-success" size={20}/>
+                            <div>
+                                <span className="label-text font-bold block text-success">Ingreso a Caja</span>
+                                <span className="text-xs opacity-70 text-success">Monto: S/ {(selectedPlan ? selectedPlan.precio : customMonto).toFixed(2)}</span>
+                            </div>
+                        </div>
                     </div>
 
-                    {registrarPago && (
-                        <div className="form-control pl-12">
-                            <label className="label"><span className="label-text font-bold opacity-80">Método de Pago</span></label>
-                            <select 
-                                className="select select-bordered select-sm w-full"
-                                value={metodoPago}
-                                onChange={e => setMetodoPago(e.target.value)}
-                            >
-                                <option value="EFECTIVO">Efectivo</option>
-                                <option value="TRANSFERENCIA">Transferencia / Tarjeta</option>
-                                <option value="YAPE">Yape</option>
-                                <option value="PLIN">Plin</option>
-                            </select>
-                        </div>
-                    )}
+                    <div className="form-control">
+                        <label className="label"><span className="label-text font-bold opacity-80">Método de Pago</span></label>
+                        <select 
+                            className="select select-bordered select-primary w-full transition-transform active:scale-[0.98]"
+                            value={metodoPago}
+                            onChange={e => setMetodoPago(e.target.value)}
+                        >
+                            <option value="EFECTIVO">Efectivo</option>
+                            <option value="TRANSFERENCIA">Transferencia / Tarjeta</option>
+                            <option value="YAPE">Yape</option>
+                            <option value="PLIN">Plin</option>
+                        </select>
+                    </div>
 
                     <div className="modal-action">
                         <button type="button" className="btn btn-ghost" onClick={onClose} disabled={loading}>

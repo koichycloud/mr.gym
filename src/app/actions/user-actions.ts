@@ -3,9 +3,10 @@
 import prisma from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 import { revalidatePath } from "next/cache"
-import { requireAuth } from "@/lib/auth-utils"
+import { requireAuth, requireAdmin } from "@/lib/auth-utils"
 import { userSchema } from "@/lib/validations"
 import { z } from "zod"
+import { logAction } from "@/lib/audit"
 
 export async function getUsers() {
     try {
@@ -15,6 +16,7 @@ export async function getUsers() {
                 id: true,
                 username: true,
                 role: true,
+                permissions: true,
                 createdAt: true,
             },
             orderBy: {
@@ -48,16 +50,23 @@ export async function createUser(data: z.infer<typeof userSchema>) {
             return { success: false, error: "El nombre de usuario ya existe." }
         }
 
+        if (!password) {
+            return { success: false, error: "La contraseña es requerida para nuevos usuarios." }
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10)
 
         const newUser = await prisma.user.create({
             data: {
                 username,
                 password: hashedPassword,
-                role: role || 'RECEPCION'
+                role: role || 'RECEPCION',
+                permissions: data.permissions || []
             }
         })
 
+        await logAction('CREAR_USUARIO', `Creó al usuario ${username} con rol ${role || 'RECEPCION'}`)
+        
         revalidatePath('/users')
         return { success: true, data: { id: newUser.id, username: newUser.username } }
 
@@ -91,15 +100,50 @@ export async function updateUserPassword(userId: string, newPassword: string) {
     }
 }
 
+export async function updateUser(userId: string, data: z.infer<typeof userSchema>) {
+    try {
+        await requireAdmin() // 🔒 Admin Only
+
+        const validation = userSchema.safeParse(data)
+        if (!validation.success) {
+            return { success: false, error: validation.error.issues[0].message }
+        }
+
+        const updateData: any = {
+            username: validation.data.username,
+            role: validation.data.role,
+            permissions: validation.data.permissions || []
+        }
+
+        if (validation.data.password && validation.data.password.length >= 6) {
+            updateData.password = await bcrypt.hash(validation.data.password, 10)
+        }
+
+        await prisma.user.update({
+            where: { id: userId },
+            data: updateData
+        })
+
+        await logAction('EDITAR_USUARIO', `Editó al usuario ${validation.data.username}. Permisos: ${(validation.data.permissions || []).join(', ')}`)
+
+        revalidatePath('/users')
+        return { success: true, message: "Usuario actualizado correctamente." }
+
+    } catch (error: any) {
+        console.error("Error al actualizar usuario:", error)
+        return { success: false, error: "No se pudo actualizar el usuario." }
+    }
+}
+
 export async function deleteUser(userId: string) {
     try {
-        await requireAuth() // 🔒 Protected
-        // Prevenir borrado del admin principal si es necesario, o comprobar usuario actual
-        // Por simplicidad, permitimos borrar cualquiera por ahora salvo validaciones extra
-
+        await requireAdmin() // 🔒 Admin Only
+        
         await prisma.user.delete({
             where: { id: userId }
         })
+
+        await logAction('ELIMINAR_USUARIO', `Eliminó al usuario con ID ${userId}`)
 
         revalidatePath('/users')
         return { success: true, message: "Usuario eliminado correctamente." }

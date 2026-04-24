@@ -5,6 +5,7 @@ import { requireAuth, requireAdmin } from '@/lib/auth-utils'
 import { pagoSchema } from '@/lib/validations'
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
+import { getLimaStartOfDay, getLimaEndOfDay, getLimaStartOfMonth, getLimaEndOfMonth } from '@/lib/date-utils'
 
 export async function registrarPago(data: z.infer<typeof pagoSchema>) {
     try {
@@ -42,17 +43,14 @@ export async function getPagosDelDia() {
     try {
         await requireAuth()
 
-        const hoy = new Date()
-        hoy.setHours(0, 0, 0, 0)
-
-        const manana = new Date(hoy)
-        manana.setDate(manana.getDate() + 1)
+        const hoy = getLimaStartOfDay()
+        const manana = getLimaEndOfDay()
 
         const pagos = await prisma.pago.findMany({
             where: {
                 fecha: {
                     gte: hoy,
-                    lt: manana
+                    lte: manana
                 }
             },
             include: {
@@ -88,11 +86,8 @@ export async function getPagosPorRango(desde: Date, hasta: Date) {
     try {
         await requireAuth()
 
-        const inicio = new Date(desde)
-        inicio.setHours(0, 0, 0, 0)
-
-        const fin = new Date(hasta)
-        fin.setHours(23, 59, 59, 999)
+        const inicio = getLimaStartOfDay(desde)
+        const fin = getLimaEndOfDay(hasta)
 
         const pagos = await prisma.pago.findMany({
             where: {
@@ -133,9 +128,8 @@ export async function getResumenMensual() {
     try {
         await requireAuth()
 
-        const hoy = new Date()
-        const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
-        const finMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0, 23, 59, 59, 999)
+        const inicioMes = getLimaStartOfMonth()
+        const finMes = getLimaEndOfMonth()
 
         const pagos = await prisma.pago.findMany({
             where: {
@@ -172,17 +166,14 @@ export async function getResumenMensual() {
 
 export async function getTotalIngresosHoy() {
     try {
-        const hoy = new Date()
-        hoy.setHours(0, 0, 0, 0)
-
-        const manana = new Date(hoy)
-        manana.setDate(manana.getDate() + 1)
+        const hoy = getLimaStartOfDay()
+        const manana = getLimaEndOfDay()
 
         const pagos = await prisma.pago.findMany({
             where: {
                 fecha: {
                     gte: hoy,
-                    lt: manana
+                    lte: manana
                 }
             },
             select: {

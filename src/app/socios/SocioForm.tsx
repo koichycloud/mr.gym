@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation'
 import { Save, X, Calendar } from 'lucide-react'
 import { format, addMonths } from 'date-fns'
 import { checkSocioExists } from '@/app/actions/socios'
+import { getPlanesActivos } from '@/app/actions/planes'
 import PhotoCapture from '@/app/components/PhotoCapture'
+import { Wallet } from 'lucide-react'
 
 interface SocioFormProps {
     initialData?: {
@@ -55,25 +57,47 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
     // Subscription State
     const [subscriptionData, setSubscriptionData] = useState<{
         meses: string | number
+        monto: string | number
         fechaInicio: string
+        metodoPago: string
     }>({
         meses: 1,
-        fechaInicio: new Date().toISOString().split('T')[0]
+        monto: 0,
+        fechaInicio: new Date().toISOString().split('T')[0],
+        metodoPago: 'EFECTIVO'
     })
     const [fechaFin, setFechaFin] = useState('')
+    const [planes, setPlanes] = useState<any[]>([])
+    const [selectedPlanId, setSelectedPlanId] = useState<string>('custom')
+
+    // Load available plans
+    useEffect(() => {
+        getPlanesActivos().then(data => {
+            setPlanes(data)
+        })
+    }, [])
+
+    const selectedPlan = planes.find(p => p.id === selectedPlanId)
 
     // Calculate End Date whenever start date or months change
     useEffect(() => {
-        if (includeSubscription && subscriptionData.fechaInicio && subscriptionData.meses) {
+        if (includeSubscription && subscriptionData.fechaInicio) {
             const start = new Date(subscriptionData.fechaInicio)
             if (isNaN(start.getTime())) return
 
-            const end = addMonths(start, Number(subscriptionData.meses))
+            let meses = 1
+            if (selectedPlanId === 'custom') {
+                meses = Number(subscriptionData.meses) || 1
+            } else if (selectedPlan) {
+                meses = selectedPlan.meses
+            }
+
+            const end = addMonths(start, meses)
             if (isNaN(end.getTime())) return
 
             setFechaFin(format(end, 'dd/MM/yyyy'))
         }
-    }, [subscriptionData.fechaInicio, subscriptionData.meses, includeSubscription])
+    }, [subscriptionData.fechaInicio, subscriptionData.meses, selectedPlanId, selectedPlan, includeSubscription])
 
     // Automatic Verification Effect
     useEffect(() => {
@@ -155,8 +179,13 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
         setFormData(prev => ({ ...prev, [name]: value }))
     }
 
-    const handleSubscriptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleSubscriptionChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target
+
+        if (name === 'planId') {
+            setSelectedPlanId(value)
+            return
+        }
 
         if (name === 'meses') {
             if (value === '0') return // Block 0 input
@@ -164,7 +193,15 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
             if (Number(value) < 0) return
         }
 
+        if (name === 'monto') {
+            if (Number(value) < 0) return
+        }
+
         setSubscriptionData(prev => ({ ...prev, [name]: value }))
+    }
+
+    const handleMetodoChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setSubscriptionData(prev => ({ ...prev, metodoPago: e.target.value }))
     }
 
     const handleCodeBlur = () => {
@@ -196,8 +233,11 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
                 fechaNacimiento: new Date(formData.fechaNacimiento),
                 ...(includeSubscription ? {
                     suscripcion: {
-                        meses: Number(subscriptionData.meses),
-                        fechaInicio: new Date(subscriptionData.fechaInicio)
+                        meses: selectedPlanId === 'custom' ? Number(subscriptionData.meses) : selectedPlan!.meses,
+                        planId: selectedPlanId === 'custom' ? undefined : selectedPlanId,
+                        monto: selectedPlanId === 'custom' ? Number(subscriptionData.monto) : undefined,
+                        fechaInicio: new Date(subscriptionData.fechaInicio),
+                        metodoPago: subscriptionData.metodoPago
                     }
                 } : {})
             }
@@ -276,7 +316,7 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
                                     name="tipoDocumento"
                                     value={formData.tipoDocumento}
                                     onChange={handleChange}
-                                    className="select select-bordered w-full"
+                                    className="select select-bordered select-primary w-full transition-transform active:scale-[0.98]"
                                     disabled={dniVerified && !initialData?.id}
                                 >
                                     <option value="DNI">DNI</option>
@@ -381,6 +421,9 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
                                             max="9999-12-31"
                                             required={dniVerified}
                                         />
+                                        <div className="absolute right-10 top-3 text-xs opacity-40 pointer-events-none">
+                                            dd/mm/aaaa
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="form-control">
@@ -391,7 +434,7 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
                                         name="sexo"
                                         value={formData.sexo || 'M'}
                                         onChange={handleChange}
-                                        className="select select-bordered w-full"
+                                        className="select select-bordered select-primary w-full transition-transform active:scale-[0.98]"
                                     >
                                         <option value="M">Masculino</option>
                                         <option value="F">Femenino</option>
@@ -418,36 +461,66 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
                                         <Calendar className="w-5 h-5" />
                                         Suscripción Inicial
                                     </h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="form-control">
                                             <label className="label">
-                                                <span className="label-text font-bold">Meses</span>
+                                                <span className="label-text font-bold">Plan / Promoción</span>
                                             </label>
-                                            <input
-                                                type="number"
-                                                name="meses"
-                                                value={subscriptionData.meses}
+                                            <select
+                                                name="planId"
+                                                value={selectedPlanId}
                                                 onChange={handleSubscriptionChange}
-                                                min="1"
-                                                max="24"
-                                                className="input input-bordered w-full"
-                                                required={includeSubscription && dniVerified}
-                                            />
+                                                className="select select-bordered select-primary w-full transition-transform active:scale-[0.98]"
+                                            >
+                                                <option value="custom">Personalizado (Ingreso manual)</option>
+                                                {planes.map(p => (
+                                                    <option key={p.id} value={p.id}>
+                                                        {p.nombre} ({p.meses} {p.meses === 1 ? 'mes' : 'meses'})
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
+
                                         <div className="form-control">
                                             <label className="label">
-                                                <span className="label-text font-bold">Fecha Inicio</span>
+                                                <span className="label-text font-bold">Fecha de Inicio</span>
                                             </label>
-                                            <input
-                                                type="date"
-                                                name="fechaInicio"
-                                                value={subscriptionData.fechaInicio}
-                                                onChange={handleSubscriptionChange}
-                                                className="input input-bordered w-full"
-                                                max="9999-12-31"
-                                                required={includeSubscription && dniVerified}
-                                            />
+                                            <div className="relative">
+                                                <input
+                                                    type="date"
+                                                    name="fechaInicio"
+                                                    value={subscriptionData.fechaInicio}
+                                                    onChange={handleSubscriptionChange}
+                                                    className="input input-bordered w-full"
+                                                    max="9999-12-31"
+                                                    required={includeSubscription && dniVerified}
+                                                />
+                                                <div className="absolute right-10 top-3 text-xs opacity-40 pointer-events-none">
+                                                    dd/mm/aaaa
+                                                </div>
+                                            </div>
                                         </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                                        {selectedPlanId === 'custom' && (
+                                            <div className="form-control">
+                                                <label className="label">
+                                                    <span className="label-text font-bold">Meses</span>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    name="meses"
+                                                    value={subscriptionData.meses}
+                                                    onChange={handleSubscriptionChange}
+                                                    min="1"
+                                                    max="24"
+                                                    className="input input-bordered w-full font-bold text-lg"
+                                                    required={selectedPlanId === 'custom' && includeSubscription && dniVerified}
+                                                />
+                                            </div>
+                                        )}
+                                        
                                         <div className="form-control">
                                             <label className="label">
                                                 <span className="label-text font-bold text-gray-500">Vence el</span>
@@ -456,10 +529,74 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
                                                 type="text"
                                                 value={fechaFin}
                                                 readOnly
-                                                className="input input-bordered w-full bg-base-300 text-gray-500"
+                                                className="input input-bordered w-full bg-base-300 text-gray-500 font-mono"
                                             />
                                         </div>
+
+                                        <div className="form-control col-span-1 md:col-span-1">
+                                             <label className="label">
+                                                <span className="label-text font-bold text-success">Precio a Cobrar</span>
+                                            </label>
+                                            {selectedPlanId === 'custom' ? (
+                                                <div className="relative">
+                                                    <Wallet size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-success" />
+                                                    <input
+                                                        type="number"
+                                                        name="monto"
+                                                        value={subscriptionData.monto}
+                                                        onChange={handleSubscriptionChange}
+                                                        className="input input-bordered w-full pl-10 font-bold text-success"
+                                                        placeholder="0.00"
+                                                        step="0.01"
+                                                        min="0"
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div className="input input-bordered bg-success/10 flex items-center gap-2 font-bold text-success">
+                                                    <Wallet size={16} />
+                                                    S/ {selectedPlan?.precio.toFixed(2)}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 p-4 bg-success/10 rounded-lg border border-success/20">
+                                        <div className="form-control">
+                                            <label className="label">
+                                                <span className="label-text font-bold text-success flex items-center gap-2">
+                                                    <Wallet size={16} /> Método de Pago
+                                                </span>
+                                            </label>
+                                            <select
+                                                name="metodoPago"
+                                                value={subscriptionData.metodoPago}
+                                                onChange={handleMetodoChange}
+                                                className="select select-bordered select-primary w-full select-sm font-bold transition-transform active:scale-[0.98]"
+                                            >
+                                                <option value="EFECTIVO">Efectivo</option>
+                                                <option value="TRANSFERENCIA">Transferencia / Tarjeta</option>
+                                                <option value="YAPE">Yape</option>
+                                                <option value="PLIN">Plin</option>
+                                            </select>
+                                        </div>
+                                        <div className="form-control">
+                                            <label className="label">
+                                                <span className="label-text font-bold text-success">Monto a Registrar en Caja</span>
+                                            </label>
+                                            <div className="text-2xl font-black text-success">
+                                                S/ {selectedPlanId === 'custom' ? Number(subscriptionData.monto).toFixed(2) : selectedPlan?.precio.toFixed(2)}
+                                            </div>
+                                            {selectedPlanId === 'custom' && (
+                                                <span className="text-[10px] opacity-60 italic text-success">Nota: Este monto se ingresará automáticamente a la caja al guardar.</span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {selectedPlan?.descripcion && (
+                                        <div className="text-xs opacity-70 mt-2 p-2 bg-base-300/50 rounded">
+                                            <strong>Descripción:</strong> {selectedPlan.descripcion}
+                                        </div>
+                                    )}
                                 </div>
                             )}
 

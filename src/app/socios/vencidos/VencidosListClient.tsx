@@ -5,8 +5,7 @@ import Link from 'next/link'
 import { Search, Download, FileText, ArrowLeft, AlertTriangle, Users, Calendar, CalendarDays, Clock, ChevronLeft, ChevronRight } from 'lucide-react'
 import { format, differenceInDays } from 'date-fns'
 import * as XLSX from 'xlsx'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import { generatePDFReport } from '@/lib/pdf-utils'
 
 interface Socio {
     id: string
@@ -96,26 +95,23 @@ export default function VencidosListClient({ suscripciones }: { suscripciones: S
     }
 
     const exportPDF = () => {
-        const doc = new jsPDF()
-        doc.setFontSize(16)
-        doc.text('Suscripciones Vencidas - Mr. GYM', 14, 20)
-        doc.setFontSize(10)
-        doc.text(`Fecha: ${format(today, 'dd/MM/yyyy')} | Total: ${filtered.length}`, 14, 28)
+        const columns = ['Código', 'Socio', 'Documento', 'Teléfono', 'Venció', 'Días'];
+        const rows = filtered.map(sub => [
+            sub.socio.codigo,
+            `${sub.socio.nombres} ${sub.socio.apellidos}`,
+            sub.socio.documento,
+            sub.socio.telefono || '-',
+            format(new Date(sub.fechaFin), 'dd/MM/yyyy'),
+            differenceInDays(today, new Date(sub.fechaFin)).toString()
+        ]);
 
-        autoTable(doc, {
-            startY: 35,
-            head: [['Código', 'Socio', 'Documento', 'Teléfono', 'Venció', 'Días']],
-            body: filtered.map(sub => [
-                sub.socio.codigo,
-                `${sub.socio.nombres} ${sub.socio.apellidos}`,
-                sub.socio.documento,
-                sub.socio.telefono || '-',
-                format(new Date(sub.fechaFin), 'dd/MM/yyyy'),
-                differenceInDays(today, new Date(sub.fechaFin)).toString()
-            ]),
-            styles: { fontSize: 8 }
-        })
-        doc.save(`suscripciones_vencidas_${format(today, 'yyyyMMdd')}.pdf`)
+        generatePDFReport({
+            title: 'Suscripciones Vencidas',
+            subtitle: `Al: ${format(today, 'dd/MM/yyyy')} | Filtro: ${filterDays === 'all' ? 'Todos' : `≤ ${filterDays} días`}`,
+            columns,
+            rows,
+            fileName: 'socios_vencidos'
+        });
     }
 
     return (

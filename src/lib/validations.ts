@@ -12,7 +12,10 @@ export const socioSchema = z.object({
     fotoUrl: z.string().optional().nullable(),
     suscripcion: z.object({
         meses: z.number().int().min(0).default(0),
-        fechaInicio: z.coerce.date().default(() => new Date())
+        planId: z.string().uuid().optional(),
+        monto: z.number().optional(),
+        fechaInicio: z.coerce.date().default(() => new Date()),
+        metodoPago: z.enum(["EFECTIVO", "TRANSFERENCIA", "YAPE", "PLIN"]).default("EFECTIVO")
     }).optional()
 })
 
@@ -49,8 +52,9 @@ export const medidaSchema = z.object({
 
 export const userSchema = z.object({
     username: z.string().min(3, "Usuario muy corto").max(20, "Usuario muy largo"),
-    password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
-    role: z.enum(["ADMIN", "RECEPCION"]).default("RECEPCION")
+    password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres").optional().or(z.literal('')),
+    role: z.enum(["ADMIN", "RECEPCION", "ENTRENADOR"]).default("RECEPCION"),
+    permissions: z.array(z.string()).optional()
 })
 
 export const pagoSchema = z.object({

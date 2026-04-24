@@ -17,7 +17,7 @@ export default function PhotoCapture({ currentPhoto, onPhotoCapture }: PhotoCapt
     const [stream, setStream] = useState<MediaStream | null>(null)
     const [devices, setDevices] = useState<MediaDeviceInfo[]>([])
     const [activeDeviceIndex, setActiveDeviceIndex] = useState<number>(0)
-    const [facingModeFallback, setFacingModeFallback] = useState<'user' | 'environment'>('user')
+    const [facingModeFallback, setFacingModeFallback] = useState<'user' | 'environment'>('environment')
 
     // Sync preview with prop updates (e.g. when editing loads)
     useEffect(() => {
@@ -26,8 +26,26 @@ export default function PhotoCapture({ currentPhoto, onPhotoCapture }: PhotoCapt
         }
     }, [currentPhoto])
 
+    const stopCamera = useCallback(() => {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop())
+            setStream(null)
+        }
+        setMode('view')
+    }, [stream])
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop())
+            }
+        }
+    }, [stream])
+
     const startCamera = async (deviceIndex?: number, fallbackMode = facingModeFallback) => {
         try {
+            // Stop existing stream
             if (stream) {
                 stream.getTracks().forEach(track => track.stop())
             }
@@ -74,19 +92,26 @@ export default function PhotoCapture({ currentPhoto, onPhotoCapture }: PhotoCapt
                 }
             }, 100)
             setMode('camera')
-        } catch (err) {
+        } catch (err: any) {
             console.error("Error accessing camera:", err)
-            alert("No se pudo acceder a la cámara. Verifique permisos o use la opción de 'Subir'.")
+            
+            // If specific device failed, try generic constraints
+            if (deviceIndex !== undefined) {
+                console.log("Retrying with generic constraints...")
+                startCamera(undefined, fallbackMode)
+                return
+            }
+
+            let errorMessage = "No se pudo acceder a la cámara. "
+            if (err.name === 'NotAllowedError') errorMessage += "Permiso denegado."
+            else if (err.name === 'NotFoundError') errorMessage += "No se encontró el dispositivo."
+            else errorMessage += "Verifique permisos o use la opción de 'Subir'."
+            
+            alert(errorMessage)
+            setMode('view')
         }
     }
 
-    const stopCamera = () => {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop())
-            setStream(null)
-        }
-        setMode('view')
-    }
 
     const toggleCamera = () => {
         if (devices.length > 1) {
@@ -112,18 +137,26 @@ export default function PhotoCapture({ currentPhoto, onPhotoCapture }: PhotoCapt
     const takePhoto = () => {
         if (videoRef.current) {
             const canvas = document.createElement('canvas')
-            // Match video dimensions
             const video = videoRef.current
             canvas.width = video.videoWidth
             canvas.height = video.videoHeight
 
             const ctx = canvas.getContext('2d')
             if (ctx) {
-                // Flip horizontally (mirror)
-                ctx.translate(canvas.width, 0)
-                ctx.scale(-1, 1)
+                const isFront = isFrontCamera()
+
+                if (isFront) {
+                    // Flip horizontally (mirror) only for front camera
+                    ctx.translate(canvas.width, 0)
+                    ctx.scale(-1, 1)
+                }
 
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+                // Reset transformation for subsequent operations if needed
+                if (isFront) {
+                    ctx.setTransform(1, 0, 0, 1, 0, 0)
+                }
 
                 // Compress/Resize to max 500px width
                 const MAX_WIDTH = 500

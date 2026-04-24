@@ -166,6 +166,29 @@ main {
   }
 }
 
+/* Custom Input and Select visibility improvements */
+.input, .select {
+  @apply border-base-content/20 bg-base-200/50 backdrop-blur-sm transition-all duration-200;
+}
+
+.input:focus, .select:focus {
+  @apply border-primary ring-2 ring-primary/20 bg-base-100 outline-none;
+}
+
+/* Fix for native select options visibility in some browsers */
+select option {
+  @apply bg-base-100 text-base-content;
+}
+
+/* Ensure selected state is clear */
+.select-primary {
+  @apply border-primary/50 border-2;
+}
+
+.input-primary {
+  @apply border-primary/50 border-2;
+}
+
 /* Utility to hide scrollbar but keep functionality */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;

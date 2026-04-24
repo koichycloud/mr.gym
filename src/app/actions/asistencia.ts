@@ -2,6 +2,7 @@
 
 import prisma from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth-utils'
+import { getLimaStartOfDay, getLimaEndOfDay } from '@/lib/date-utils'
 
 export async function registrarAsistencia(socioId: string) {
     try {
@@ -25,17 +26,14 @@ export async function getAsistenciasHoy() {
     try {
         await requireAuth()
 
-        const hoy = new Date()
-        hoy.setHours(0, 0, 0, 0)
-
-        const manana = new Date(hoy)
-        manana.setDate(manana.getDate() + 1)
+        const hoy = getLimaStartOfDay()
+        const manana = getLimaEndOfDay()
 
         const asistencias = await prisma.asistencia.findMany({
             where: {
                 fecha: {
                     gte: hoy,
-                    lt: manana
+                    lte: manana
                 }
             },
             include: {
@@ -64,17 +62,14 @@ export async function getAsistenciasPorFecha(fecha: Date) {
     try {
         await requireAuth()
 
-        const inicio = new Date(fecha)
-        inicio.setHours(0, 0, 0, 0)
-
-        const fin = new Date(inicio)
-        fin.setDate(fin.getDate() + 1)
+        const inicio = getLimaStartOfDay(fecha)
+        const fin = getLimaEndOfDay(fecha)
 
         const asistencias = await prisma.asistencia.findMany({
             where: {
                 fecha: {
                     gte: inicio,
-                    lt: fin
+                    lte: fin
                 }
             },
             include: {
@@ -103,31 +98,28 @@ export async function getEstadisticasAsistencia() {
     try {
         await requireAuth()
 
-        const hoy = new Date()
-        hoy.setHours(0, 0, 0, 0)
-
-        const manana = new Date(hoy)
-        manana.setDate(manana.getDate() + 1)
+        const hoy = getLimaStartOfDay()
+        const manana = getLimaEndOfDay()
 
         // Count today
         const totalHoy = await prisma.asistencia.count({
             where: {
                 fecha: {
                     gte: hoy,
-                    lt: manana
+                    lte: manana
                 }
             }
         })
 
         // Last 7 days
-        const hace7Dias = new Date(hoy)
+        const hace7Dias = getLimaStartOfDay()
         hace7Dias.setDate(hace7Dias.getDate() - 7)
 
         const ultimaSemana = await prisma.asistencia.findMany({
             where: {
                 fecha: {
                     gte: hace7Dias,
-                    lt: manana
+                    lte: manana
                 }
             },
             select: {
@@ -140,7 +132,7 @@ export async function getEstadisticasAsistencia() {
             where: {
                 fecha: {
                     gte: hoy,
-                    lt: manana
+                    lte: manana
                 }
             },
             select: {
@@ -184,17 +176,14 @@ export async function getEstadisticasAsistencia() {
 
 export async function contarAsistenciasHoy() {
     try {
-        const hoy = new Date()
-        hoy.setHours(0, 0, 0, 0)
-
-        const manana = new Date(hoy)
-        manana.setDate(manana.getDate() + 1)
+        const hoy = getLimaStartOfDay()
+        const manana = getLimaEndOfDay()
 
         const total = await prisma.asistencia.count({
             where: {
                 fecha: {
                     gte: hoy,
-                    lt: manana
+                    lte: manana
                 }
             }
         })

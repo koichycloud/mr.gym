@@ -6,11 +6,14 @@ export async function logAction(accion: string, detalles: string) {
         const session = await requireAuth().catch(() => null)
         const usuario = session?.user?.name || 'SISTEMA'
 
+        const fechaPeru = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Lima" }))
+
         await prisma.auditLog.create({
             data: {
                 usuario,
                 accion,
-                detalles
+                detalles,
+                fecha: fechaPeru
             }
         })
     } catch (error) {

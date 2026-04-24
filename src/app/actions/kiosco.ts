@@ -1,6 +1,7 @@
 'use server'
 
 import prisma from '@/lib/prisma'
+import { getLimaStartOfDay } from '@/lib/date-utils'
 
 export type AccessResult = {
     success: boolean
@@ -53,22 +54,64 @@ async function sendTelegramAlert(socioName: string, daysLeft: number) {
 }
 
 export async function validateKioskAccess(codigo: string, mode: 'ENTRADA' | 'SALIDA' = 'ENTRADA'): Promise<AccessResult> {
-    console.log(`[KIOSCO] Intento de acceso - Código: "${codigo}", Modo: ${mode}`);
+    // Normalize: trim whitespace and strip non-alphanumeric chars to handle scanner artifacts
+    const cleanCodigo = codigo.trim().replace(/[^A-Za-z0-9]/g, '').toUpperCase()
+    console.log(`[KIOSCO] Intento de acceso - Código: "${cleanCodigo}" (raw: "${codigo}"), Modo: ${mode}`);
     try {
-        const socio = await prisma.socio.findUnique({
-            where: { codigo },
-            include: {
+        type SocioWithSubs = {
+            id: string
+            codigo: string
+            nombres: string | null
+            apellidos: string | null
+            fotoUrl: string | null
+            suscripciones: {
+                fechaFin: Date
+                fechaInicio: Date
+                estado: string
+                meses: number
+            }[]
+        }
+
+        // 1. Try to find by current codigo first
+        let socio: SocioWithSubs | null = await prisma.socio.findUnique({
+            where: { codigo: cleanCodigo },
+            select: {
+                id: true, codigo: true, nombres: true, apellidos: true, fotoUrl: true,
                 suscripciones: {
                     orderBy: { fechaFin: 'desc' },
-                    take: 1
+                    take: 1,
+                    select: { fechaFin: true, fechaInicio: true, estado: true, meses: true }
                 }
             }
         })
 
+        // 2. If not found, check if it's a historic code (old printed QR codes still in circulation)
+        if (!socio) {
+            const historial = await prisma.codigoHistorial.findFirst({
+                where: { codigo: cleanCodigo },
+                select: {
+                    socio: {
+                        select: {
+                            id: true, codigo: true, nombres: true, apellidos: true, fotoUrl: true,
+                            suscripciones: {
+                                orderBy: { fechaFin: 'desc' },
+                                take: 1,
+                                select: { fechaFin: true, fechaInicio: true, estado: true, meses: true }
+                            }
+                        }
+                    }
+                }
+            })
+            if (historial?.socio) {
+                socio = historial.socio
+                console.log(`[KIOSCO] Código histórico "${cleanCodigo}" resuelto al socio "${socio.codigo}"`)
+            }
+        }
+
         if (!socio) {
             return {
                 success: false,
-                message: 'Socio no encontrado',
+                message: 'Código no reconocido',
                 reason: 'NOT_FOUND'
             }
         }
@@ -89,7 +132,7 @@ export async function validateKioskAccess(codigo: string, mode: 'ENTRADA' | 'SAL
             }
         }
 
-        const hoy = new Date()
+        const hoy = getLimaStartOfDay()
         const vence = new Date(suscripcion.fechaFin)
         const diffTime = vence.getTime() - hoy.getTime()
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
@@ -132,7 +175,8 @@ export async function validateKioskAccess(codigo: string, mode: 'ENTRADA' | 'SAL
 
         // Validar anti-passback únicamente si intentan repetir la MISMA acción en menos de 15 minutos
         if (ultimaAsistencia) {
-            const minutosTranscurridos = (hoy.getTime() - new Date(ultimaAsistencia.fecha).getTime()) / (1000 * 60)
+            const ahora = new Date();
+            const minutosTranscurridos = (ahora.getTime() - new Date(ultimaAsistencia.fecha).getTime()) / (1000 * 60)
             
             if (minutosTranscurridos < COOLDOWN_MINUTES && ultimaAsistencia.tipo === tipoOperacion) {
                 // Bloqueo Anti-Passback

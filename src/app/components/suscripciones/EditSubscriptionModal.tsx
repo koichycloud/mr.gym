@@ -60,14 +60,19 @@ export default function EditSubscriptionModal({ subscription, onClose, onSubmit 
                         <label className="label">
                             <span className="label-text">Fecha de Inicio</span>
                         </label>
-                        <input
-                            type="date"
-                            className="input input-bordered w-full"
-                            value={date}
-                            onChange={(e) => setDate(e.target.value)}
-                            max="9999-12-31"
-                            required
-                        />
+                        <div className="relative">
+                            <input
+                                type="date"
+                                className="input input-bordered w-full"
+                                value={date}
+                                onChange={(e) => setDate(e.target.value)}
+                                max="9999-12-31"
+                                required
+                            />
+                            <div className="absolute right-10 top-3 text-xs opacity-40 pointer-events-none">
+                                dd/mm/aaaa
+                            </div>
+                        </div>
                     </div>
 
                     <div className="form-control w-full">

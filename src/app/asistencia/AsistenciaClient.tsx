@@ -15,6 +15,8 @@ import {
     ResponsiveContainer,
     Cell
 } from 'recharts'
+import { FileText } from 'lucide-react'
+import { generatePDFReport } from '@/lib/pdf-utils'
 
 type Asistencia = {
     id: string
@@ -72,6 +74,25 @@ export default function AsistenciaClient({ asistenciasIniciales, statsIniciales 
         }
     }
 
+    const exportarPDF = () => {
+        const columns = ['Hora', 'Código', 'Socio', 'Sexo', 'Tipo'];
+        const rows = asistencias.map(a => [
+            format(new Date(a.fecha), 'HH:mm:ss'),
+            a.socio.codigo,
+            `${a.socio.nombres} ${a.socio.apellidos}`,
+            a.socio.sexo,
+            a.tipo
+        ]);
+
+        generatePDFReport({
+            title: 'Reporte de Asistencia',
+            subtitle: `Fecha: ${format(new Date(fechaSeleccionada + 'T00:00:00'), 'dd/MM/yyyy')}`,
+            columns,
+            rows,
+            fileName: `asistencias_${fechaSeleccionada}`
+        });
+    }
+
     const esHoy = fechaSeleccionada === format(new Date(), 'yyyy-MM-dd')
 
     // Prepare chart data from stats
@@ -94,17 +115,33 @@ export default function AsistenciaClient({ asistenciasIniciales, statsIniciales 
                     </p>
                 </div>
 
-                <div className="form-control">
-                    <label className="label">
-                        <span className="label-text font-semibold">Filtrar por fecha</span>
-                    </label>
-                    <input
-                        type="date"
-                        className="input input-bordered input-primary"
-                        value={fechaSeleccionada}
-                        max={format(new Date(), 'yyyy-MM-dd')}
-                        onChange={(e) => buscarPorFecha(e.target.value)}
-                    />
+                <div className="flex items-end gap-2">
+                    <div className="form-control">
+                        <label className="label">
+                            <span className="label-text font-semibold">Filtrar por fecha</span>
+                        </label>
+                        <div className="relative">
+                            <input
+                                type="date"
+                                className="input input-bordered input-primary"
+                                value={fechaSeleccionada}
+                                max={format(new Date(), 'yyyy-MM-dd')}
+                                onChange={(e) => buscarPorFecha(e.target.value)}
+                            />
+                            <div className="absolute right-10 top-3 text-xs opacity-40 pointer-events-none">
+                                dd/mm/aaaa
+                            </div>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={exportarPDF}
+                        disabled={loading || asistencias.length === 0}
+                        className="btn btn-error text-white gap-2"
+                        title="Descargar Reporte PDF"
+                    >
+                        <FileText size={20} />
+                        <span className="hidden md:inline">PDF</span>
+                    </button>
                 </div>
             </div>
 
@@ -123,8 +160,8 @@ export default function AsistenciaClient({ asistenciasIniciales, statsIniciales 
                         </div>
                         <div className="stat-desc">
                             {esHoy
-                                ? format(new Date(), "EEEE d 'de' MMMM", { locale: es })
-                                : format(new Date(fechaSeleccionada + 'T12:00:00'), "EEEE d 'de' MMMM", { locale: es })
+                                ? format(new Date(), "dd/MM/yyyy")
+                                : format(new Date(fechaSeleccionada + 'T12:00:00'), "dd/MM/yyyy")
                             }
                         </div>
                     </div>
@@ -207,7 +244,7 @@ export default function AsistenciaClient({ asistenciasIniciales, statsIniciales 
             <div className="card bg-base-100 shadow-xl">
                 <div className="card-body">
                     <h2 className="card-title">
-                        Registros del {esHoy ? 'día de hoy' : format(new Date(fechaSeleccionada + 'T12:00:00'), "d 'de' MMMM yyyy", { locale: es })}
+                        Registros del {esHoy ? 'día de hoy' : format(new Date(fechaSeleccionada + 'T12:00:00'), "dd/MM/yyyy")}
                     </h2>
 
                     {loading ? (

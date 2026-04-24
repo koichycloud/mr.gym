@@ -24,13 +24,22 @@ export default function Navbar() {
 
     if (pathname === '/login' || pathname === '/admin/scanner/cliente' || pathname === '/kiosco') return null
 
-    const isActive = (path: string) => {
-        if (path === '/' && pathname === '/') return 'active text-primary'
-        if (path !== '/' && pathname.startsWith(path)) return 'active text-primary'
-        return 'text-base-content/70 hover:text-base-content'
+    const isPathActive = (path: string) => {
+        if (path === '/') return pathname === '/'
+        if (path === '/socios') {
+            return pathname === '/socios' || (pathname.startsWith('/socios/') && pathname !== '/socios/vencidos')
+        }
+        return pathname.startsWith(path)
+    }
+
+    const getActiveClassName = (path: string) => {
+        return isPathActive(path) ? 'active text-primary' : 'text-base-content/70 hover:text-base-content'
     }
 
     const isAdmin = session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPERADMIN';
+    const permissions = (session?.user?.permissions as string[]) || [];
+
+    const hasPermission = (p: string) => isAdmin || permissions.includes(p);
 
     return (
         <>
@@ -44,56 +53,55 @@ export default function Navbar() {
                 <div className="navbar-center hidden lg:flex">
                     <ul className="menu menu-horizontal px-1 space-x-2">
                         <li>
-                            <Link href="/" className={isActive('/')}>
+                            <Link href="/" className={getActiveClassName('/')}>
                                 <Home size={18} /> Inicio
                             </Link>
                         </li>
                         <li>
-                            <Link href="/socios" className={isActive('/socios')}>
+                            <Link href="/socios" className={getActiveClassName('/socios')}>
                                 <Users size={18} /> Socios
                             </Link>
                         </li>
                         <li>
-                            <Link href="/asistencia" className={isActive('/asistencia')}>
+                            <Link href="/asistencia" className={getActiveClassName('/asistencia')}>
                                 <CalendarDays size={18} /> Asistencia
                             </Link>
                         </li>
-                        <li>
-                            <Link href="/socios/vencidos" className={isActive('/socios/vencidos')}>
-                                <AlertTriangle size={18} /> Vencidos
-                            </Link>
-                        </li>
-                        {isAdmin && (
+                        {hasPermission('SOCIOS_VER') && (
                             <li>
-                                <Link href="/caja" className={isActive('/caja')}>
+                                <Link href="/socios/vencidos" className={getActiveClassName('/socios/vencidos')}>
+                                    <AlertTriangle size={18} /> Vencidos
+                                </Link>
+                            </li>
+                        )}
+                        {hasPermission('CAJA_VER') && (
+                            <li>
+                                <Link href="/caja" className={getActiveClassName('/caja')}>
                                     <DollarSign size={18} /> Caja
                                 </Link>
                             </li>
                         )}
-                        {isAdmin && (
-                            <>
-                                <li>
-                                    <Link href="/users" className={isActive('/users')}>
-                                        <Users size={18} /> Usuarios
-                                    </Link>
-                                </li>
-                                <li>
-                                    <Link href="/planes" className={isActive('/planes')}>
-                                        <FileText size={18} /> Tipos Planes
-                                    </Link>
-                                </li>
-                                <li>
-                                    <Link href="/admin/bitacora" className={isActive('/admin/bitacora')}>
-                                        <FileText size={18} /> Bitácora
-                                    </Link>
-                                </li>
-                            </>
+                        {hasPermission('USUARIOS_GESTIONAR') && (
+                            <li>
+                                <Link href="/users" className={getActiveClassName('/users')}>
+                                    <Users size={18} /> Usuarios
+                                </Link>
+                            </li>
                         )}
-                        <li>
-                            <Link href="/admin/scanner" className={isActive('/admin/scanner')}>
-                                <ScanLine size={18} /> Scanner
-                            </Link>
-                        </li>
+                        {hasPermission('PLANES_GESTIONAR') && (
+                            <li>
+                                <Link href="/planes" className={getActiveClassName('/planes')}>
+                                    <FileText size={18} /> Tipos Planes
+                                </Link>
+                            </li>
+                        )}
+                        {isAdmin && (
+                            <li>
+                                <Link href="/admin/bitacora" className={getActiveClassName('/admin/bitacora')}>
+                                    <FileText size={18} /> Bitácora
+                                </Link>
+                            </li>
+                        )}
                     </ul>
                 </div>
 
@@ -107,10 +115,10 @@ export default function Navbar() {
                                     </span>
                                 </div>
                             </div>
-                            <ul tabIndex={0} onClick={() => { const el = document.activeElement as HTMLElement; if(el) el.blur(); }} className="mt-3 z-[1] p-2 shadow menu menu-sm dropdown-content bg-base-100 rounded-box w-52 border border-base-200">
-                                <li className="menu-title px-4 py-2 border-b border-base-200 mb-2">
-                                    <span className="font-bold text-base-content block truncate">{session.user.name}</span>
-                                    <span className="text-[10px] uppercase opacity-60 mt-0.5 block">{session.user.role}</span>
+                            <ul tabIndex={0} onClick={() => { const el = document.activeElement as HTMLElement; if(el) el.blur(); }} className="mt-4 z-[100] p-3 shadow-2xl shadow-black/30 menu menu-md dropdown-content bg-base-100 rounded-2xl w-64 border-2 border-primary/30 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                                <li className="menu-title px-4 py-3 border-b-2 border-base-200 mb-2">
+                                    <span className="font-black text-base-content text-lg block truncate">{session.user.name}</span>
+                                    <span className="text-xs font-bold text-primary uppercase tracking-widest mt-1 block">{session.user.role}</span>
                                 </li>
                                 <li><Link href="/perfil" className="justify-between">Mi Perfil <span className="badge badge-sm badge-primary">Nuevo</span></Link></li>
                                 <li><button onClick={() => signOut({ callbackUrl: '/login' })} className="text-error mt-2">Cerrar Sesión</button></li>
@@ -133,7 +141,7 @@ export default function Navbar() {
                             <span>Inicio</span>
                         </Link>
 
-                        <Link href="/socios" className={`flex flex-col items-center justify-center flex-1 gap-1 text-[10px] font-medium transition-colors ${pathname.startsWith('/socios') ? 'text-primary' : 'text-base-content/60 hover:text-base-content'}`}>
+                        <Link href="/socios" className={`flex flex-col items-center justify-center flex-1 gap-1 text-[10px] font-medium transition-colors ${isPathActive('/socios') ? 'text-primary' : 'text-base-content/60 hover:text-base-content'}`}>
                             <Users size={22} />
                             <span>Socios</span>
                         </Link>
@@ -143,11 +151,6 @@ export default function Navbar() {
                             <span>Asistencia</span>
                         </Link>
 
-                        <Link href="/admin/scanner" className={`flex flex-col items-center justify-center flex-1 gap-1 text-[10px] font-medium transition-colors ${pathname.startsWith('/admin/scanner') ? 'text-primary' : 'text-base-content/60 hover:text-base-content'}`}>
-                            <ScanLine size={22} />
-                            <span>Scanner</span>
-                        </Link>
-
                         {/* Botón "Más" */}
                         <div className={`dropdown dropdown-top dropdown-end flex-1`}>
                             <div tabIndex={0} role="button"
@@ -155,18 +158,22 @@ export default function Navbar() {
                                 <Menu size={22} />
                                 <span>Más</span>
                             </div>
-                            <ul tabIndex={0} onClick={() => { const el = document.activeElement as HTMLElement; if(el) el.blur(); }} className="dropdown-content z-[100] menu p-2 shadow bg-base-100 rounded-box w-52 mb-2 border border-base-200">
+                            <ul tabIndex={0} onClick={() => { const el = document.activeElement as HTMLElement; if(el) el.blur(); }} className="dropdown-content z-[100] menu p-3 shadow-[0_-15px_40px_rgba(0,0,0,0.4)] bg-base-100 rounded-3xl w-60 mb-6 border-2 border-primary/40 animate-in fade-in slide-in-from-bottom-8 zoom-in-95 duration-200 origin-bottom-right">
                                 <li><Link href="/socios/vencidos"><AlertTriangle size={16} /> Vencidos</Link></li>
+                                {hasPermission('CAJA_VER') && (
+                                    <li><Link href="/caja"><DollarSign size={16} /> Caja</Link></li>
+                                )}
+                                {hasPermission('USUARIOS_GESTIONAR') && (
+                                    <li><Link href="/users"><UserCog size={16} /> Usuarios</Link></li>
+                                )}
+                                {hasPermission('PLANES_GESTIONAR') && (
+                                    <li><Link href="/planes"><FileText size={16} /> Planes</Link></li>
+                                )}
                                 {isAdmin && (
-                                    <>
-                                        <li><Link href="/caja"><DollarSign size={16} /> Caja</Link></li>
-                                        <li><Link href="/users"><UserCog size={16} /> Usuarios</Link></li>
-                                        <li><Link href="/planes"><FileText size={16} /> Planes</Link></li>
-                                        <li><Link href="/admin/bitacora"><FileText size={16} /> Bitácora</Link></li>
-                                        <div className="divider my-0"></div>
-                                    </>
+                                    <li><Link href="/admin/bitacora"><FileText size={16} /> Bitácora</Link></li>
                                 )}
                                 <li><Link href="/perfil"><UserCog size={16} /> Mi Perfil</Link></li>
+                                <div className="divider my-0"></div>
                                 <li><button onClick={() => signOut({ callbackUrl: '/login' })} className="text-error"><LogOut size={16} /> Cerrar Sesión</button></li>
                             </ul>
                         </div>

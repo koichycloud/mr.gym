@@ -2,13 +2,12 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Plus, Search, ArrowLeft, Eye, Edit, Clock, FileDown, FileText, Trash2 } from 'lucide-react'
+import { Plus, Search, ArrowLeft, Eye, Edit, Clock, FileDown, FileText, Trash2, XCircle } from 'lucide-react'
 import { differenceInMonths, differenceInDays, differenceInWeeks, format } from 'date-fns'
 import * as XLSX from 'xlsx'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
 import { deleteSocio } from '@/app/actions/socios'
 import { useRouter } from 'next/navigation'
+import { generatePDFReport } from '@/lib/pdf-utils'
 
 export default function SociosListClient({ initialSocios, isAdmin }: { initialSocios: any[], isAdmin: boolean }) {
     const [search, setSearch] = useState('')
@@ -16,6 +15,8 @@ export default function SociosListClient({ initialSocios, isAdmin }: { initialSo
     const itemsPerPage = 20
     const router = useRouter()
     const [isDeleting, setIsDeleting] = useState(false)
+    const [filterType, setFilterType] = useState<'all' | 'expiring' | 'vencidos'>('all')
+    const [viewingPhoto, setViewingPhoto] = useState<{url: string, name: string} | null>(null)
 
     const handleDelete = async (id: string, name: string) => {
         if (!confirm(`¿Estás seguro de que deseas eliminar al socio ${name}? Esta acción no se puede deshacer y borrará todo su historial y suscripciones.`)) {
@@ -44,14 +45,30 @@ export default function SociosListClient({ initialSocios, isAdmin }: { initialSo
         const apellidos = (socio.apellidos || '').toLowerCase()
         const fullName = `${nombres} ${apellidos}`
 
-        return (
-            nombres.includes(term) ||
+        const matchesSearch = nombres.includes(term) ||
             apellidos.includes(term) ||
             fullName.includes(term) ||
             socio.numeroDocumento.includes(search) ||
             socio.codigo.toLowerCase().includes(term) ||
             socio.historialCodigos?.some((h: any) => h.codigo.toLowerCase().includes(term))
-        )
+
+        if (!matchesSearch) return false
+
+        const activeSub = socio.suscripciones?.[0]
+        const today = new Date()
+        
+        if (filterType === 'expiring') {
+            if (!activeSub) return false
+            const days = differenceInDays(new Date(activeSub.fechaFin), today)
+            return days >= 0 && days <= 7
+        }
+
+        if (filterType === 'vencidos') {
+            if (!activeSub) return true // Contados como vencidos si no tienen sub activa? O ignorar.
+            return new Date(activeSub.fechaFin) < today
+        }
+
+        return true
     })
 
     const totalPages = Math.ceil(filteredSocios.length / itemsPerPage)
@@ -65,7 +82,7 @@ export default function SociosListClient({ initialSocios, isAdmin }: { initialSo
             Apellidos: s.apellidos,
             Documento: `${s.tipoDocumento} ${s.numeroDocumento}`,
             Teléfono: s.telefono || '',
-            'Fecha Registro': format(new Date(s.createdAt), 'yyyy-MM-dd')
+            'Fecha Registro': format(new Date(s.createdAt), 'dd/MM/yyyy')
         }))
 
         const ws = XLSX.utils.json_to_sheet(dataToExport)
@@ -74,32 +91,29 @@ export default function SociosListClient({ initialSocios, isAdmin }: { initialSo
         XLSX.writeFile(wb, "socios_mr_gym.xlsx")
     }
 
+
+
     const exportToPDF = () => {
-        const doc = new jsPDF()
-
-        doc.setFontSize(18)
-        doc.text("Reporte de Socios - Mr. GYM", 14, 22)
-        doc.setFontSize(11)
-        doc.text(`Fecha: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 14, 30)
-
-        const tableColumn = ["Código", "Nombres", "Apellidos", "Documento", "Teléfono"]
-        const tableRows = filteredSocios.map(s => [
+        const columns = ["Código", "Nombres", "Apellidos", "Documento", "Suscripción"];
+        const rows = filteredSocios.map(s => [
             s.codigo,
             s.nombres,
             s.apellidos,
             `${s.tipoDocumento} ${s.numeroDocumento}`,
-            s.telefono || '-'
-        ])
+            s.suscripciones?.[0] ? format(new Date(s.suscripciones[0].fechaFin), 'dd/MM/yyyy') : 'Sin suscripción'
+        ]);
 
-        autoTable(doc, {
-            head: [tableColumn],
-            body: tableRows,
-            startY: 40,
-            styles: { fontSize: 9 },
-            headStyles: { fillColor: [41, 128, 185] }
-        })
+        let subtitle = "Listado General de Socios";
+        if (filterType === 'expiring') subtitle = "Socios Próximos a Vencer (Próximos 7 días)";
+        if (filterType === 'vencidos') subtitle = "Socios con Suscripción Vencida";
 
-        doc.save("socios_mr_gym.pdf")
+        generatePDFReport({
+            title: 'Reporte de Socios',
+            subtitle: subtitle,
+            columns,
+            rows,
+            fileName: `socios_${filterType}`
+        });
     }
 
     const getRemainingTime = (socio: any) => {
@@ -181,6 +195,27 @@ export default function SociosListClient({ initialSocios, isAdmin }: { initialSo
                                 />
                             </div>
                         </div>
+
+                        <div className="flex gap-2">
+                             <button 
+                                onClick={() => { setFilterType('all'); setCurrentPage(1); }}
+                                className={`btn btn-xs md:btn-sm ${filterType === 'all' ? 'btn-primary' : 'btn-ghost'}`}
+                            >
+                                Todos
+                            </button>
+                            <button 
+                                onClick={() => { setFilterType('expiring'); setCurrentPage(1); }}
+                                className={`btn btn-xs md:btn-sm ${filterType === 'expiring' ? 'btn-warning' : 'btn-ghost'}`}
+                            >
+                                Por Vencer (7d)
+                            </button>
+                            <button 
+                                onClick={() => { setFilterType('vencidos'); setCurrentPage(1); }}
+                                className={`btn btn-xs md:btn-sm ${filterType === 'vencidos' ? 'btn-error' : 'btn-ghost'}`}
+                            >
+                                Vencidos
+                            </button>
+                        </div>
                     </div>
 
                     <div className="bg-base-100">
@@ -228,7 +263,10 @@ export default function SociosListClient({ initialSocios, isAdmin }: { initialSo
                                                 <td>
                                                     <div className="flex items-center gap-3">
                                                         {socio.fotoUrl ? (
-                                                            <div className="avatar">
+                                                            <div 
+                                                                className="avatar cursor-pointer hover:scale-110 transition-transform"
+                                                                onClick={() => setViewingPhoto({url: socio.fotoUrl, name: `${socio.nombres} ${socio.apellidos}`})}
+                                                            >
                                                                 <div className="w-10 h-10 rounded-full shadow-sm">
                                                                     <img src={socio.fotoUrl} alt="Avatar" className="object-cover" />
                                                                 </div>
@@ -297,7 +335,10 @@ export default function SociosListClient({ initialSocios, isAdmin }: { initialSo
                                         <div className="flex justify-between items-start mb-3">
                                             <div className="flex items-center gap-3 flex-1">
                                                 {socio.fotoUrl ? (
-                                                    <div className="avatar">
+                                                    <div 
+                                                        className="avatar cursor-pointer hover:scale-110 transition-transform"
+                                                        onClick={() => setViewingPhoto({url: socio.fotoUrl, name: `${socio.nombres} ${socio.apellidos}`})}
+                                                    >
                                                         <div className="w-10 h-10 rounded-full shadow-sm">
                                                             <img src={socio.fotoUrl} alt="Avatar" className="object-cover" />
                                                         </div>
@@ -383,6 +424,27 @@ export default function SociosListClient({ initialSocios, isAdmin }: { initialSo
                     </div>
                 </div>
             </div>
+            {/* Photo Zoom Modal */}
+            {viewingPhoto && (
+                <div className="modal modal-open z-[9999]" onClick={() => setViewingPhoto(null)}>
+                    <div className="modal-box p-0 bg-transparent shadow-none max-w-4xl w-auto overflow-visible relative" onClick={e => e.stopPropagation()}>
+                        <button 
+                            className="btn btn-circle btn-sm absolute -top-10 right-0 md:-right-10 bg-base-100 border-none shadow-lg"
+                            onClick={() => setViewingPhoto(null)}
+                        >
+                            <XCircle size={24} />
+                        </button>
+                        <img 
+                            src={viewingPhoto.url} 
+                            alt="Foto ampliada" 
+                            className="max-h-[85vh] w-auto mx-auto rounded-2xl shadow-2xl border-4 border-white/10 ring-1 ring-white/20"
+                        />
+                        <div className="text-center mt-4 text-white font-bold text-lg drop-shadow-lg">
+                            {viewingPhoto.name}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     )
 }

@@ -2,6 +2,7 @@
 
 import prisma from '@/lib/prisma'
 import { requireAuth } from '@/lib/auth-utils'
+import { getLimaStartOfDay, getLimaStartOfMonth } from '@/lib/date-utils'
 
 export async function getAsistenciasPorSocio(socioId: string, limit?: number) {
     try {
@@ -23,7 +24,7 @@ export async function getAsistenciasPorSocio(socioId: string, limit?: number) {
         })
 
         // Last 30 days
-        const hace30Dias = new Date()
+        const hace30Dias = getLimaStartOfDay()
         hace30Dias.setDate(hace30Dias.getDate() - 30)
 
         const ultimos30Dias = await prisma.asistencia.count({
@@ -36,9 +37,7 @@ export async function getAsistenciasPorSocio(socioId: string, limit?: number) {
         })
 
         // This month
-        const inicioMes = new Date()
-        inicioMes.setDate(1)
-        inicioMes.setHours(0, 0, 0, 0)
+        const inicioMes = getLimaStartOfMonth()
 
         const esteMes = await prisma.asistencia.count({
             where: {

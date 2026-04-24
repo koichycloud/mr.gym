@@ -6,6 +6,8 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { DollarSign, CreditCard, TrendingUp, Plus, Search, Banknote, Smartphone } from 'lucide-react'
 import { Toaster, toast } from 'sonner'
+import { FileText, Download } from 'lucide-react'
+import { generatePDFReport } from '@/lib/pdf-utils'
 
 type Pago = {
     id: string
@@ -118,6 +120,35 @@ export default function CajaClient({ pagosIniciales, totalDiaInicial, desgloseIn
         }
     }
 
+    const exportarPDF = (soloRenovaciones: boolean = false) => {
+        let lista = pagos;
+        let titulo = 'Reporte de Caja';
+        if (soloRenovaciones) {
+            lista = pagos.filter(p => p.concepto === 'SUSCRIPCION');
+            titulo = 'Reporte de Renovaciones';
+        }
+
+        const columns = ['Fecha', 'Socio/Info', 'Concepto', 'Método', 'Monto'];
+        const rows = lista.map(p => [
+            format(new Date(p.fecha), 'dd/MM HH:mm'),
+            p.socio ? `${p.socio.codigo} - ${p.socio.nombres} ${p.socio.apellidos}` : (p.descripcion || '-'),
+            p.concepto,
+            p.metodoPago,
+            `S/ ${p.monto.toFixed(2)}`
+        ]);
+
+        const total = lista.reduce((acc, p) => acc + p.monto, 0);
+        rows.push(['', '', '', 'TOTAL', `S/ ${total.toFixed(2)}`]);
+
+        generatePDFReport({
+            title: titulo,
+            subtitle: `Rango: ${format(new Date(fechaDesde + 'T00:00:00'), 'dd/MM/yyyy')} - ${format(new Date(fechaHasta + 'T23:59:59'), 'dd/MM/yyyy')}`,
+            columns,
+            rows,
+            fileName: soloRenovaciones ? `renovaciones_${fechaDesde}` : `caja_${fechaDesde}`
+        });
+    }
+
     return (
         <div className="space-y-6">
             <Toaster position="top-right" richColors />
@@ -200,21 +231,31 @@ export default function CajaClient({ pagosIniciales, totalDiaInicial, desgloseIn
                     <div className="flex flex-col md:flex-row gap-4 items-end">
                         <div className="form-control">
                             <label className="label"><span className="label-text">Desde</span></label>
-                            <input
-                                type="date"
-                                className="input input-bordered input-sm"
-                                value={fechaDesde}
-                                onChange={(e) => setFechaDesde(e.target.value)}
-                            />
+                            <div className="relative">
+                                <input
+                                    type="date"
+                                    className="input input-bordered input-sm"
+                                    value={fechaDesde}
+                                    onChange={(e) => setFechaDesde(e.target.value)}
+                                />
+                                <div className="absolute right-8 top-1.5 text-[8px] opacity-30 pointer-events-none">
+                                    dd/mm/aaaa
+                                </div>
+                            </div>
                         </div>
                         <div className="form-control">
                             <label className="label"><span className="label-text">Hasta</span></label>
-                            <input
-                                type="date"
-                                className="input input-bordered input-sm"
-                                value={fechaHasta}
-                                onChange={(e) => setFechaHasta(e.target.value)}
-                            />
+                            <div className="relative">
+                                <input
+                                    type="date"
+                                    className="input input-bordered input-sm"
+                                    value={fechaHasta}
+                                    onChange={(e) => setFechaHasta(e.target.value)}
+                                />
+                                <div className="absolute right-8 top-1.5 text-[8px] opacity-30 pointer-events-none">
+                                    dd/mm/aaaa
+                                </div>
+                            </div>
                         </div>
                         <button
                             className="btn btn-outline btn-sm gap-2"
@@ -224,6 +265,24 @@ export default function CajaClient({ pagosIniciales, totalDiaInicial, desgloseIn
                             {buscando ? <span className="loading loading-spinner loading-xs"></span> : <Search size={16} />}
                             Buscar
                         </button>
+                        <div className="flex gap-2">
+                             <button
+                                className="btn btn-error btn-sm text-white gap-2"
+                                onClick={() => exportarPDF(false)}
+                                disabled={buscando || pagos.length === 0}
+                            >
+                                <FileText size={16} />
+                                Reporte Caja
+                            </button>
+                            <button
+                                className="btn btn-secondary btn-sm text-white gap-2"
+                                onClick={() => exportarPDF(true)}
+                                disabled={buscando || pagos.length === 0}
+                            >
+                                <Download size={16} />
+                                Renovaciones
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -255,7 +314,7 @@ export default function CajaClient({ pagosIniciales, totalDiaInicial, desgloseIn
                                     {pagos.map((p) => (
                                         <tr key={p.id} className="hover">
                                             <td className="font-mono text-sm">
-                                                {format(new Date(p.fecha), 'dd/MM HH:mm')}
+                                                {format(new Date(p.fecha), 'dd/MM/yyyy HH:mm')}
                                             </td>
                                             <td>
                                                 {p.socio
