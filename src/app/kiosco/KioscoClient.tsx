@@ -80,6 +80,12 @@ export default function KioscoClient() {
         setState('LOADING')
         setTimeLeft(0)
         
+        // Si el código escaneado es una URL del kiosco personal, redireccionamos
+        if (code.includes('/kiosco-personal?code=')) {
+          window.location.href = code;
+          return;
+        }
+
         try {
             const scanResult = await validateKioskAccess(code, selectedMode)
             setResult(scanResult)

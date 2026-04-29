@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { Home, Users, Upload, CalendarDays, DollarSign, ScanLine, Menu, FileText, UserCog, LogOut, AlertTriangle } from 'lucide-react'
+import { Home, Users, Upload, CalendarDays, DollarSign, ScanLine, Menu, FileText, UserCog, LogOut, AlertTriangle, Banknote, PackageSearch } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 
 import { useSession, signOut } from "next-auth/react"
@@ -10,6 +10,8 @@ import { useSession, signOut } from "next-auth/react"
 export default function Navbar() {
     const pathname = usePathname()
     const { data: session, status } = useSession()
+    const [adminMenuOpen, setAdminMenuOpen] = useState(false)
+    const adminMenuRef = useRef<HTMLLIElement>(null)
 
     useEffect(() => {
         if (session?.user?.id) {
@@ -22,7 +24,18 @@ export default function Navbar() {
         }
     }, [session?.user?.id])
 
-    if (pathname === '/login' || pathname === '/admin/scanner/cliente' || pathname === '/kiosco') return null
+    // Close admin menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (adminMenuRef.current && !adminMenuRef.current.contains(e.target as Node)) {
+                setAdminMenuOpen(false)
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [])
+
+    if (pathname === '/login' || pathname === '/admin/scanner/cliente' || pathname === '/kiosco' || pathname === '/kiosco-personal') return null
 
     const isPathActive = (path: string) => {
         if (path === '/') return pathname === '/'
@@ -96,10 +109,22 @@ export default function Navbar() {
                             </li>
                         )}
                         {isAdmin && (
-                            <li>
-                                <Link href="/admin/bitacora" className={getActiveClassName('/admin/bitacora')}>
-                                    <FileText size={18} /> Bitácora
-                                </Link>
+                            <li ref={adminMenuRef} className="relative">
+                                <button
+                                    onClick={() => setAdminMenuOpen(o => !o)}
+                                    className={`flex items-center gap-2 rounded-lg px-3 py-2 transition-colors ${pathname.startsWith('/admin') ? 'text-primary font-semibold' : 'text-base-content/70 hover:text-base-content'}`}
+                                >
+                                    <UserCog size={18} /> Admin
+                                    <span className="text-[10px] opacity-50">{adminMenuOpen ? '▲' : '▼'}</span>
+                                </button>
+                                {adminMenuOpen && (
+                                    <ul className="absolute top-full left-0 mt-1 z-[100] menu p-2 shadow-xl bg-base-100 border border-base-200 rounded-2xl w-52 animate-in fade-in zoom-in-95 duration-100">
+                                        <li onClick={() => setAdminMenuOpen(false)}><Link href="/admin/bitacora"><FileText size={16} /> Bitácora</Link></li>
+                                        <li onClick={() => setAdminMenuOpen(false)}><Link href="/admin/personal"><Users size={16} /> Personal</Link></li>
+                                        <li onClick={() => setAdminMenuOpen(false)}><Link href="/admin/nomina"><Banknote size={16} /> Nómina</Link></li>
+                                        <li onClick={() => setAdminMenuOpen(false)}><Link href="/admin/productos-personal"><PackageSearch size={16} /> Prods. Personal</Link></li>
+                                    </ul>
+                                )}
                             </li>
                         )}
                     </ul>
@@ -170,7 +195,12 @@ export default function Navbar() {
                                     <li><Link href="/planes"><FileText size={16} /> Planes</Link></li>
                                 )}
                                 {isAdmin && (
-                                    <li><Link href="/admin/bitacora"><FileText size={16} /> Bitácora</Link></li>
+                                    <>
+                                        <li><Link href="/admin/bitacora"><FileText size={16} /> Bitácora</Link></li>
+                                        <li><Link href="/admin/personal"><Users size={16} /> Personal</Link></li>
+                                        <li><Link href="/admin/nomina"><Banknote size={16} /> Nómina</Link></li>
+                                        <li><Link href="/admin/productos-personal"><PackageSearch size={16} /> Prods. Personal</Link></li>
+                                    </>
                                 )}
                                 <li><Link href="/perfil"><UserCog size={16} /> Mi Perfil</Link></li>
                                 <div className="divider my-0"></div>

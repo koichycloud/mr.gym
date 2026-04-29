@@ -146,3 +146,110 @@ model AuditLog {
   @@index([usuario, fecha])
   @@index([accion])
 }
+
+// --- MÓDULO DE PERSONAL ---
+
+model Personal {
+  id              String   @id @default(uuid())
+  codigo          String   @unique // Para el kiosco
+  nombres         String
+  apellidos       String
+  tipoDocumento   String   @default("DNI") // DNI, CE, etc.
+  dni             String   @unique // Usado para el número de documento
+  telefono        String?
+  rol             String   // Instructor, Recepcionista, etc.
+  metodoPago      String   // POR_HORA, POR_DIA, SEMANAL, QUINCENAL, MENSUAL
+  montoPago       Float    // Monto según el método
+  horasObjetivo   Float    // Horas que debe cumplir en su ciclo (ej. 40 semanales, 80 quincenales)
+  activo          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  asistencias     AsistenciaPersonal[]
+  consumos        ConsumoPersonal[]
+  adelantos       AdelantoPersonal[]
+  pagos           PagoPersonal[]
+  
+  @@index([nombres, apellidos])
+}
+
+model AsistenciaPersonal {
+  id                  String    @id @default(uuid())
+  personalId          String
+  fecha               DateTime  @default(now()) // Fecha de la jornada
+  
+  horaEntrada         DateTime?
+  horaSalidaAlmuerzo  DateTime?
+  horaEntradaAlmuerzo DateTime?
+  horaSalida          DateTime?
+  
+  // Total de horas calculadas (Salida - Entrada) menos (EntradaAlmuerzo - SalidaAlmuerzo)
+  horasTrabajadas     Float?    
+  
+  personal            Personal  @relation(fields: [personalId], references: [id], onDelete: Cascade)
+
+  @@index([personalId, fecha])
+}
+
+model ProductoPersonal {
+  id          String   @id @default(uuid())
+  nombre      String
+  descripcion String?
+  precio      Float
+  fotoUrl     String?
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  consumos    ConsumoPersonal[]
+}
+
+model ConsumoPersonal {
+  id                 String   @id @default(uuid())
+  personalId         String
+  productoPersonalId String
+  cantidad           Int      @default(1)
+  montoTotal         Float    // cantidad * precio (al momento del consumo)
+  fecha              DateTime @default(now())
+  pagado             Boolean  @default(false)
+  pagoId             String?  
+  
+  personal           Personal          @relation(fields: [personalId], references: [id], onDelete: Cascade)
+  producto           ProductoPersonal  @relation(fields: [productoPersonalId], references: [id])
+  pago               PagoPersonal?     @relation(fields: [pagoId], references: [id], onDelete: SetNull)
+}
+
+model AdelantoPersonal {
+  id          String   @id @default(uuid())
+  personalId  String
+  monto       Float
+  fecha       DateTime @default(now())
+  motivo      String?
+  estado      String   @default("PENDIENTE") // PENDIENTE, APROBADO, RECHAZADO
+  pagado      Boolean  @default(false) 
+  pagoId      String?  
+
+  personal    Personal       @relation(fields: [personalId], references: [id], onDelete: Cascade)
+  pago        PagoPersonal?  @relation(fields: [pagoId], references: [id], onDelete: SetNull)
+}
+
+model PagoPersonal {
+  id            String   @id @default(uuid())
+  personalId    String
+  fechaInicio   DateTime 
+  fechaFin      DateTime
+  
+  horasTrabajadas Float
+  horasObjetivo   Float
+  
+  montoBase       Float    
+  totalConsumos   Float  
+  totalAdelantos  Float  
+  montoFinal      Float    
+  
+  fechaPago       DateTime @default(now())
+  
+  personal      Personal           @relation(fields: [personalId], references: [id])
+  consumos      ConsumoPersonal[]
+  adelantos     AdelantoPersonal[]
+}

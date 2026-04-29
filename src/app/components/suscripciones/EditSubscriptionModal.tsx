@@ -14,7 +14,11 @@ interface EditSubscriptionModalProps {
 }
 
 export default function EditSubscriptionModal({ subscription, onClose, onSubmit }: EditSubscriptionModalProps) {
-    const [date, setDate] = useState(format(new Date(subscription.fechaInicio), 'yyyy-MM-dd'))
+    const initDate = new Date(subscription.fechaInicio)
+    if (initDate.getUTCHours() === 0) {
+        initDate.setUTCHours(12)
+    }
+    const [date, setDate] = useState(format(initDate, 'yyyy-MM-dd'))
     const [meses, setMeses] = useState(subscription.meses)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
@@ -25,13 +29,9 @@ export default function EditSubscriptionModal({ subscription, onClose, onSubmit 
         setError('')
 
         try {
-            const newDate = new Date(date)
-            // Fix timezone offset issue by setting time to noon or handling timezone explicitly if needed
-            // For simplicity in this app, we assume local date.
-            // Adjust to ensure we don't shift day due to UTC conversion if simplistic
-            const adjustedDate = new Date(newDate.valueOf() + newDate.getTimezoneOffset() * 60000)
+            const newDate = new Date(date + 'T12:00:00')
 
-            const result = await onSubmit(subscription.id, adjustedDate, Number(meses))
+            const result = await onSubmit(subscription.id, newDate, Number(meses))
             if (result.success) {
                 onClose()
             } else {

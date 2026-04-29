@@ -1,7 +1,7 @@
 'use server'
 
 import prisma from '@/lib/prisma'
-import { addDays } from 'date-fns'
+import { addDays, addMonths } from 'date-fns'
 import { revalidatePath } from 'next/cache'
 import { requireAuth } from '@/lib/auth-utils'
 import { suscripcionSchema } from '@/lib/validations'
@@ -161,8 +161,9 @@ export async function updateSubscription(id: string, newDate: Date, meses: numbe
         }
 
         const fechaInicio = new Date(newDate)
-        const fechaFin = new Date(fechaInicio)
-        fechaFin.setMonth(fechaFin.getMonth() + meses)
+        if (fechaInicio.getUTCHours() === 0) fechaInicio.setUTCHours(12);
+
+        const fechaFin = addDays(addMonths(fechaInicio, meses), -1)
 
         const estado = fechaFin < new Date() ? 'VENCIDA' : 'ACTIVA'
 

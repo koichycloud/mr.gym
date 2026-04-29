@@ -13,6 +13,14 @@ import EditSubscriptionModal from '@/app/components/suscripciones/EditSubscripti
 import MedidasTab from '@/app/components/medidas/MedidasTab'
 import { QRCodeSVG } from 'qrcode.react'
 
+const safeFormatDate = (dateVal: string | Date) => {
+    const d = new Date(dateVal);
+    if (d.getUTCHours() === 0) {
+        d.setUTCHours(12);
+    }
+    return format(d, 'dd/MM/yyyy');
+}
+
 export default function SocioDetailClient({ socio }: { socio: any }) {
     const [showModal, setShowModal] = useState(false)
     const [editingSub, setEditingSub] = useState<any>(null)
@@ -445,7 +453,7 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                             <Calendar className="text-primary w-5 h-5" />
                                             <div>
                                                 <p className="text-xs opacity-50">Fecha de Nacimiento</p>
-                                                <p className="font-semibold">{format(new Date(socio.fechaNacimiento), 'dd/MM/yyyy')}</p>
+                                                <p className="font-semibold">{safeFormatDate(socio.fechaNacimiento)}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -471,7 +479,7 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                             <tbody>
                                                 {socio.historialCodigos?.map((item: any) => (
                                                     <tr key={item.id}>
-                                                        <td>{format(new Date(item.fechaCambio), 'dd/MM/yyyy')}</td>
+                                                        <td>{safeFormatDate(item.fechaCambio)}</td>
                                                         <td className="font-mono text-right">{item.codigo}</td>
                                                     </tr>
                                                 ))}
@@ -489,7 +497,7 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                         <div className="md:hidden flex flex-col divide-y divide-base-200">
                                             {socio.historialCodigos?.map((item: any) => (
                                                 <div key={item.id} className="p-3 flex justify-between items-center text-sm">
-                                                    <span className="opacity-70">{format(new Date(item.fechaCambio), 'dd/MM/yyyy')}</span>
+                                                    <span className="opacity-70">{safeFormatDate(item.fechaCambio)}</span>
                                                     <span className="font-mono font-bold text-primary">{item.codigo}</span>
                                                 </div>
                                             ))}
@@ -514,7 +522,7 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                         </h2>
                                         {latestSub && (
                                             <p className="opacity-70">
-                                                Vence el: <span className="font-bold">{format(new Date(latestSub.fechaFin), 'dd/MM/yyyy')}</span>
+                                                Vence el: <span className="font-bold">{safeFormatDate(latestSub.fechaFin)}</span>
                                             </p>
                                         )}
                                     </div>
@@ -550,7 +558,7 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
 
                                                     return (
                                                         <tr key={sub.id}>
-                                                            <td>{format(new Date(sub.fechaInicio), 'dd/MM/yyyy')}</td>
+                                                            <td>{safeFormatDate(sub.fechaInicio)}</td>
                                                             <td>
                                         {sub.plan ? (
                                             <div>
@@ -561,7 +569,7 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                             `${sub.meses} ${sub.meses === 1 ? 'mes' : 'meses'}`
                                         )}
                                     </td>
-                                                            <td>{format(new Date(sub.fechaFin), 'dd/MM/yyyy')}</td>
+                                                            <td>{safeFormatDate(sub.fechaFin)}</td>
                                                             <td className="font-mono text-xs text-primary">{displayCode}</td>
                                                             <td>
                                                                 <div className={`badge ${sub.estado === 'ACTIVA' ? 'badge-success' : 'badge-ghost'}`}>
@@ -611,11 +619,11 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                                     <div className="grid grid-cols-2 gap-2 text-xs">
                                                         <div>
                                                             <span className="opacity-50 block">Inicio</span>
-                                                            <span className="font-semibold">{format(new Date(sub.fechaInicio), 'dd/MM/yyyy')}</span>
+                                                            <span className="font-semibold">{safeFormatDate(sub.fechaInicio)}</span>
                                                         </div>
                                                         <div>
                                                             <span className="opacity-50 block">Vencimiento</span>
-                                                            <span className="font-semibold">{format(new Date(sub.fechaFin), 'dd/MM/yyyy')}</span>
+                                                            <span className="font-semibold">{safeFormatDate(sub.fechaFin)}</span>
                                                         </div>
                                                         <div>
                                                             <span className="opacity-50 block">Duración</span>

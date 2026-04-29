@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Save, Wallet } from 'lucide-react'
-import { addMonths, format } from 'date-fns'
+import { addMonths, addDays, format } from 'date-fns'
 import { getPlanesActivos } from '@/app/actions/planes'
 
 interface NewSubscriptionModalProps {
@@ -35,7 +35,8 @@ export default function NewSubscriptionModal({ socioId, socioNombre, socioCodigo
         nuevoCodigo: ''
     })
 
-    const [fechaFin, setFechaFin] = useState('')
+    const [fechaFinDisplay, setFechaFinDisplay] = useState('')
+    const [fechaFinRaw, setFechaFinRaw] = useState<Date | null>(null)
     const selectedPlan = planes.find(p => p.id === selectedPlanId)
 
     useEffect(() => {
@@ -49,14 +50,15 @@ export default function NewSubscriptionModal({ socioId, socioNombre, socioCodigo
 
     useEffect(() => {
         if (!formData.fechaInicio) return
-        const start = new Date(formData.fechaInicio)
+        const start = new Date(formData.fechaInicio + 'T12:00:00') // Force noon to avoid timezone shift
         if (isNaN(start.getTime())) return
 
         const meses = selectedPlan ? selectedPlan.meses : customMeses
-        const end = addMonths(start, meses)
+        const end = addDays(addMonths(start, meses), -1) // Subtract 1 day for inclusive period
         if (isNaN(end.getTime())) return
 
-        setFechaFin(format(end, 'yyyy-MM-dd'))
+        setFechaFinRaw(end)
+        setFechaFinDisplay(format(end, 'dd/MM/yyyy'))
     }, [formData.fechaInicio, selectedPlan, customMeses])
 
     const formatCode = (val: string) => {
@@ -80,8 +82,8 @@ export default function NewSubscriptionModal({ socioId, socioNombre, socioCodigo
                 socioId,
                 planId: selectedPlan?.id,
                 meses: meses,
-                fechaInicio: new Date(formData.fechaInicio),
-                fechaFin: new Date(fechaFin),
+                fechaInicio: new Date(formData.fechaInicio + 'T12:00:00'),
+                fechaFin: fechaFinRaw || new Date(),
                 nuevoCodigo: (formattedCode !== '' && formattedCode !== socioCodigo) ? formattedCode : undefined
             }
 
@@ -218,7 +220,7 @@ export default function NewSubscriptionModal({ socioId, socioNombre, socioCodigo
                             </label>
                             <input
                                 type="text"
-                                value={fechaFin}
+                                value={fechaFinDisplay}
                                 readOnly
                                 className="input input-bordered w-full bg-base-200"
                             />
