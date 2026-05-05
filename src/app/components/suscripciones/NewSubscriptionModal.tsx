@@ -32,7 +32,7 @@ export default function NewSubscriptionModal({ socioId, socioNombre, socioCodigo
         nuevoCodigo: string
     }>({
         fechaInicio: new Date().toISOString().split('T')[0],
-        nuevoCodigo: ''
+        nuevoCodigo: socioCodigo || ''
     })
 
     const [fechaFinDisplay, setFechaFinDisplay] = useState('')

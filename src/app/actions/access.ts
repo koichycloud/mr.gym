@@ -61,7 +61,7 @@ export async function validateAccess(codigo: string): Promise<AccessResult> {
             where: { codigo },
             include: {
                 suscripciones: {
-                    orderBy: { fechaFin: 'desc' },
+                    orderBy: { createdAt: 'desc' },
                     take: 1
                 }
             }

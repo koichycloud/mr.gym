@@ -153,7 +153,7 @@ export async function getSocios() {
             suscripciones: {
                 // REMOVED: where: { estado: 'ACTIVA' }
                 // We want the latest subscription regardless of status to correctly show "Vencida" if applicable
-                orderBy: { fechaFin: 'desc' },
+                orderBy: { createdAt: 'desc' },
                 include: { plan: true },
                 take: 1
             },
