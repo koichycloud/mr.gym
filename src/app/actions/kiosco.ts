@@ -78,7 +78,7 @@ export async function validateKioskAccess(codigo: string, mode: 'ENTRADA' | 'SAL
             select: {
                 id: true, codigo: true, nombres: true, apellidos: true, fotoUrl: true,
                 suscripciones: {
-                    orderBy: { createdAt: 'desc' },
+                    orderBy: { fechaFin: 'desc' },
                     take: 1,
                     select: { fechaFin: true, fechaInicio: true, estado: true, meses: true }
                 }
@@ -94,7 +94,7 @@ export async function validateKioskAccess(codigo: string, mode: 'ENTRADA' | 'SAL
                         select: {
                             id: true, codigo: true, nombres: true, apellidos: true, fotoUrl: true,
                             suscripciones: {
-                                orderBy: { createdAt: 'desc' },
+                                orderBy: { fechaFin: 'desc' },
                                 take: 1,
                                 select: { fechaFin: true, fechaInicio: true, estado: true, meses: true }
                             }

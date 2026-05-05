@@ -85,7 +85,7 @@ export async function createSocio(data: z.infer<typeof socioSchema>) {
             },
             include: {
                 suscripciones: {
-                    orderBy: { createdAt: 'desc' },
+                    orderBy: { fechaFin: 'desc' },
                     take: 1
                 }
             }
@@ -212,7 +212,7 @@ export async function getSocios(params?: {
                 fotoUrl: true,
                 createdAt: true,
                 suscripciones: {
-                    orderBy: { createdAt: 'desc' },
+                    orderBy: { fechaFin: 'desc' },
                     take: 1,
                     select: {
                         fechaFin: true,
@@ -295,7 +295,7 @@ export async function getSocioById(id: string) {
         where: { id },
         include: {
             suscripciones: {
-                orderBy: { createdAt: 'desc' }, 
+                orderBy: { fechaFin: 'desc' }, 
                 include: { plan: true }
             },
             historialCodigos: {
