@@ -13,6 +13,95 @@ import EditSubscriptionModal from '@/app/components/suscripciones/EditSubscripti
 import MedidasTab from '@/app/components/medidas/MedidasTab'
 import { QRCodeSVG } from 'qrcode.react'
 
+/** Draws the full branded carnet onto a canvas and returns a Blob.
+ *  Uses Blob URL (not btoa) to avoid charset encoding issues with accented names.
+ */
+async function generateCarnetBlob(
+    svgId: string,
+    codigo: string,
+    nombre: string
+): Promise<Blob | null> {
+    const svgEl = document.getElementById(svgId) as SVGSVGElement | null
+    if (!svgEl) return null
+
+    const svgData = new XMLSerializer().serializeToString(svgEl)
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
+    const svgUrl = URL.createObjectURL(svgBlob)
+
+    return new Promise((resolve) => {
+        const qrImg = new Image()
+        qrImg.onload = () => {
+            const SCALE = 3
+            const QR = 252 * SCALE
+            const PAD = 16 * SCALE
+            const HDR = 64 * SCALE
+            const FTR = 60 * SCALE
+            const W = QR + PAD * 2
+            const H = HDR + QR + PAD * 2 + FTR
+
+            const canvas = document.createElement('canvas')
+            canvas.width = W
+            canvas.height = H
+            const ctx = canvas.getContext('2d')!
+
+            // White base
+            ctx.fillStyle = '#ffffff'
+            ctx.fillRect(0, 0, W, H)
+
+            // Header gradient
+            const grad = ctx.createLinearGradient(0, 0, W, HDR)
+            grad.addColorStop(0, '#4f46e5')
+            grad.addColorStop(1, '#7c3aed')
+            ctx.fillStyle = grad
+            ctx.fillRect(0, 0, W, HDR)
+
+            // Header text
+            const txtX = PAD + 12 * SCALE
+            ctx.fillStyle = '#ffffff'
+            ctx.font = `900 ${18 * SCALE}px Arial, sans-serif`
+            ctx.textBaseline = 'middle'
+            ctx.fillText('MR. GYM', txtX, HDR * 0.38)
+            ctx.font = `600 ${9 * SCALE}px Arial, sans-serif`
+            ctx.fillStyle = 'rgba(255,255,255,0.75)'
+            ctx.fillText('CARNET DE ACCESO', txtX, HDR * 0.72)
+
+            // QR image (clean, on white)
+            ctx.fillStyle = '#ffffff'
+            ctx.fillRect(0, HDR, W, QR + PAD * 2)
+            ctx.drawImage(qrImg, PAD, HDR + PAD, QR, QR)
+
+            // Footer background
+            ctx.fillStyle = '#f3f3ff'
+            ctx.fillRect(0, HDR + QR + PAD * 2, W, FTR)
+
+            // Footer border line
+            ctx.strokeStyle = '#d0d0ee'
+            ctx.lineWidth = SCALE
+            ctx.beginPath()
+            ctx.moveTo(0, HDR + QR + PAD * 2)
+            ctx.lineTo(W, HDR + QR + PAD * 2)
+            ctx.stroke()
+
+            // Footer code
+            ctx.fillStyle = '#4f46e5'
+            ctx.font = `900 ${20 * SCALE}px monospace`
+            ctx.textAlign = 'center'
+            ctx.textBaseline = 'middle'
+            ctx.fillText(codigo, W / 2, HDR + QR + PAD * 2 + FTR * 0.35)
+
+            // Footer name
+            ctx.fillStyle = '#444444'
+            ctx.font = `600 ${10 * SCALE}px Arial, sans-serif`
+            ctx.fillText(nombre, W / 2, HDR + QR + PAD * 2 + FTR * 0.72)
+
+            URL.revokeObjectURL(svgUrl)
+            canvas.toBlob((blob) => resolve(blob), 'image/png')
+        }
+        qrImg.onerror = () => { URL.revokeObjectURL(svgUrl); resolve(null) }
+        qrImg.src = svgUrl
+    })
+}
+
 const safeFormatDate = (dateVal: string | Date) => {
     const d = new Date(dateVal);
     if (d.getUTCHours() === 0) {
@@ -212,14 +301,13 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                 {/* Botones */}
                                 <div className="grid grid-cols-1 gap-3">
                                     <button className="btn btn-primary w-full shadow-md font-bold" onClick={async () => {
-                                        const el = document.getElementById('qr-code-container')
-                                        if (!el) return
-                                        const html2canvas = (await import('html2canvas')).default
-                                        const canvas = await html2canvas(el, { backgroundColor: '#ffffff', scale: 3, useCORS: true, logging: false })
+                                        const blob = await generateCarnetBlob('socio-qr-svg', socio.codigo, `${socio.nombres} ${socio.apellidos}`)
+                                        if (!blob) { alert('Error al generar la imagen. Intenta de nuevo.'); return }
                                         const link = document.createElement('a')
                                         link.download = `QR-${socio.nombres}-${socio.codigo}.png`
-                                        link.href = canvas.toDataURL('image/png')
+                                        link.href = URL.createObjectURL(blob)
                                         link.click()
+                                        setTimeout(() => URL.revokeObjectURL(link.href), 5000)
                                     }}>
                                         <Download size={20} className="mr-1" />
                                         Descargar Imagen
@@ -234,28 +322,15 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                             const phone = socio.telefono.replace(/\D/g, '')
                                             const text = `Hola ${socio.nombres}, aquí tienes tu código de acceso para Mr. Gym: ${socio.codigo}`
                                             const targetUrl = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
-                                            try {
-                                                const el = document.getElementById('qr-code-container')
-                                                if (el) {
-                                                    const html2canvas = (await import('html2canvas')).default
-                                                    const canvas = await html2canvas(el, { backgroundColor: '#ffffff', scale: 3, useCORS: true, logging: false })
-                                                    canvas.toBlob(async (blob) => {
-                                                        if (blob) {
-                                                            try {
-                                                                const item = new ClipboardItem({ 'image/png': blob })
-                                                                await navigator.clipboard.write([item])
-                                                                alert('✅ Imagen QR copiada al portapapeles.\n\nSe abrirá WhatsApp.\nMantén presionado en el chat y selecciona PEGAR para enviar el código como imagen.')
-                                                            } catch (e) {
-                                                                console.error('No se pudo copiar', e)
-                                                            }
-                                                        }
-                                                        window.open(targetUrl, '_blank')
-                                                        logQRSent(socio.nombres, socio.codigo, 'WhatsApp')
-                                                    }, 'image/png')
-                                                    return
+                                            const blob = await generateCarnetBlob('socio-qr-svg', socio.codigo, `${socio.nombres} ${socio.apellidos}`)
+                                            if (blob) {
+                                                try {
+                                                    const item = new ClipboardItem({ 'image/png': blob })
+                                                    await navigator.clipboard.write([item])
+                                                    alert('✅ Imagen QR copiada al portapapeles.\n\nSe abrirá WhatsApp.\nMantén presionado en el chat y selecciona PEGAR para enviar el código como imagen.')
+                                                } catch (e) {
+                                                    console.error('No se pudo copiar al portapapeles', e)
                                                 }
-                                            } catch (err) {
-                                                console.error('Error al copiar QR:', err)
                                             }
                                             window.open(targetUrl, '_blank')
                                             logQRSent(socio.nombres, socio.codigo, 'WhatsApp')
@@ -266,30 +341,19 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
 
                                         <button className="btn btn-outline shadow-sm font-bold bg-base-200/50" onClick={async () => {
                                             const text = `Hola ${socio.nombres}, aquí tienes tu código de acceso para Mr. Gym: ${socio.codigo}`
-                                            try {
-                                                const el = document.getElementById('qr-code-container')
-                                                if (el) {
-                                                    const html2canvas = (await import('html2canvas')).default
-                                                    const canvas = await html2canvas(el, { backgroundColor: '#ffffff', scale: 3, useCORS: true, logging: false })
-                                                    canvas.toBlob(async (blob) => {
-                                                        if (!blob) { alert('Error al generar la imagen.'); return }
-                                                        const file = new File([blob], `QR-${socio.nombres}-${socio.codigo}.png`, { type: 'image/png' })
-                                                        const shareData = { title: 'Código QR de Acceso', text, files: [file] }
-                                                        if (navigator.canShare && navigator.canShare(shareData)) {
-                                                            try {
-                                                                await navigator.share(shareData)
-                                                                logQRSent(socio.nombres, socio.codigo, 'Nativo (Compartir)')
-                                                            } catch (err: any) {
-                                                                console.log('Compartir cancelado o falló', err.message)
-                                                            }
-                                                        } else {
-                                                            alert("Tu dispositivo no soporta compartir nativamente. Usa el botón 'WhatsApp'.")
-                                                        }
-                                                    }, 'image/png')
-                                                    return
+                                            const blob = await generateCarnetBlob('socio-qr-svg', socio.codigo, `${socio.nombres} ${socio.apellidos}`)
+                                            if (!blob) { alert('Error al generar la imagen.'); return }
+                                            const file = new File([blob], `QR-${socio.nombres}-${socio.codigo}.png`, { type: 'image/png' })
+                                            const shareData = { title: 'Código QR de Acceso', text, files: [file] }
+                                            if (navigator.canShare && navigator.canShare(shareData)) {
+                                                try {
+                                                    await navigator.share(shareData)
+                                                    logQRSent(socio.nombres, socio.codigo, 'Nativo (Compartir)')
+                                                } catch (err: any) {
+                                                    console.log('Compartir cancelado o falló', err.message)
                                                 }
-                                            } catch (err) {
-                                                console.error('Error al compartir QR:', err)
+                                            } else {
+                                                alert("Tu dispositivo no soporta compartir nativamente. Usa el botón 'WhatsApp'.")
                                             }
                                         }}>
                                             <Share2 size={18} className="mr-1" />
