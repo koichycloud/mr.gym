@@ -129,21 +129,69 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                 {activeTab === 'carnet' && (
                     <div className="card bg-base-100 shadow-xl">
                         <div className="card-body items-center text-center">
-                            <h2 className="card-title text-2xl mb-2">Carnet de Acceso</h2>
-                            <div className="p-4 bg-white rounded-lg border-2 border-base-300 relative overflow-hidden" id="qr-code-container" style={{ width: '288px', height: '288px', margin: '0 auto' }}>
-                                <QRCodeSVG
-                                    value={socio.codigo}
-                                    size={252}
-                                    level="H"
-                                    includeMargin={true}
-                                    bgColor="#FFFFFF"
-                                    fgColor="#000000"
-                                    id="socio-qr-svg"
-                                    className="relative z-10 mx-auto"
-                                />
+                            <h2 className="card-title text-2xl mb-4">Carnet de Acceso</h2>
+
+                            {/* Branded QR Card — Option B */}
+                            <div
+                                id="qr-code-container"
+                                style={{
+                                    width: '300px',
+                                    borderRadius: '16px',
+                                    overflow: 'hidden',
+                                    boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+                                    border: '3px solid #4f46e5',
+                                    margin: '0 auto',
+                                    background: '#fff',
+                                }}
+                            >
+                                {/* Header with brand */}
+                                <div style={{
+                                    background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+                                    padding: '14px 16px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '10px',
+                                }}>
+                                    <img
+                                        src="/icons/icon-192x192.png"
+                                        alt="Mr. Gym"
+                                        style={{ width: '36px', height: '36px', borderRadius: '8px', flexShrink: 0 }}
+                                    />
+                                    <div style={{ textAlign: 'left' }}>
+                                        <div style={{ color: '#fff', fontWeight: 900, fontSize: '18px', letterSpacing: '-0.5px', lineHeight: 1 }}>MR. GYM</div>
+                                        <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: '10px', fontWeight: 600, letterSpacing: '2px', textTransform: 'uppercase' }}>Carnet de Acceso</div>
+                                    </div>
+                                </div>
+
+                                {/* Clean QR — nothing behind or on top */}
+                                <div style={{ background: '#fff', padding: '16px', display: 'flex', justifyContent: 'center' }}>
+                                    <QRCodeSVG
+                                        value={socio.codigo}
+                                        size={252}
+                                        level="H"
+                                        includeMargin={false}
+                                        bgColor="#FFFFFF"
+                                        fgColor="#000000"
+                                        id="socio-qr-svg"
+                                    />
+                                </div>
+
+                                {/* Footer with code + name */}
+                                <div style={{
+                                    background: '#f8f8ff',
+                                    borderTop: '1px solid #e0e0f0',
+                                    padding: '10px 16px 14px',
+                                    textAlign: 'center',
+                                }}>
+                                    <div style={{ fontFamily: 'monospace', fontSize: '22px', fontWeight: 900, letterSpacing: '4px', color: '#4f46e5' }}>
+                                        {socio.codigo}
+                                    </div>
+                                    <div style={{ fontSize: '12px', color: '#555', marginTop: '2px', fontWeight: 600 }}>
+                                        {socio.nombres} {socio.apellidos}
+                                    </div>
+                                </div>
                             </div>
-                            <p className="mt-4 font-mono text-xl tracking-widest font-bold">{socio.codigo}</p>
-                            <p className="text-sm opacity-60">Muestra este código en recepción para ingresar</p>
+
 
                             <div className="flex flex-col gap-4 mt-8 w-full max-w-sm mx-auto">
                                 {/* Estado de Acceso Card */}
