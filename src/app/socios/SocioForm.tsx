@@ -63,7 +63,7 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
     }>({
         meses: 1,
         monto: 0,
-        fechaInicio: new Date().toISOString().split('T')[0],
+        fechaInicio: format(new Date(), 'yyyy-MM-dd'),
         metodoPago: 'EFECTIVO'
     })
     const [fechaFin, setFechaFin] = useState('')

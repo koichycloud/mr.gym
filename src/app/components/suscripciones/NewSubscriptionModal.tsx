@@ -31,7 +31,7 @@ export default function NewSubscriptionModal({ socioId, socioNombre, socioCodigo
         fechaInicio: string
         nuevoCodigo: string
     }>({
-        fechaInicio: new Date().toISOString().split('T')[0],
+        fechaInicio: format(new Date(), 'yyyy-MM-dd'),
         nuevoCodigo: socioCodigo || ''
     })
 

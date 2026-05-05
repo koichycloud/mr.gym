@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { X, Save } from 'lucide-react'
-import { differenceInYears } from 'date-fns'
+import { differenceInYears, format } from 'date-fns'
 
 interface AddMedidaModalProps {
     onClose: () => void
@@ -14,7 +14,7 @@ export default function AddMedidaModal({ onClose, onSubmit, fechaNacimiento }: A
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [formData, setFormData] = useState({
-        fecha: new Date().toISOString().split('T')[0],
+        fecha: format(new Date(), 'yyyy-MM-dd'),
         peso: '',
         altura: '',
         porcentajeGrasa: '',
