@@ -1,19 +1,36 @@
-import { getSociosPaginated } from '@/app/actions/socios'
+import { getSocios } from '@/app/actions/socios'
 import SociosListClient from './SociosListClient'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 
 export const dynamic = 'force-dynamic'
 
-export default async function SociosPage({ searchParams }: { searchParams: { page?: string, q?: string, filter?: string } }) {
-    const page = parseInt(searchParams.page || '1')
-    const query = searchParams.q || ''
-    const filterType = searchParams.filter || 'all'
-
-    const { socios, totalCount } = await getSociosPaginated(page, 20, query, filterType)
-    
+export default async function SociosPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ page?: string; q?: string; filter?: string }>
+}) {
+    const { page, q, filter } = await searchParams
     const session = await getServerSession(authOptions)
     const isAdmin = session?.user?.role === 'ADMIN'
 
-    return <SociosListClient initialSocios={socios} totalCount={totalCount} currentPage={page} initialQuery={query} initialFilter={filterType} isAdmin={isAdmin} />
+    const filterType = (filter === 'expiring' || filter === 'vencidos') ? filter : 'all'
+
+    const { socios, totalCount, totalPages } = await getSocios({
+        search: q || '',
+        filterType,
+        page: parseInt(page || '1'),
+    })
+
+    return (
+        <SociosListClient
+            initialSocios={socios}
+            isAdmin={isAdmin}
+            totalCount={totalCount}
+            totalPages={totalPages}
+            currentPage={parseInt(page || '1')}
+            currentSearch={q || ''}
+            currentFilter={filterType}
+        />
+    )
 }

@@ -144,68 +144,148 @@ async function updateExpiredSubscriptions() {
     })
 }
 
-export async function getSociosPaginated(page: number = 1, limit: number = 20, query: string = '', filterType: string = 'all') {
+const SOCIOS_PAGE_SIZE = 20
+
+export async function getSocios(params?: {
+    search?: string
+    filterType?: 'all' | 'expiring' | 'vencidos'
+    page?: number
+}): Promise<{ socios: any[]; totalCount: number; totalPages: number }> {
     await requireAuth() // 🔒 Protected
     await updateExpiredSubscriptions() // Lazy update
-    
-    // Fetch all (we will filter in Node.js to match complex client logic without massive payload)
-    const allSocios = await prisma.socio.findMany({
+
+    const search = params?.search?.trim() || ''
+    const filterType = params?.filterType || 'all'
+    const page = Math.max(1, params?.page || 1)
+
+    const today = new Date()
+    const sevenDaysLater = new Date(today)
+    sevenDaysLater.setDate(sevenDaysLater.getDate() + 7)
+
+    // Build search filter
+    const searchFilter = search ? {
+        OR: [
+            { nombres: { contains: search, mode: 'insensitive' as const } },
+            { apellidos: { contains: search, mode: 'insensitive' as const } },
+            { numeroDocumento: { contains: search } },
+            { codigo: { contains: search, mode: 'insensitive' as const } },
+            { historialCodigos: { some: { codigo: { contains: search, mode: 'insensitive' as const } } } },
+        ]
+    } : {}
+
+    // Build subscription filter for expiring/vencidos
+    let subscriptionFilter: any = {}
+    if (filterType === 'expiring') {
+        subscriptionFilter = {
+            suscripciones: {
+                some: {
+                    fechaFin: { gte: today, lte: sevenDaysLater }
+                }
+            }
+        }
+    } else if (filterType === 'vencidos') {
+        subscriptionFilter = {
+            suscripciones: {
+                every: { fechaFin: { lt: today } }
+            }
+        }
+    }
+
+    const where = { ...searchFilter, ...subscriptionFilter }
+
+    const [socios, totalCount] = await Promise.all([
+        prisma.socio.findMany({
+            where,
+            orderBy: { codigo: 'desc' },
+            skip: (page - 1) * SOCIOS_PAGE_SIZE,
+            take: SOCIOS_PAGE_SIZE,
+            select: {
+                id: true,
+                codigo: true,
+                nombres: true,
+                apellidos: true,
+                sexo: true,
+                tipoDocumento: true,
+                numeroDocumento: true,
+                fechaNacimiento: true,
+                telefono: true,
+                fotoUrl: true,
+                createdAt: true,
+                suscripciones: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 1,
+                    select: {
+                        fechaFin: true,
+                        fechaInicio: true,
+                        estado: true,
+                        meses: true,
+                    }
+                },
+                historialCodigos: {
+                    orderBy: { fechaCambio: 'desc' },
+                    take: 3,
+                    select: { id: true, codigo: true }
+                }
+            }
+        }),
+        prisma.socio.count({ where })
+    ])
+
+    return {
+        socios,
+        totalCount,
+        totalPages: Math.ceil(totalCount / SOCIOS_PAGE_SIZE)
+    }
+}
+
+/** Full export (no pagination) - only for Excel/PDF export */
+export async function exportSocios(params?: {
+    search?: string
+    filterType?: 'all' | 'expiring' | 'vencidos'
+}) {
+    await requireAuth() // 🔒 Protected
+
+    const search = params?.search?.trim() || ''
+    const filterType = params?.filterType || 'all'
+
+    const today = new Date()
+    const sevenDaysLater = new Date(today)
+    sevenDaysLater.setDate(sevenDaysLater.getDate() + 7)
+
+    const searchFilter = search ? {
+        OR: [
+            { nombres: { contains: search, mode: 'insensitive' as const } },
+            { apellidos: { contains: search, mode: 'insensitive' as const } },
+            { numeroDocumento: { contains: search } },
+            { codigo: { contains: search, mode: 'insensitive' as const } },
+        ]
+    } : {}
+
+    let subscriptionFilter: any = {}
+    if (filterType === 'expiring') {
+        subscriptionFilter = { suscripciones: { some: { fechaFin: { gte: today, lte: sevenDaysLater } } } }
+    } else if (filterType === 'vencidos') {
+        subscriptionFilter = { suscripciones: { every: { fechaFin: { lt: today } } } }
+    }
+
+    return prisma.socio.findMany({
+        where: { ...searchFilter, ...subscriptionFilter },
         orderBy: { codigo: 'desc' },
-        include: {
+        select: {
+            codigo: true,
+            nombres: true,
+            apellidos: true,
+            tipoDocumento: true,
+            numeroDocumento: true,
+            telefono: true,
+            createdAt: true,
             suscripciones: {
                 orderBy: { createdAt: 'desc' },
-                include: { plan: true },
-                take: 1
-            },
-            historialCodigos: {
-                orderBy: { fechaCambio: 'desc' }
+                take: 1,
+                select: { fechaFin: true }
             }
         }
     })
-
-    const term = query.toLowerCase()
-    const today = new Date()
-
-    const filteredSocios = allSocios.filter(socio => {
-        const nombres = (socio.nombres || '').toLowerCase()
-        const apellidos = (socio.apellidos || '').toLowerCase()
-        const fullName = `${nombres} ${apellidos}`
-
-        const matchesSearch = nombres.includes(term) ||
-            apellidos.includes(term) ||
-            fullName.includes(term) ||
-            socio.numeroDocumento.includes(term) ||
-            socio.codigo.toLowerCase().includes(term) ||
-            socio.historialCodigos?.some(h => h.codigo.toLowerCase().includes(term))
-
-        if (!matchesSearch) return false
-
-        const activeSub = socio.suscripciones?.[0]
-        
-        if (filterType === 'expiring') {
-            if (!activeSub) return false
-            const days = Math.ceil((new Date(activeSub.fechaFin).getTime() - today.getTime()) / (1000 * 3600 * 24))
-            return days >= 0 && days <= 7
-        }
-
-        if (filterType === 'vencidos') {
-            if (!activeSub) return true 
-            return new Date(activeSub.fechaFin) < today
-        }
-
-        return true
-    })
-
-    const totalCount = filteredSocios.length
-    
-    if (limit === -1) {
-        return { socios: filteredSocios, totalCount }
-    }
-
-    const startIndex = (page - 1) * limit
-    const paginated = filteredSocios.slice(startIndex, startIndex + limit)
-
-    return { socios: paginated, totalCount }
 }
 
 export async function getSocioById(id: string) {

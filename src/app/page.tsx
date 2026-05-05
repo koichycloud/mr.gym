@@ -19,7 +19,7 @@ export default async function Home({
   const session = await getServerSession(authOptions)
   const allExpiring = await getExpiringSubscriptions()
   const expired = await getExpiredSubscriptions()
-  const socios = await getSocios()
+  const { socios, totalCount } = await getSocios()
   const asistenciasHoy = await contarAsistenciasHoy()
   const ingresosHoy = await getTotalIngresosHoy()
 
@@ -46,7 +46,7 @@ export default async function Home({
                 <Users className="inline-block w-8 h-8 stroke-current" />
               </div>
               <div className="stat-title font-bold">Total Socios</div>
-              <div className="stat-value text-primary">{socios.length}</div>
+              <div className="stat-value text-primary">{totalCount}</div>
               <div className="stat-desc flex items-center gap-1">Gestionar lista <ChevronRight size={12}/></div>
               <div className="absolute bottom-0 left-0 h-1 w-0 bg-primary group-hover:w-full transition-all duration-300"></div>
             </div>
