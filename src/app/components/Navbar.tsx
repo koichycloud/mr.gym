@@ -57,7 +57,7 @@ export default function Navbar() {
     return (
         <>
             {/* TOP NAVBAR (Desktop & Mobile Header) */}
-            <div className="navbar bg-base-100 shadow-sm border-b border-base-200">
+            <div className="navbar bg-base-100 shadow-sm border-b border-base-200 sticky top-0 z-50">
                 <div className="navbar-start">
                     <Link href="/" className="btn btn-ghost text-4xl font-black text-[#3f2009]" style={{ WebkitTextStroke: '4px black', paintOrder: 'stroke fill' }}>Mr. GYM</Link>
                 </div>

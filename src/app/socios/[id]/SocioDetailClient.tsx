@@ -528,7 +528,7 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                     </div>
                                     <button className="btn btn-primary" onClick={() => setShowModal(true)}>
                                         <Plus className="mr-2" />
-                                        Renovar / Nueva
+                                        Renovación
                                     </button>
                                 </div>
                             </div>
