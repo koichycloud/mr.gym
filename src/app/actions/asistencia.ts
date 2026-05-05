@@ -156,7 +156,7 @@ export async function getEstadisticasAsistencia() {
         })
 
         // Weekly breakdown (Array with exact dates)
-        const diasSemanaArr = [];
+        const diasSemanaArr: Array<{ dia: string, fecha: string, asistencias: number }> = [];
         for (let i = 6; i >= 0; i--) {
             const d = getLimaStartOfDay();
             d.setDate(d.getDate() - i);

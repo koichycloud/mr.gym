@@ -229,7 +229,7 @@ export default function AsistenciaClient({ asistenciasIniciales, statsIniciales 
                                         dataKey="asistencias"
                                         radius={[8, 8, 0, 0]}
                                         maxBarSize={60}
-                                        onClick={(data) => {
+                                        onClick={(data: any) => {
                                             if (data && data.fecha) {
                                                 buscarPorFecha(data.fecha)
                                                 setTimeout(() => {
