@@ -320,8 +320,11 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                                 return
                                             }
                                             const phone = socio.telefono.replace(/\D/g, '')
+                                            // Si el número tiene 9 dígitos (formato peruano sin código de país),
+                                            // le agregamos automáticamente el código de Perú: 51
+                                            const phoneWithCountry = phone.length === 9 ? `51${phone}` : phone
                                             const text = `Hola ${socio.nombres}, aquí tienes tu código de acceso para Mr. Gym: ${socio.codigo}`
-                                            const targetUrl = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
+                                            const targetUrl = `https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(text)}`
 
                                             // ⚠️ DEBE ir ANTES de cualquier await — el navegador bloquea
                                             // window.open si se llama después de una operación asíncrona
