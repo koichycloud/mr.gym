@@ -144,15 +144,15 @@ async function updateExpiredSubscriptions() {
     })
 }
 
-export async function getSocios() {
+export async function getSociosPaginated(page: number = 1, limit: number = 20, query: string = '', filterType: string = 'all') {
     await requireAuth() // 🔒 Protected
     await updateExpiredSubscriptions() // Lazy update
-    return await prisma.socio.findMany({
+    
+    // Fetch all (we will filter in Node.js to match complex client logic without massive payload)
+    const allSocios = await prisma.socio.findMany({
         orderBy: { codigo: 'desc' },
         include: {
             suscripciones: {
-                // REMOVED: where: { estado: 'ACTIVA' }
-                // We want the latest subscription regardless of status to correctly show "Vencida" if applicable
                 orderBy: { createdAt: 'desc' },
                 include: { plan: true },
                 take: 1
@@ -162,6 +162,50 @@ export async function getSocios() {
             }
         }
     })
+
+    const term = query.toLowerCase()
+    const today = new Date()
+
+    const filteredSocios = allSocios.filter(socio => {
+        const nombres = (socio.nombres || '').toLowerCase()
+        const apellidos = (socio.apellidos || '').toLowerCase()
+        const fullName = `${nombres} ${apellidos}`
+
+        const matchesSearch = nombres.includes(term) ||
+            apellidos.includes(term) ||
+            fullName.includes(term) ||
+            socio.numeroDocumento.includes(term) ||
+            socio.codigo.toLowerCase().includes(term) ||
+            socio.historialCodigos?.some(h => h.codigo.toLowerCase().includes(term))
+
+        if (!matchesSearch) return false
+
+        const activeSub = socio.suscripciones?.[0]
+        
+        if (filterType === 'expiring') {
+            if (!activeSub) return false
+            const days = Math.ceil((new Date(activeSub.fechaFin).getTime() - today.getTime()) / (1000 * 3600 * 24))
+            return days >= 0 && days <= 7
+        }
+
+        if (filterType === 'vencidos') {
+            if (!activeSub) return true 
+            return new Date(activeSub.fechaFin) < today
+        }
+
+        return true
+    })
+
+    const totalCount = filteredSocios.length
+    
+    if (limit === -1) {
+        return { socios: filteredSocios, totalCount }
+    }
+
+    const startIndex = (page - 1) * limit
+    const paginated = filteredSocios.slice(startIndex, startIndex + limit)
+
+    return { socios: paginated, totalCount }
 }
 
 export async function getSocioById(id: string) {

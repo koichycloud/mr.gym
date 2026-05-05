@@ -5,18 +5,28 @@ import Link from 'next/link'
 import { Plus, Search, ArrowLeft, Eye, Edit, Clock, FileDown, FileText, Trash2, XCircle } from 'lucide-react'
 import { differenceInMonths, differenceInDays, differenceInWeeks, format } from 'date-fns'
 import * as XLSX from 'xlsx'
-import { deleteSocio } from '@/app/actions/socios'
+import { deleteSocio, getSociosPaginated } from '@/app/actions/socios'
 import { useRouter } from 'next/navigation'
 import { generatePDFReport } from '@/lib/pdf-utils'
 
-export default function SociosListClient({ initialSocios, isAdmin }: { initialSocios: any[], isAdmin: boolean }) {
-    const [search, setSearch] = useState('')
-    const [currentPage, setCurrentPage] = useState(1)
-    const itemsPerPage = 20
+export default function SociosListClient({ initialSocios, totalCount, currentPage, initialQuery, initialFilter, isAdmin }: { initialSocios: any[], totalCount: number, currentPage: number, initialQuery: string, initialFilter: string, isAdmin: boolean }) {
+    const [search, setSearch] = useState(initialQuery)
     const router = useRouter()
     const [isDeleting, setIsDeleting] = useState(false)
-    const [filterType, setFilterType] = useState<'all' | 'expiring' | 'vencidos'>('all')
+    const [filterType, setFilterType] = useState<'all' | 'expiring' | 'vencidos'>(initialFilter as any)
     const [viewingPhoto, setViewingPhoto] = useState<{url: string, name: string} | null>(null)
+    const [isExporting, setIsExporting] = useState(false)
+
+    const itemsPerPage = 20
+    const totalPages = Math.max(1, Math.ceil(totalCount / itemsPerPage))
+
+    const updateParams = (newPage: number, newSearch: string, newFilter: string) => {
+        const params = new URLSearchParams()
+        if (newSearch) params.set('q', newSearch)
+        if (newFilter !== 'all') params.set('filter', newFilter)
+        if (newPage > 1) params.set('page', newPage.toString())
+        router.push(`/socios?${params.toString()}`)
+    }
 
     const handleDelete = async (id: string, name: string) => {
         if (!confirm(`¿Estás seguro de que deseas eliminar al socio ${name}? Esta acción no se puede deshacer y borrará todo su historial y suscripciones.`)) {
@@ -27,7 +37,6 @@ export default function SociosListClient({ initialSocios, isAdmin }: { initialSo
         try {
             const result = await deleteSocio(id)
             if (result.success) {
-                // Success message or toast could go here
                 router.refresh()
             } else {
                 alert(result.error || 'Error al eliminar socio')
@@ -39,81 +48,61 @@ export default function SociosListClient({ initialSocios, isAdmin }: { initialSo
         }
     }
 
-    const filteredSocios = initialSocios.filter(socio => {
-        const term = search.toLowerCase()
-        const nombres = (socio.nombres || '').toLowerCase()
-        const apellidos = (socio.apellidos || '').toLowerCase()
-        const fullName = `${nombres} ${apellidos}`
+    const paginatedSocios = initialSocios
 
-        const matchesSearch = nombres.includes(term) ||
-            apellidos.includes(term) ||
-            fullName.includes(term) ||
-            socio.numeroDocumento.includes(search) ||
-            socio.codigo.toLowerCase().includes(term) ||
-            socio.historialCodigos?.some((h: any) => h.codigo.toLowerCase().includes(term))
+    const handleExportExcel = async () => {
+        setIsExporting(true)
+        try {
+            const { socios: allFiltered } = await getSociosPaginated(1, -1, search, filterType)
+            const dataToExport = allFiltered.map((s: any) => ({
+                Código: s.codigo,
+                Nombres: s.nombres,
+                Apellidos: s.apellidos,
+                Documento: `${s.tipoDocumento} ${s.numeroDocumento}`,
+                Teléfono: s.telefono || '',
+                'Fecha Registro': format(new Date(s.createdAt), 'dd/MM/yyyy')
+            }))
 
-        if (!matchesSearch) return false
-
-        const activeSub = socio.suscripciones?.[0]
-        const today = new Date()
-        
-        if (filterType === 'expiring') {
-            if (!activeSub) return false
-            const days = differenceInDays(new Date(activeSub.fechaFin), today)
-            return days >= 0 && days <= 7
+            const ws = XLSX.utils.json_to_sheet(dataToExport)
+            const wb = XLSX.utils.book_new()
+            XLSX.utils.book_append_sheet(wb, ws, "Socios")
+            XLSX.writeFile(wb, "socios_mr_gym.xlsx")
+        } catch(e) {
+            alert("Error al exportar")
+        } finally {
+            setIsExporting(false)
         }
-
-        if (filterType === 'vencidos') {
-            if (!activeSub) return true // Contados como vencidos si no tienen sub activa? O ignorar.
-            return new Date(activeSub.fechaFin) < today
-        }
-
-        return true
-    })
-
-    const totalPages = Math.ceil(filteredSocios.length / itemsPerPage)
-    const startIndex = (currentPage - 1) * itemsPerPage
-    const paginatedSocios = filteredSocios.slice(startIndex, startIndex + itemsPerPage)
-
-    const exportToExcel = () => {
-        const dataToExport = filteredSocios.map(s => ({
-            Código: s.codigo,
-            Nombres: s.nombres,
-            Apellidos: s.apellidos,
-            Documento: `${s.tipoDocumento} ${s.numeroDocumento}`,
-            Teléfono: s.telefono || '',
-            'Fecha Registro': format(new Date(s.createdAt), 'dd/MM/yyyy')
-        }))
-
-        const ws = XLSX.utils.json_to_sheet(dataToExport)
-        const wb = XLSX.utils.book_new()
-        XLSX.utils.book_append_sheet(wb, ws, "Socios")
-        XLSX.writeFile(wb, "socios_mr_gym.xlsx")
     }
 
+    const handleExportPDF = async () => {
+        setIsExporting(true)
+        try {
+            const { socios: allFiltered } = await getSociosPaginated(1, -1, search, filterType)
+            const columns = ["Código", "Nombres", "Apellidos", "Documento", "Suscripción"];
+            const rows = allFiltered.map((s: any) => [
+                s.codigo,
+                s.nombres,
+                s.apellidos,
+                `${s.tipoDocumento} ${s.numeroDocumento}`,
+                s.suscripciones?.[0] ? format(new Date(s.suscripciones[0].fechaFin), 'dd/MM/yyyy') : 'Sin suscripción'
+            ]);
 
+            let subtitle = "Listado General de Socios";
+            if (filterType === 'expiring') subtitle = "Socios Próximos a Vencer (Próximos 7 días)";
+            if (filterType === 'vencidos') subtitle = "Socios con Suscripción Vencida";
 
-    const exportToPDF = () => {
-        const columns = ["Código", "Nombres", "Apellidos", "Documento", "Suscripción"];
-        const rows = filteredSocios.map(s => [
-            s.codigo,
-            s.nombres,
-            s.apellidos,
-            `${s.tipoDocumento} ${s.numeroDocumento}`,
-            s.suscripciones?.[0] ? format(new Date(s.suscripciones[0].fechaFin), 'dd/MM/yyyy') : 'Sin suscripción'
-        ]);
-
-        let subtitle = "Listado General de Socios";
-        if (filterType === 'expiring') subtitle = "Socios Próximos a Vencer (Próximos 7 días)";
-        if (filterType === 'vencidos') subtitle = "Socios con Suscripción Vencida";
-
-        generatePDFReport({
-            title: 'Reporte de Socios',
-            subtitle: subtitle,
-            columns,
-            rows,
-            fileName: `socios_${filterType}`
-        });
+            generatePDFReport({
+                title: 'Reporte de Socios',
+                subtitle: subtitle,
+                columns,
+                rows,
+                fileName: `socios_${filterType}`
+            });
+        } catch (e) {
+            alert("Error al exportar a PDF")
+        } finally {
+            setIsExporting(false)
+        }
     }
 
     const getRemainingTime = (socio: any) => {
@@ -164,11 +153,11 @@ export default function SociosListClient({ initialSocios, isAdmin }: { initialSo
                         <h1 className="text-3xl font-bold">Socios</h1>
                     </div>
                     <div className="flex gap-2">
-                        <button onClick={exportToExcel} className="btn btn-success text-white btn-sm md:btn-md">
-                            <FileDown size={18} /> Excel
+                        <button onClick={handleExportExcel} disabled={isExporting} className="btn btn-success text-white btn-sm md:btn-md">
+                            {isExporting ? <span className="loading loading-spinner loading-xs"></span> : <FileDown size={18} />} Excel
                         </button>
-                        <button onClick={exportToPDF} className="btn btn-error text-white btn-sm md:btn-md">
-                            <FileText size={18} /> PDF
+                        <button onClick={handleExportPDF} disabled={isExporting} className="btn btn-error text-white btn-sm md:btn-md">
+                            {isExporting ? <span className="loading loading-spinner loading-xs"></span> : <FileText size={18} />} PDF
                         </button>
                         <Link href="/socios/nuevo" className="btn btn-primary btn-sm md:btn-md">
                             <Plus className="w-5 h-5 mr-1" />
@@ -188,9 +177,14 @@ export default function SociosListClient({ initialSocios, isAdmin }: { initialSo
                                 <input
                                     className="input input-bordered w-full pl-10"
                                     placeholder="Buscar por nombre, DNI o código..."
+                                    defaultValue={search}
                                     onChange={(e) => {
-                                        setSearch(e.target.value)
-                                        setCurrentPage(1)
+                                        const val = e.target.value
+                                        setSearch(val)
+                                        if ((window as any).searchTimeout) clearTimeout((window as any).searchTimeout)
+                                        ;(window as any).searchTimeout = setTimeout(() => {
+                                            updateParams(1, val, filterType)
+                                        }, 500)
                                     }}
                                 />
                             </div>
@@ -198,19 +192,19 @@ export default function SociosListClient({ initialSocios, isAdmin }: { initialSo
 
                         <div className="flex gap-2">
                              <button 
-                                onClick={() => { setFilterType('all'); setCurrentPage(1); }}
+                                onClick={() => { setFilterType('all'); updateParams(1, search, 'all'); }}
                                 className={`btn btn-xs md:btn-sm ${filterType === 'all' ? 'btn-primary' : 'btn-ghost'}`}
                             >
                                 Todos
                             </button>
                             <button 
-                                onClick={() => { setFilterType('expiring'); setCurrentPage(1); }}
+                                onClick={() => { setFilterType('expiring'); updateParams(1, search, 'expiring'); }}
                                 className={`btn btn-xs md:btn-sm ${filterType === 'expiring' ? 'btn-warning' : 'btn-ghost'}`}
                             >
                                 Por Vencer (7d)
                             </button>
                             <button 
-                                onClick={() => { setFilterType('vencidos'); setCurrentPage(1); }}
+                                onClick={() => { setFilterType('vencidos'); updateParams(1, search, 'vencidos'); }}
                                 className={`btn btn-xs md:btn-sm ${filterType === 'vencidos' ? 'btn-error' : 'btn-ghost'}`}
                             >
                                 Vencidos
@@ -407,15 +401,15 @@ export default function SociosListClient({ initialSocios, isAdmin }: { initialSo
                                 <div className="join shadow-sm">
                                     <button
                                         className="join-item btn btn-sm bg-base-200 hover:bg-base-300 border-none"
-                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                        onClick={() => updateParams(Math.max(1, currentPage - 1), search, filterType)}
                                         disabled={currentPage === 1}
                                     >« Anterior</button>
                                     <button className="join-item btn btn-sm bg-base-100 pointer-events-none border-none">
-                                        Página {currentPage} de {totalPages}
+                                        Página {currentPage} de {totalPages} ({totalCount} total)
                                     </button>
                                     <button
                                         className="join-item btn btn-sm bg-base-200 hover:bg-base-300 border-none"
-                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                        onClick={() => updateParams(Math.min(totalPages, currentPage + 1), search, filterType)}
                                         disabled={currentPage === totalPages}
                                     >Siguiente »</button>
                                 </div>
