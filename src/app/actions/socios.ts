@@ -171,11 +171,11 @@ export async function getSocioById(id: string) {
         where: { id },
         include: {
             suscripciones: {
-                orderBy: { codigo: 'desc' }, // Higher code = more recent boleta, shown first
+                orderBy: { createdAt: 'desc' }, 
                 include: { plan: true }
             },
             historialCodigos: {
-                orderBy: { codigo: 'desc' } // Same logic for code history
+                orderBy: { fechaCambio: 'desc' } 
             }
         }
     })
