@@ -37,11 +37,29 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
   const [cantidadProducto, setCantidadProducto] = useState(1);
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const logoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Auto-focus cuando no hay sesión
   useEffect(() => {
     if (!personal && inputRef.current) {
       inputRef.current.focus();
     }
+  }, [personal]);
+
+  // Auto-logout tras 30 segundos de inactividad en el dashboard
+  useEffect(() => {
+    if (personal) {
+      logoutTimerRef.current = setTimeout(() => {
+        setPersonal(null);
+        setAsistencia(null);
+        setShowConsumos(false);
+        setShowAdelantos(false);
+      }, 30000); // 30 segundos
+    }
+    return () => {
+      if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+    };
   }, [personal]);
 
   // Auto-login from QR/Link
@@ -62,19 +80,21 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
     }
   }, [autoCode]);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    let codeToUse = codigo.trim();
+  const handleLogin = async (e?: React.FormEvent, overrideCode?: string) => {
+    if (e) e.preventDefault();
+    let codeToUse = (overrideCode ?? codigo).trim();
     if (!codeToUse) return;
 
-    // Si el scanner lee la URL completa (ej: por QR), extraemos solo el código
-    if (codeToUse.includes("?code=")) {
+    // Si el scanner lee la URL completa, extraemos solo el código
+    if (codeToUse.includes("code=")) {
       try {
-        const url = new URL(codeToUse);
+        // Intentar parsear como URL completa
+        const urlToParse = codeToUse.startsWith('http') ? codeToUse : `https://x.com/${codeToUse}`;
+        const url = new URL(urlToParse);
         codeToUse = url.searchParams.get("code") || codeToUse;
-      } catch (err) {
+      } catch {
         const parts = codeToUse.split("code=");
-        if (parts.length > 1) codeToUse = parts[1];
+        if (parts.length > 1) codeToUse = parts[1].split('&')[0];
       }
     }
 
@@ -90,6 +110,18 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
       if (inputRef.current) inputRef.current.focus();
     }
     setLoading(false);
+  };
+
+  // Handler del input — debounce para auto-submit del lector óptico
+  const handleCodigoChange = (val: string) => {
+    setCodigo(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (val.trim()) {
+      // Los lectores ópticos escriben todo en <100ms; esperamos 300ms sin cambios
+      debounceRef.current = setTimeout(() => {
+        handleLogin(undefined, val.trim());
+      }, 300);
+    }
   };
 
   const refreshData = async (personalId: string) => {
@@ -189,7 +221,7 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
               ref={inputRef}
               type="password"
               value={codigo}
-              onChange={(e) => setCodigo(e.target.value)}
+              onChange={(e) => handleCodigoChange(e.target.value)}
               placeholder="••••••"
               className="w-full bg-zinc-950 border-2 border-zinc-800 text-white text-center text-4xl py-6 rounded-2xl focus:border-yellow-500 focus:outline-none transition-all tracking-[0.3em] font-mono shadow-inner"
               autoFocus
