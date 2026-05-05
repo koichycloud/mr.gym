@@ -130,7 +130,7 @@ export default function CajaClient({ pagosIniciales, totalDiaInicial, desgloseIn
 
         const columns = ['Fecha', 'Socio/Info', 'Concepto', 'Método', 'Monto'];
         const rows = lista.map(p => [
-            format(new Date(p.fecha), 'dd/MM HH:mm'),
+            format(new Date(p.fecha), 'dd/MM hh:mm a'),
             p.socio ? `${p.socio.codigo} - ${p.socio.nombres} ${p.socio.apellidos}` : (p.descripcion || '-'),
             p.concepto,
             p.metodoPago,
@@ -314,7 +314,7 @@ export default function CajaClient({ pagosIniciales, totalDiaInicial, desgloseIn
                                     {pagos.map((p) => (
                                         <tr key={p.id} className="hover">
                                             <td className="font-mono text-sm">
-                                                {format(new Date(p.fecha), 'dd/MM/yyyy HH:mm')}
+                                                {format(new Date(p.fecha), 'dd/MM/yyyy hh:mm a')}
                                             </td>
                                             <td>
                                                 {p.socio

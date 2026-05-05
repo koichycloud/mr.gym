@@ -405,7 +405,7 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                                                     {format(new Date(a.fecha), "dd/MM/yyyy")}
                                                                 </td>
                                                                 <td className="font-bold text-primary">
-                                                                    {format(new Date(a.fecha), 'HH:mm:ss')}
+                                                                    {format(new Date(a.fecha), 'hh:mm:ss a')}
                                                                 </td>
                                                                 <td>
                                                                     <div className="badge badge-success badge-sm">

@@ -328,7 +328,7 @@ export default function MedidasTab({ socioId, fechaNacimiento, sexo = 'M' }: { s
                 <div style={{ textAlign: 'center', marginBottom: '30px', borderBottom: '2px solid #4338ca', paddingBottom: '20px' }}>
                     <h1 style={{ fontSize: '36px', fontWeight: '900', color: '#4338ca', margin: '0', letterSpacing: '-1px' }}>MR. GYM</h1>
                     <h2 style={{ fontSize: '20px', fontWeight: '500', marginTop: '10px', color: '#4b5563', margin: '5px 0' }}>Reporte de Evolución Física</h2>
-                    <p style={{ fontSize: '14px', color: '#9ca3af', marginTop: '5px' }}>Generado el: {format(new Date(), 'dd/MM/yyyy HH:mm')}</p>
+                    <p style={{ fontSize: '14px', color: '#9ca3af', marginTop: '5px' }}>Generado el: {format(new Date(), 'dd/MM/yyyy hh:mm a')}</p>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0px' }}>

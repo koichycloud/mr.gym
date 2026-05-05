@@ -77,7 +77,7 @@ export default function AsistenciaClient({ asistenciasIniciales, statsIniciales 
     const exportarPDF = () => {
         const columns = ['Hora', 'Código', 'Socio', 'Sexo', 'Tipo'];
         const rows = asistencias.map(a => [
-            format(new Date(a.fecha), 'HH:mm:ss'),
+            format(new Date(a.fecha), 'hh:mm:ss a'),
             a.socio.codigo,
             `${a.socio.nombres} ${a.socio.apellidos}`,
             a.socio.sexo,
@@ -287,7 +287,7 @@ export default function AsistenciaClient({ asistenciasIniciales, statsIniciales 
                                                     {asistencias.length - index}
                                                 </td>
                                                 <td className="font-bold text-primary">
-                                                    {format(new Date(a.fecha), 'HH:mm:ss')}
+                                                    {format(new Date(a.fecha), 'hh:mm:ss a')}
                                                 </td>
                                                 <td className="font-mono">{a.socio.codigo}</td>
                                                 <td>
@@ -321,7 +321,7 @@ export default function AsistenciaClient({ asistenciasIniciales, statsIniciales 
                                             <p className="font-mono text-xs text-primary opacity-80">{a.socio.codigo}</p>
                                         </div>
                                         <div className="text-right shrink-0">
-                                            <p className="font-bold text-primary text-sm">{format(new Date(a.fecha), 'HH:mm')}</p>
+                                            <p className="font-bold text-primary text-sm">{format(new Date(a.fecha), 'hh:mm a')}</p>
                                             <div className="badge badge-success badge-xs">{a.tipo}</div>
                                         </div>
                                     </div>

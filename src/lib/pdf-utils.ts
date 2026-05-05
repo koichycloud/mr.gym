@@ -44,7 +44,7 @@ export const generatePDFReport = ({
     // Report Info
     doc.setTextColor(80, 80, 80)
     doc.setFontSize(8)
-    doc.text(`Fecha de impresión: ${format(new Date(), 'dd/MM/yyyy HH:mm:ss')}`, 14, 48)
+    doc.text(`Fecha de impresión: ${format(new Date(), 'dd/MM/yyyy hh:mm:ss a')}`, 14, 48)
 
     // Table
     autoTable(doc, {

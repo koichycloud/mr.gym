@@ -8,16 +8,20 @@ export const dynamic = 'force-dynamic'
 
 const PAGE_SIZE = 50
 
-/** Format a UTC date as dd/MM/yyyy HH:mm in Lima time (UTC-5) */
+/** Format a UTC date as dd/MM/yyyy hh:mm a in Lima time (UTC-5) */
 function formatLimaDateTime(date: Date): string {
     const LIMA_OFFSET_MS = 5 * 60 * 60 * 1000
     const limaDate = new Date(date.getTime() - LIMA_OFFSET_MS)
     const dd = String(limaDate.getUTCDate()).padStart(2, '0')
     const mm = String(limaDate.getUTCMonth() + 1).padStart(2, '0')
     const yyyy = limaDate.getUTCFullYear()
-    const hh = String(limaDate.getUTCHours()).padStart(2, '0')
+    let hours = limaDate.getUTCHours()
+    const ampm = hours >= 12 ? 'PM' : 'AM'
+    hours = hours % 12
+    hours = hours ? hours : 12
+    const hh = String(hours).padStart(2, '0')
     const min = String(limaDate.getUTCMinutes()).padStart(2, '0')
-    return `${dd}/${mm}/${yyyy} ${hh}:${min}`
+    return `${dd}/${mm}/${yyyy} ${hh}:${min} ${ampm}`
 }
 
 export default async function BitacoraPage({
