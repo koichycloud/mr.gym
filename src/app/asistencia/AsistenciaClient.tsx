@@ -35,7 +35,7 @@ type Stats = {
     totalHoy: number
     horaPico: string
     promedioSemanal: number
-    diasSemana: Record<string, number>
+    diasSemana: Array<{ dia: string, fecha: string, asistencias: number }>
 }
 
 type Props = {
@@ -96,9 +96,10 @@ export default function AsistenciaClient({ asistenciasIniciales, statsIniciales 
     const esHoy = fechaSeleccionada === format(new Date(), 'yyyy-MM-dd')
 
     // Prepare chart data from stats
-    const datosGrafica = Object.entries(stats.diasSemana).map(([dia, total]) => ({
-        dia: dia.charAt(0).toUpperCase() + dia.slice(1),
-        asistencias: total
+    const datosGrafica = stats.diasSemana.map((d) => ({
+        dia: d.dia.charAt(0).toUpperCase() + d.dia.slice(1),
+        fecha: d.fecha,
+        asistencias: d.asistencias
     }))
 
     return (
@@ -228,6 +229,15 @@ export default function AsistenciaClient({ asistenciasIniciales, statsIniciales 
                                         dataKey="asistencias"
                                         radius={[8, 8, 0, 0]}
                                         maxBarSize={60}
+                                        onClick={(data) => {
+                                            if (data && data.fecha) {
+                                                buscarPorFecha(data.fecha)
+                                                setTimeout(() => {
+                                                    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+                                                }, 100)
+                                            }
+                                        }}
+                                        style={{ cursor: 'pointer' }}
                                     >
                                         {datosGrafica.map((_, index) => (
                                             <Cell key={`cell-${index}`} fill={COLORES_BARRAS[index % COLORES_BARRAS.length]} />

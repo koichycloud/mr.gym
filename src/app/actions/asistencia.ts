@@ -155,22 +155,39 @@ export async function getEstadisticasAsistencia() {
             }
         })
 
-        // Weekly breakdown
-        const diasSemana: Record<string, number> = {}
+        // Weekly breakdown (Array with exact dates)
+        const diasSemanaArr = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = getLimaStartOfDay();
+            d.setDate(d.getDate() - i);
+            const dateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            diasSemanaArr.push({
+                dia: d.toLocaleDateString('es-PE', { weekday: 'short' }),
+                fecha: dateStr,
+                asistencias: 0
+            });
+        }
+
         ultimaSemana.forEach(a => {
-            const dia = new Date(a.fecha).toLocaleDateString('es-PE', { weekday: 'short' })
-            diasSemana[dia] = (diasSemana[dia] || 0) + 1
-        })
+            const aDate = new Date(a.fecha);
+            // Convert to Lima time
+            const localDate = new Date(aDate.getTime() - (5 * 60 * 60 * 1000));
+            const dateStr = localDate.getFullYear() + '-' + String(localDate.getMonth() + 1).padStart(2, '0') + '-' + String(localDate.getDate()).padStart(2, '0');
+            const found = diasSemanaArr.find(d => d.fecha === dateStr);
+            if (found) {
+                found.asistencias++;
+            }
+        });
 
         return {
             totalHoy,
             horaPico,
             promedioSemanal: ultimaSemana.length > 0 ? Math.round(ultimaSemana.length / 7) : 0,
-            diasSemana
+            diasSemana: diasSemanaArr
         }
     } catch (error) {
         console.error('Error obteniendo estadísticas:', error)
-        return { totalHoy: 0, horaPico: '-', promedioSemanal: 0, diasSemana: {} }
+        return { totalHoy: 0, horaPico: '-', promedioSemanal: 0, diasSemana: [] }
     }
 }
 
