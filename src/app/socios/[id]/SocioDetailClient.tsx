@@ -211,151 +211,85 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
 
                                 {/* Botones */}
                                 <div className="grid grid-cols-1 gap-3">
-                                    <button className="btn btn-primary w-full shadow-md font-bold" onClick={() => {
-                                        const svg = document.getElementById("socio-qr-svg");
-                                        if (svg) {
-                                            const svgData = new XMLSerializer().serializeToString(svg);
-                                            const canvas = document.createElement("canvas");
-                                            const ctx = canvas.getContext("2d");
-                                            const img = new Image();
-                                            img.onload = () => {
-                                                const SIZE = 1024; // High-res so WhatsApp compression doesn't hurt
-                                                canvas.width = SIZE;
-                                                canvas.height = SIZE;
-                                                if (ctx) {
-                                                    ctx.fillStyle = "#FFFFFF";
-                                                    ctx.fillRect(0, 0, SIZE, SIZE);
-                                                    ctx.drawImage(img, 0, 0, SIZE, SIZE);
-                                                    const pngFile = canvas.toDataURL("image/png");
-                                                    const downloadLink = document.createElement("a");
-                                                    downloadLink.download = `QR-${socio.nombres}-${socio.codigo}.png`;
-                                                    downloadLink.href = pngFile;
-                                                    downloadLink.click();
-                                                }
-                                            };
-                                            img.src = "data:image/svg+xml;base64," + btoa(svgData);
-                                        }
+                                    <button className="btn btn-primary w-full shadow-md font-bold" onClick={async () => {
+                                        const el = document.getElementById('qr-code-container')
+                                        if (!el) return
+                                        const html2canvas = (await import('html2canvas')).default
+                                        const canvas = await html2canvas(el, { backgroundColor: '#ffffff', scale: 3, useCORS: true, logging: false })
+                                        const link = document.createElement('a')
+                                        link.download = `QR-${socio.nombres}-${socio.codigo}.png`
+                                        link.href = canvas.toDataURL('image/png')
+                                        link.click()
                                     }}>
                                         <Download size={20} className="mr-1" />
                                         Descargar Imagen
                                     </button>
-                                    
+
                                     <div className="grid grid-cols-2 gap-3">
                                         <button className="btn btn-outline btn-success shadow-sm font-bold bg-success/5" onClick={async () => {
                                             if (!socio.telefono) {
-                                                alert("El socio no tiene un número de teléfono registrado.");
-                                                return;
+                                                alert('El socio no tiene un número de teléfono registrado.')
+                                                return
                                             }
-                                            const phone = socio.telefono.replace(/\D/g, '');
-                                            const text = `Hola ${socio.nombres}, aquí tienes tu código de acceso para Mr. Gym: ${socio.codigo}`;
-                                            const targetUrl = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
-
+                                            const phone = socio.telefono.replace(/\D/g, '')
+                                            const text = `Hola ${socio.nombres}, aquí tienes tu código de acceso para Mr. Gym: ${socio.codigo}`
+                                            const targetUrl = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
                                             try {
-                                                const svg = document.getElementById("socio-qr-svg");
-                                                if (svg) {
-                                                    const svgData = new XMLSerializer().serializeToString(svg);
-                                                    const canvas = document.createElement("canvas");
-                                                    const ctx = canvas.getContext("2d");
-                                                    const img = new Image();
-
-                                                    await new Promise((resolve) => {
-                                                        img.onload = async () => {
-                                                            const SIZE = 1024;
-                                                            canvas.width = SIZE;
-                                                            canvas.height = SIZE;
-
-                                                            if (ctx) {
-                                                                ctx.fillStyle = "#FFFFFF";
-                                                                ctx.fillRect(0, 0, SIZE, SIZE);
-                                                                ctx.drawImage(img, 0, 0, SIZE, SIZE);
-                                                                canvas.toBlob(async (blob) => {
-                                                                    if (blob) {
-                                                                        try {
-                                                                            const item = new ClipboardItem({ "image/png": blob });
-                                                                            await navigator.clipboard.write([item]);
-                                                                            alert("✅ Imagen QR copiada al portapapeles.\n\nSe abrirá WhatsApp.\nMantén presionado en el chat y selecciona PEGAR para enviar el código como imagen.");
-                                                                        } catch (e) {
-                                                                            console.error("No se pudo copiar", e);
-                                                                        }
-                                                                    }
-                                                                    window.open(targetUrl, '_blank');
-                                                                    logQRSent(socio.nombres, socio.codigo, 'WhatsApp');
-                                                                    resolve(null);
-                                                                }, 'image/png');
-                                                            } else {
-                                                                resolve(null);
+                                                const el = document.getElementById('qr-code-container')
+                                                if (el) {
+                                                    const html2canvas = (await import('html2canvas')).default
+                                                    const canvas = await html2canvas(el, { backgroundColor: '#ffffff', scale: 3, useCORS: true, logging: false })
+                                                    canvas.toBlob(async (blob) => {
+                                                        if (blob) {
+                                                            try {
+                                                                const item = new ClipboardItem({ 'image/png': blob })
+                                                                await navigator.clipboard.write([item])
+                                                                alert('✅ Imagen QR copiada al portapapeles.\n\nSe abrirá WhatsApp.\nMantén presionado en el chat y selecciona PEGAR para enviar el código como imagen.')
+                                                            } catch (e) {
+                                                                console.error('No se pudo copiar', e)
                                                             }
-                                                        };
-                                                        img.src = "data:image/svg+xml;base64," + window.btoa(unescape(encodeURIComponent(svgData)));
-                                                    });
-                                                    return;
+                                                        }
+                                                        window.open(targetUrl, '_blank')
+                                                        logQRSent(socio.nombres, socio.codigo, 'WhatsApp')
+                                                    }, 'image/png')
+                                                    return
                                                 }
                                             } catch (err) {
-                                                console.error("Error al copiar QR:", err);
+                                                console.error('Error al copiar QR:', err)
                                             }
-                                            window.open(targetUrl, '_blank');
-                                            logQRSent(socio.nombres, socio.codigo, 'WhatsApp');
+                                            window.open(targetUrl, '_blank')
+                                            logQRSent(socio.nombres, socio.codigo, 'WhatsApp')
                                         }}>
                                             <MessageCircle size={18} className="mr-1" />
                                             WhatsApp
                                         </button>
-                                        
+
                                         <button className="btn btn-outline shadow-sm font-bold bg-base-200/50" onClick={async () => {
-                                            const text = `Hola ${socio.nombres}, aquí tienes tu código de acceso para Mr. Gym: ${socio.codigo}`;
+                                            const text = `Hola ${socio.nombres}, aquí tienes tu código de acceso para Mr. Gym: ${socio.codigo}`
                                             try {
-                                                const svg = document.getElementById("socio-qr-svg");
-                                                if (svg) {
-                                                    const svgData = new XMLSerializer().serializeToString(svg);
-                                                    const canvas = document.createElement("canvas");
-                                                    const ctx = canvas.getContext("2d");
-                                                    const img = new Image();
-
-                                                    await new Promise((resolve) => {
-                                                        img.onload = async () => {
-                                                            const SIZE = 1024;
-                                                            canvas.width = SIZE;
-                                                            canvas.height = SIZE;
-
-                                                            if (ctx) {
-                                                                ctx.fillStyle = "#FFFFFF";
-                                                                ctx.fillRect(0, 0, SIZE, SIZE);
-                                                                ctx.drawImage(img, 0, 0, SIZE, SIZE);
-                                                                canvas.toBlob(async (blob) => {
-                                                                    if (!blob) {
-                                                                        alert("Error al generar la imagen.");
-                                                                        resolve(null);
-                                                                        return;
-                                                                    }
-
-                                                                    const file = new File([blob], `QR-${socio.nombres}-${socio.codigo}.png`, { type: "image/png" });
-                                                                    const shareData = {
-                                                                        title: 'Código QR de Acceso',
-                                                                        text: text,
-                                                                        files: [file]
-                                                                    };
-
-                                                                    if (navigator.canShare && navigator.canShare(shareData)) {
-                                                                        try {
-                                                                            await navigator.share(shareData);
-                                                                    logQRSent(socio.nombres, socio.codigo, 'Nativo (Compartir)');
-                                                                        } catch (err: any) {
-                                                                            console.log("Compartir cancelado o falló", err.message);
-                                                                        }
-                                                                    } else {
-                                                                        alert("Tu dispositivo no soporta compartir nativamente. Usa el botón 'WhatsApp'.");
-                                                                    }
-                                                                    resolve(null);
-                                                                }, 'image/png');
-                                                            } else {
-                                                                resolve(null);
+                                                const el = document.getElementById('qr-code-container')
+                                                if (el) {
+                                                    const html2canvas = (await import('html2canvas')).default
+                                                    const canvas = await html2canvas(el, { backgroundColor: '#ffffff', scale: 3, useCORS: true, logging: false })
+                                                    canvas.toBlob(async (blob) => {
+                                                        if (!blob) { alert('Error al generar la imagen.'); return }
+                                                        const file = new File([blob], `QR-${socio.nombres}-${socio.codigo}.png`, { type: 'image/png' })
+                                                        const shareData = { title: 'Código QR de Acceso', text, files: [file] }
+                                                        if (navigator.canShare && navigator.canShare(shareData)) {
+                                                            try {
+                                                                await navigator.share(shareData)
+                                                                logQRSent(socio.nombres, socio.codigo, 'Nativo (Compartir)')
+                                                            } catch (err: any) {
+                                                                console.log('Compartir cancelado o falló', err.message)
                                                             }
-                                                        };
-                                                        img.src = "data:image/svg+xml;base64," + window.btoa(unescape(encodeURIComponent(svgData)));
-                                                    });
-                                                    return;
+                                                        } else {
+                                                            alert("Tu dispositivo no soporta compartir nativamente. Usa el botón 'WhatsApp'.")
+                                                        }
+                                                    }, 'image/png')
+                                                    return
                                                 }
                                             } catch (err) {
-                                                console.error("Error al compartir QR:", err);
+                                                console.error('Error al compartir QR:', err)
                                             }
                                         }}>
                                             <Share2 size={18} className="mr-1" />
@@ -367,6 +301,7 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                         </div>
                     </div>
                 )}
+
 
                 {activeTab === 'asistencias' && (
                     <div className="space-y-6">
