@@ -329,6 +329,14 @@ export default function PersonalClient({ initialData }: { initialData: any[] }) 
                   size={200}
                   level="H"
                   includeMargin={true}
+                  imageSettings={{
+                    src: '/icons/icon-192x192.png',
+                    x: undefined,
+                    y: undefined,
+                    height: 42,
+                    width: 42,
+                    excavate: true,
+                  }}
                 />
               </div>
               <p className="mt-6 text-black font-black text-2xl tracking-widest">{qrModal.personal.codigo}</p>

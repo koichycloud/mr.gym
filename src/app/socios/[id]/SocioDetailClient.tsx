@@ -140,6 +140,14 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                     fgColor="#000000"
                                     id="socio-qr-svg"
                                     className="relative z-10 mx-auto"
+                                    imageSettings={{
+                                        src: '/icons/icon-192x192.png',
+                                        x: undefined,
+                                        y: undefined,
+                                        height: 52,
+                                        width: 52,
+                                        excavate: true,
+                                    }}
                                 />
                             </div>
                             <p className="mt-4 font-mono text-xl tracking-widest font-bold">{socio.codigo}</p>
