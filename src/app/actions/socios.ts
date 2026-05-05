@@ -329,3 +329,14 @@ export async function deleteSocio(id: string) {
         return { success: false, error: 'Error al eliminar socio.' }
     }
 }
+
+export async function logQRSent(socioName: string, socioCodigo: string, method: string) {
+    try {
+        await requireAuth()
+        await logAction('ENVIAR_QR', `Se envió el código QR a ${socioName} (${socioCodigo}) vía ${method}`)
+        return { success: true }
+    } catch (error) {
+        console.error("Error logging QR sent:", error)
+        return { success: false }
+    }
+}

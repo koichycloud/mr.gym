@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { getSocioById } from '@/app/actions/socios'
+import { getSocioById, logQRSent } from '@/app/actions/socios'
 import { createSubscription, updateSubscription } from '@/app/actions/suscripciones'
 import { getAsistenciasPorSocio } from '@/app/actions/asistencia-socio'
 import { ArrowLeft, Edit, Plus, Calendar, Phone, CreditCard, User, MapPin, CalendarDays, TrendingUp, Clock, Download, MessageCircle, Share2, CheckCircle, XCircle } from 'lucide-react'
@@ -231,6 +231,7 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                                                         }
                                                                     }
                                                                     window.open(targetUrl, '_blank');
+                                                                    logQRSent(socio.nombres, socio.codigo, 'WhatsApp');
                                                                     resolve(null);
                                                                 }, 'image/png');
                                                             } else {
@@ -245,6 +246,7 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                                 console.error("Error al copiar QR:", err);
                                             }
                                             window.open(targetUrl, '_blank');
+                                            logQRSent(socio.nombres, socio.codigo, 'WhatsApp');
                                         }}>
                                             <MessageCircle size={18} className="mr-1" />
                                             WhatsApp
@@ -287,6 +289,7 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                                                     if (navigator.canShare && navigator.canShare(shareData)) {
                                                                         try {
                                                                             await navigator.share(shareData);
+                                                                    logQRSent(socio.nombres, socio.codigo, 'Nativo (Compartir)');
                                                                         } catch (err: any) {
                                                                             console.log("Compartir cancelado o falló", err.message);
                                                                         }
