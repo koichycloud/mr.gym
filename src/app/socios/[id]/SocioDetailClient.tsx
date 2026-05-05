@@ -322,22 +322,28 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                             const phone = socio.telefono.replace(/\D/g, '')
                                             const text = `Hola ${socio.nombres}, aquí tienes tu código de acceso para Mr. Gym: ${socio.codigo}`
                                             const targetUrl = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
+
+                                            // ⚠️ DEBE ir ANTES de cualquier await — el navegador bloquea
+                                            // window.open si se llama después de una operación asíncrona
+                                            window.open(targetUrl, '_blank')
+                                            logQRSent(socio.nombres, socio.codigo, 'WhatsApp')
+
+                                            // Ahora sí, generar y copiar la imagen al portapapeles
                                             const blob = await generateCarnetBlob('socio-qr-svg', socio.codigo, `${socio.nombres} ${socio.apellidos}`)
                                             if (blob) {
                                                 try {
                                                     const item = new ClipboardItem({ 'image/png': blob })
                                                     await navigator.clipboard.write([item])
-                                                    alert('✅ Imagen QR copiada al portapapeles.\n\nSe abrirá WhatsApp.\nMantén presionado en el chat y selecciona PEGAR para enviar el código como imagen.')
+                                                    alert('✅ Imagen QR copiada al portapapeles.\n\nEn WhatsApp: mantén presionado en el chat y selecciona PEGAR para enviar el código como imagen.')
                                                 } catch (e) {
                                                     console.error('No se pudo copiar al portapapeles', e)
                                                 }
                                             }
-                                            window.open(targetUrl, '_blank')
-                                            logQRSent(socio.nombres, socio.codigo, 'WhatsApp')
                                         }}>
                                             <MessageCircle size={18} className="mr-1" />
                                             WhatsApp
                                         </button>
+
 
                                         <button className="btn btn-outline shadow-sm font-bold bg-base-200/50" onClick={async () => {
                                             const text = `Hola ${socio.nombres}, aquí tienes tu código de acceso para Mr. Gym: ${socio.codigo}`
