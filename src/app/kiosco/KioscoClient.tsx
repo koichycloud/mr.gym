@@ -14,7 +14,7 @@ export default function KioscoClient() {
     const [result, setResult] = useState<AccessResult | null>(null)
     const [currentInput, setCurrentInput] = useState('')
     const [timeLeft, setTimeLeft] = useState<number>(0)
-    const [selectedMode, setSelectedMode] = useState<'ENTRADA' | 'SALIDA'>('ENTRADA')
+    const [selectedMode, setSelectedMode] = useState<'ENTRADA' | 'SALIDA' | 'AUTO'>('AUTO')
     
     const [inputFeedback, setInputFeedback] = useState(false)
     
@@ -30,7 +30,7 @@ export default function KioscoClient() {
         setResult(null)
         setCurrentInput('')
         setTimeLeft(0)
-        setSelectedMode('ENTRADA')
+        setSelectedMode('AUTO')
     }, [])
 
     const resetIdleTimer = useCallback(() => {
@@ -323,9 +323,9 @@ export default function KioscoClient() {
                 <div className="flex gap-[80px] w-full max-w-5xl justify-center mb-16">
                     <button 
                         onClick={(e) => { e.stopPropagation(); setSelectedMode('ENTRADA'); resetIdleTimer(); }}
-                        className={`flex-1 py-16 rounded-[4rem] border-8 transition-colors duration-200 cursor-pointer pointer-events-auto ${selectedMode === 'ENTRADA' ? 'bg-zinc-900 border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.4)]' : 'bg-zinc-900/60 border-green-900/40 opacity-80'}`}
+                        className={`flex-1 py-16 rounded-[4rem] border-8 transition-colors duration-200 cursor-pointer pointer-events-auto ${selectedMode === 'ENTRADA' || selectedMode === 'AUTO' ? 'bg-zinc-900 border-green-500 shadow-[0_0_20px_rgba(34,197,94,0.4)]' : 'bg-zinc-900/60 border-green-900/40 opacity-80'}`}
                     >
-                        <h2 className={`text-7xl font-black tracking-widest ${selectedMode === 'ENTRADA' ? 'text-green-400' : 'text-green-900'}`}>ENTRADA</h2>
+                        <h2 className={`text-7xl font-black tracking-widest ${selectedMode === 'ENTRADA' || selectedMode === 'AUTO' ? 'text-green-400' : 'text-green-900'}`}>ENTRADA</h2>
                     </button>
                     
                     <button 
