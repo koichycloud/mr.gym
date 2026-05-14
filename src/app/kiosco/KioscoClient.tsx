@@ -12,7 +12,6 @@ const DISPLAY_SECONDS = 5 // Segundos en pantalla antes de regresar a IDLE
 export default function KioscoClient() {
     const [state, setState] = useState<KioskState>('IDLE')
     const [result, setResult] = useState<AccessResult | null>(null)
-    const [currentInput, setCurrentInput] = useState('')
     const [timeLeft, setTimeLeft] = useState<number>(0)
     const [selectedMode, setSelectedMode] = useState<'ENTRADA' | 'SALIDA' | 'AUTO'>('AUTO')
     
@@ -23,12 +22,14 @@ export default function KioscoClient() {
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     
     const isProcessingRef = useRef(false)
+    const currentInputRef = useRef('')
+    const feedbackRef = useRef(false)
     const lastScanDataRef = useRef<{ code: string; time: number } | null>(null)
 
     const returnToIdle = useCallback(() => {
         setState('IDLE')
         setResult(null)
-        setCurrentInput('')
+        currentInputRef.current = ''
         setTimeLeft(0)
         setSelectedMode('AUTO')
     }, [])
@@ -144,25 +145,31 @@ export default function KioscoClient() {
             if (e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt') return
 
             // Feedback visual de que se recibió una tecla
-            setInputFeedback(true)
-            setTimeout(() => setInputFeedback(false), 100)
+            if (!feedbackRef.current) {
+                feedbackRef.current = true
+                setInputFeedback(true)
+                setTimeout(() => {
+                    feedbackRef.current = false
+                    setInputFeedback(false)
+                }, 100)
+            }
 
             // Si pasa mucho tiempo sin completar el escaneo, limpiamos para evitar basura
             if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
             typingTimeoutRef.current = setTimeout(() => {
-                setCurrentInput('')
+                currentInputRef.current = ''
             }, 1500)
 
             if (e.key === 'Enter' || e.key === 'Return') {
                 e.preventDefault() 
-                if (currentInput.length > 0) {
+                if (currentInputRef.current.length > 0) {
                     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
-                    handleScan(currentInput)
-                    setCurrentInput('') 
+                    handleScan(currentInputRef.current)
+                    currentInputRef.current = '' 
                 }
             } else {
                 if (e.key.length === 1) {
-                    setCurrentInput(prev => prev + e.key)
+                    currentInputRef.current += e.key
                 }
             }
         }
@@ -173,7 +180,7 @@ export default function KioscoClient() {
             if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
             window.removeEventListener('keydown', handleKeyDown)
         }
-    }, [currentInput, handleScan, resetIdleTimer])
+    }, [handleScan, resetIdleTimer])
 
     const renderPhotoCircle = (colorClass: string) => (
         <div className={`w-[26rem] h-[26rem] rounded-full flex items-center justify-center overflow-hidden border-8 shadow-2xl mb-10 bg-black/60 ${colorClass}`}>
