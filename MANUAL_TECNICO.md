@@ -108,3 +108,32 @@ Si un administrador futuro necesita pedirle a un Agente de Inteligencia Artifici
 > 5. El Kiosco físico lee de la ruta `/kiosco`. Está excluida del login obligatorio dentro de `src/middleware.ts`.
 > 
 > Te adjunto los archivos `MANUAL_TECNICO.md` y `prisma/schema.prisma` para que comprendas el esquema. Con esta base, mi petición es la siguiente: [Inserta aquí tu petición...]"
+
+---
+
+## 7. Sistema de Respaldos Automáticos (Backups)
+
+El sistema cuenta con un esquema redundante de copias de seguridad automáticas diarias a la medianoche (12:00 AM hora de Perú / GMT-5) y con una retención de 30 días.
+
+### A. Respaldos en la Nube (Vercel Cron + Supabase Storage)
+La aplicación realiza un volcado de todas las tablas en un archivo JSON y lo aloja de forma segura en un bucket privado de Supabase.
+
+1. **Bucket en Supabase**:
+   * Debe existir un bucket privado en Supabase Storage llamado `backups`.
+2. **Variables de Entorno en Vercel**:
+   * `SUPABASE_URL`: URL del proyecto (Ej: `https://xxxxxx.supabase.co`).
+   * `SUPABASE_SERVICE_ROLE_KEY`: Clave JWT secreta administrativa de Supabase (permite escribir y listar archivos en el bucket privado).
+   * `CRON_SECRET` o `BACKUP_CRON_SECRET`: Token de seguridad para autorizar la petición de Vercel Cron.
+3. **Programación**:
+   * Definido en `vercel.json` para ejecutar diariamente la ruta `/api/cron/backup`. El endpoint se encarga de subir el respaldo y eliminar los archivos del bucket con antigüedad mayor a 30 días.
+
+### B. Respaldos Autónomos (GitHub Actions)
+Como método alternativo y redundante, GitHub Actions genera un dump SQL comprimido directo de la base de datos PostgreSQL.
+
+1. **Configuración del Workflow**:
+   * Ubicado en `.github/workflows/db-backup.yml`.
+   * Se ejecuta mediante un disparador programado (`schedule`) diario y también permite disparo manual (`workflow_dispatch`).
+2. **Secreto en GitHub**:
+   * Se debe agregar el secreto `DATABASE_URL` (URL de conexión a la base de datos de producción) en los Secrets del repositorio (Settings -> Secrets and variables -> Actions).
+3. **Retención**:
+   * Los archivos se guardan como artefactos en el historial de ejecuciones de GitHub y se auto-eliminan a los 30 días de forma nativa.

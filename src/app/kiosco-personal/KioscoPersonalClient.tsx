@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { getPersonalByCodigo } from "@/app/actions/personal";
 import { markAsistencia, getTodayAsistencia, getResumenHoras } from "@/app/actions/asistencia-personal";
 import { registrarConsumo, solicitarAdelanto } from "@/app/actions/nomina-personal";
@@ -18,12 +18,14 @@ export default function KioscoPersonalClient({ initialProductos }: { initialProd
 
 function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }) {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const autoCode = searchParams.get("code");
   const [codigo, setCodigo] = useState("");
   const [loading, setLoading] = useState(false);
   const [personal, setPersonal] = useState<any>(null);
   const [asistencia, setAsistencia] = useState<any>(null);
   const [resumenHoras, setResumenHoras] = useState(0);
+  const [secondsLeft, setSecondsLeft] = useState(15);
   
   // UI States
   const [showConsumos, setShowConsumos] = useState(false);
@@ -47,20 +49,47 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
     }
   }, [personal]);
 
-  // Auto-logout tras 30 segundos de inactividad en el dashboard
+  // Auto-logout tras 15 segundos de inactividad con contador visible y reinicio por interacción
   useEffect(() => {
-    if (personal) {
-      logoutTimerRef.current = setTimeout(() => {
-        setPersonal(null);
-        setAsistencia(null);
-        setShowConsumos(false);
-        setShowAdelantos(false);
-      }, 30000); // 30 segundos
-    }
-    return () => {
-      if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+    if (!personal) return;
+
+    setSecondsLeft(15);
+
+    const handleLogoutTimeout = () => {
+      setPersonal(null);
+      setAsistencia(null);
+      setShowConsumos(false);
+      setShowAdelantos(false);
+      router.push("/kiosco"); // Redirigir de vuelta al kiosco de socios
     };
-  }, [personal]);
+
+    const interval = setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          handleLogoutTimeout();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    const resetIdleTimer = () => {
+      setSecondsLeft(15);
+    };
+
+    const events = ["mousemove", "click", "keydown", "touchstart", "scroll"];
+    events.forEach((event) => {
+      window.addEventListener(event, resetIdleTimer);
+    });
+
+    return () => {
+      clearInterval(interval);
+      events.forEach((event) => {
+        window.removeEventListener(event, resetIdleTimer);
+      });
+    };
+  }, [personal, router]);
 
   // Auto-login from QR/Link
   useEffect(() => {
@@ -73,6 +102,10 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
           await refreshData(res.personal.id);
         } else {
           toast.error(res.error || "Enlace de acceso inválido");
+          // Redirigir de vuelta al kiosco principal en 5 segundos si el código es inválido
+          setTimeout(() => {
+            router.push("/kiosco");
+          }, 5000);
         }
         setLoading(false);
       };
@@ -140,6 +173,7 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
     setAsistencia(null);
     setShowConsumos(false);
     setShowAdelantos(false);
+    router.push("/kiosco"); // Redirigir de vuelta al kiosco de socios
   };
 
   const handleAsistencia = async (tipo: 'ENTRADA' | 'SALIDA_ALMUERZO' | 'ENTRADA_ALMUERZO' | 'SALIDA') => {
@@ -235,6 +269,14 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
           >
             {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : "INGRESAR"}
           </button>
+
+          <button
+            type="button"
+            onClick={() => router.push("/kiosco")}
+            className="w-full mt-4 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold text-md py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+          >
+            VOLVER AL KIOSCO
+          </button>
         </form>
       </div>
     );
@@ -244,8 +286,23 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
   const faltan = personal.horasObjetivo ? Math.max(0, personal.horasObjetivo - resumenHoras).toFixed(1) : 0;
   
   return (
-    <div className="w-full max-w-4xl bg-zinc-900/90 backdrop-blur-xl rounded-3xl border border-zinc-800 shadow-2xl overflow-hidden flex flex-col md:flex-row">
+    <div className="w-full max-w-4xl bg-zinc-900/90 backdrop-blur-xl rounded-3xl border border-zinc-800 shadow-2xl overflow-hidden flex flex-col md:flex-row relative">
       
+      {/* Contador de inactividad visible */}
+      <div className="absolute top-4 right-4 z-10">
+        {secondsLeft <= 5 ? (
+          <div className="bg-red-600 text-white px-4 py-2 rounded-full border border-red-500 flex items-center gap-2 text-xs font-black tracking-wider uppercase animate-bounce shadow-[0_0_15px_rgba(220,38,38,0.5)]">
+            <AlertCircle className="w-4 h-4 text-white" />
+            <span>Cierre en: {secondsLeft}s</span>
+          </div>
+        ) : (
+          <div className="bg-zinc-800/80 text-zinc-400 px-4 py-2 rounded-full border border-zinc-700/80 flex items-center gap-2 text-xs font-bold tracking-wider uppercase">
+            <Clock className="w-4 h-4 text-zinc-500" />
+            <span>Inactivo en: {secondsLeft}s</span>
+          </div>
+        )}
+      </div>
+
       {/* Sidebar Profile & Progress */}
       <div className="md:w-1/3 bg-zinc-950 p-8 flex flex-col items-center border-b md:border-b-0 md:border-r border-zinc-800">
         <div className="w-24 h-24 bg-zinc-800 rounded-full flex items-center justify-center mb-4 border-2 border-yellow-500 overflow-hidden">
@@ -282,9 +339,9 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
 
         <button 
           onClick={handleLogout}
-          className="mt-6 w-full py-3 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors flex items-center justify-center gap-2"
+          className="mt-6 w-full py-4 bg-red-600 hover:bg-red-500 text-white font-black uppercase tracking-wider rounded-xl transition-all duration-200 shadow-[0_0_15px_rgba(220,38,38,0.4)] flex items-center justify-center gap-2 border-2 border-red-500 cursor-pointer pointer-events-auto"
         >
-          <LogOut className="w-4 h-4" />
+          <LogOut className="w-5 h-5" />
           Cerrar Sesión
         </button>
       </div>

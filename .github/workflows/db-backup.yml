@@ -1,0 +1,43 @@
+name: Database Backup (Supabase)
+
+on:
+  schedule:
+    # Corre todos los días a las 05:00 UTC (12:00 AM en hora de Perú / GMT-5)
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+    # Permite ejecutar el respaldo manualmente desde la interfaz de GitHub
+
+jobs:
+  backup:
+    name: Backup PostgreSQL Database
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get Current Date
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Install PostgreSQL Client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Perform pg_dump
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "Error: DATABASE_URL secret is not set!"
+            exit 1
+          fi
+          # Extraer esquema y datos, excluir logs si pesan demasiado (opcional, pero aquí respaldamos todo)
+          pg_dump "$DATABASE_URL" | gzip > backup_${{ steps.date.outputs.date }}.sql.gz
+          echo "Backup created successfully: backup_${{ steps.date.outputs.date }}.sql.gz"
+
+      - name: Upload Backup Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ steps.date.outputs.date }}
+          path: backup_${{ steps.date.outputs.date }}.sql.gz
+          retention-days: 30
+          if-no-files-found: error

@@ -184,6 +184,25 @@ export async function validateKioskAccess(codigo: string, mode: 'ENTRADA' | 'SAL
     const cleanCodigo = codigo.trim().replace(/[^A-Za-z0-9]/g, '').toUpperCase()
     console.log(`[KIOSCO] Intento de acceso - Código: "${cleanCodigo}" (raw: "${codigo}"), Modo: ${mode}`);
     try {
+        // Verificar si el código pertenece a un miembro del personal activo
+        const personal = await prisma.personal.findUnique({
+            where: { codigo: cleanCodigo, activo: true }
+        })
+
+        if (personal) {
+            console.log(`[KIOSCO] Personal detectado: ${personal.nombres} ${personal.apellidos} (${personal.codigo})`);
+            return {
+                success: true,
+                message: 'PERSONAL_REDIRECT',
+                tipoAcceso: 'ENTRADA',
+                socio: {
+                    nombres: personal.nombres,
+                    apellidos: personal.apellidos,
+                    estado: 'ACTIVO'
+                }
+            }
+        }
+
         type SocioWithSubs = {
             id: string
             codigo: string

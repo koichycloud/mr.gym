@@ -89,6 +89,12 @@ export default function KioscoClient() {
 
         try {
             const scanResult = await validateKioskAccess(code, selectedMode)
+            
+            if (scanResult.success && scanResult.message === 'PERSONAL_REDIRECT') {
+                window.location.href = `/kiosco-personal?code=${encodeURIComponent(code)}`;
+                return;
+            }
+
             setResult(scanResult)
 
             if (scanResult.success) {

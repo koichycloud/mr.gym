@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { getLimaStartOfDay, getLimaEndOfDay } from "@/lib/date-utils";
 
 // Calcular las horas netas trabajadas
 function calculateNetHours(
@@ -25,11 +26,8 @@ function calculateNetHours(
 
 // Obtener o crear el registro del día de hoy para un personal
 export async function getTodayAsistencia(personalId: string) {
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
-
-  const endOfDay = new Date();
-  endOfDay.setHours(23, 59, 59, 999);
+  const startOfDay = getLimaStartOfDay();
+  const endOfDay = getLimaEndOfDay();
 
   try {
     let asistencia = await prisma.asistenciaPersonal.findFirst({
@@ -145,3 +143,127 @@ export async function getResumenHoras(personalId: string) {
         return { success: false, error: "Error al calcular horas" };
     }
 }
+
+// Combinar fecha (YYYY-MM-DD) y hora (HH:MM) en un objeto Date local
+function combineDateAndTime(dateStr: string, timeStr: string | null | undefined): Date | null {
+  if (!dateStr || !timeStr) return null;
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  return new Date(year, month - 1, day, hours, minutes, 0, 0);
+}
+
+// Crear asistencia manual
+export async function createManualAsistencia(
+  personalId: string,
+  data: {
+    fecha: string; // YYYY-MM-DD
+    horaEntrada?: string; // HH:MM
+    horaSalidaAlmuerzo?: string; // HH:MM
+    horaEntradaAlmuerzo?: string; // HH:MM
+    horaSalida?: string; // HH:MM
+  }
+) {
+  try {
+    const [year, month, day] = data.fecha.split('-').map(Number);
+    const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
+    const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
+
+    // Verificar si ya existe asistencia para este día
+    const existing = await prisma.asistenciaPersonal.findFirst({
+      where: {
+        personalId,
+        fecha: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+      },
+    });
+
+    if (existing) {
+      return { success: false, error: "Ya existe un registro de asistencia para esta fecha. Edítelo en su lugar." };
+    }
+
+    const entrada = combineDateAndTime(data.fecha, data.horaEntrada);
+    const salidaAlmuerzo = combineDateAndTime(data.fecha, data.horaSalidaAlmuerzo);
+    const entradaAlmuerzo = combineDateAndTime(data.fecha, data.horaEntradaAlmuerzo);
+    const salida = combineDateAndTime(data.fecha, data.horaSalida);
+
+    const horasTrabajadas = calculateNetHours(entrada, salida, salidaAlmuerzo, entradaAlmuerzo);
+
+    const newRecord = await prisma.asistenciaPersonal.create({
+      data: {
+        personalId,
+        fecha: startOfDay,
+        horaEntrada: entrada,
+        horaSalidaAlmuerzo: salidaAlmuerzo,
+        horaEntradaAlmuerzo: entradaAlmuerzo,
+        horaSalida: salida,
+        horasTrabajadas,
+      },
+    });
+
+    revalidatePath(`/admin/personal/${personalId}`);
+    return { success: true, asistencia: newRecord };
+  } catch (error: any) {
+    console.error("Error al crear asistencia manual:", error);
+    return { success: false, error: "Error al registrar la asistencia" };
+  }
+}
+
+// Actualizar asistencia
+export async function updateAsistencia(
+  id: string,
+  personalId: string,
+  data: {
+    fecha: string; // YYYY-MM-DD
+    horaEntrada?: string;
+    horaSalidaAlmuerzo?: string;
+    horaEntradaAlmuerzo?: string;
+    horaSalida?: string;
+  }
+) {
+  try {
+    const [year, month, day] = data.fecha.split('-').map(Number);
+    const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
+
+    const entrada = combineDateAndTime(data.fecha, data.horaEntrada);
+    const salidaAlmuerzo = combineDateAndTime(data.fecha, data.horaSalidaAlmuerzo);
+    const entradaAlmuerzo = combineDateAndTime(data.fecha, data.horaEntradaAlmuerzo);
+    const salida = combineDateAndTime(data.fecha, data.horaSalida);
+
+    const horasTrabajadas = calculateNetHours(entrada, salida, salidaAlmuerzo, entradaAlmuerzo);
+
+    const updated = await prisma.asistenciaPersonal.update({
+      where: { id },
+      data: {
+        fecha: startOfDay,
+        horaEntrada: entrada,
+        horaSalidaAlmuerzo: salidaAlmuerzo,
+        horaEntradaAlmuerzo: entradaAlmuerzo,
+        horaSalida: salida,
+        horasTrabajadas,
+      },
+    });
+
+    revalidatePath(`/admin/personal/${personalId}`);
+    return { success: true, asistencia: updated };
+  } catch (error: any) {
+    console.error("Error al actualizar asistencia:", error);
+    return { success: false, error: "Error al actualizar la asistencia" };
+  }
+}
+
+// Eliminar asistencia
+export async function deleteAsistencia(id: string, personalId: string) {
+  try {
+    await prisma.asistenciaPersonal.delete({
+      where: { id },
+    });
+    revalidatePath(`/admin/personal/${personalId}`);
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error al eliminar asistencia:", error);
+    return { success: false, error: "Error al eliminar la asistencia" };
+  }
+}
+
