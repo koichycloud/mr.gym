@@ -5,6 +5,97 @@ import { createPersonal, updatePersonal, deletePersonal } from "@/app/actions/pe
 import { Plus, Edit2, Trash2, X, Loader2, Link, QrCode, Share2, Send, Download } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
+import { logQRSent } from "@/app/actions/socios";
+
+/** Genera la imagen del carnet de personal (dorado/amarillo) en un canvas y devuelve un Blob PNG. */
+async function generateCarnetBlob(
+  svgId: string,
+  codigo: string,
+  nombre: string
+): Promise<Blob | null> {
+  const svgEl = document.getElementById(svgId) as SVGSVGElement | null;
+  if (!svgEl) return null;
+
+  const svgData = new XMLSerializer().serializeToString(svgEl);
+  const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+  const svgUrl = URL.createObjectURL(svgBlob);
+
+  return new Promise((resolve) => {
+    const qrImg = new Image();
+    qrImg.onload = () => {
+      const SCALE = 3;
+      const QR = 252 * SCALE;
+      const PAD = 16 * SCALE;
+      const HDR = 64 * SCALE;
+      const FTR = 60 * SCALE;
+      const W = QR + PAD * 2;
+      const H = HDR + QR + PAD * 2 + FTR;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext("2d")!;
+
+      // Base blanca
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, W, H);
+
+      // Degradado del header (Dorado/Amarillo para Personal)
+      const grad = ctx.createLinearGradient(0, 0, W, HDR);
+      grad.addColorStop(0, "#ca8a04");
+      grad.addColorStop(1, "#eab308");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, HDR);
+
+      // Texto de cabecera
+      const txtX = PAD + 12 * SCALE;
+      ctx.fillStyle = "#ffffff";
+      ctx.font = `900 ${18 * SCALE}px Arial, sans-serif`;
+      ctx.textBaseline = "middle";
+      ctx.fillText("MR. GYM", txtX, HDR * 0.38);
+      ctx.font = `600 ${9 * SCALE}px Arial, sans-serif`;
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.fillText("CARNET DE PERSONAL", txtX, HDR * 0.72);
+
+      // Imagen QR (limpia, sobre fondo blanco)
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, HDR, W, QR + PAD * 2);
+      ctx.drawImage(qrImg, PAD, HDR + PAD, QR, QR);
+
+      // Fondo del footer (amarillo muy claro)
+      ctx.fillStyle = "#fffdf5";
+      ctx.fillRect(0, HDR + QR + PAD * 2, W, FTR);
+
+      // Línea de borde del footer
+      ctx.strokeStyle = "#fef08a";
+      ctx.lineWidth = SCALE;
+      ctx.beginPath();
+      ctx.moveTo(0, HDR + QR + PAD * 2);
+      ctx.lineTo(W, HDR + QR + PAD * 2);
+      ctx.stroke();
+
+      // Código en el footer (dorado)
+      ctx.fillStyle = "#ca8a04";
+      ctx.font = `900 ${20 * SCALE}px monospace`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(codigo, W / 2, HDR + QR + PAD * 2 + FTR * 0.35);
+
+      // Nombre en el footer
+      ctx.fillStyle = "#444444";
+      ctx.font = `600 ${10 * SCALE}px Arial, sans-serif`;
+      ctx.fillText(nombre, W / 2, HDR + QR + PAD * 2 + FTR * 0.72);
+
+      URL.revokeObjectURL(svgUrl);
+      canvas.toBlob((blob) => resolve(blob), "image/png");
+    };
+    qrImg.onerror = () => {
+      URL.revokeObjectURL(svgUrl);
+      resolve(null);
+    };
+    qrImg.src = svgUrl;
+  });
+}
 
 export default function PersonalClient({ initialData }: { initialData: any[] }) {
   const [personal, setPersonal] = useState(initialData);
@@ -104,27 +195,18 @@ export default function PersonalClient({ initialData }: { initialData: any[] }) 
     }
   };
 
-  const downloadQR = () => {
-    const svg = document.querySelector("#qr-personal-svg") as SVGElement;
-    if (!svg) return;
-    
-    const svgData = new XMLSerializer().serializeToString(svg);
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    const img = new Image();
-    
-    img.onload = () => {
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx?.drawImage(img, 0, 0);
-      const pngFile = canvas.toDataURL("image/png");
-      const downloadLink = document.createElement("a");
-      downloadLink.download = `QR_Acceso_${qrModal.personal.nombres}_${qrModal.personal.apellidos}.png`;
-      downloadLink.href = pngFile;
-      downloadLink.click();
-    };
-    
-    img.src = "data:image/svg+xml;base64," + btoa(svgData);
+  const downloadQR = async () => {
+    if (!qrModal.personal) return;
+    const blob = await generateCarnetBlob("qr-personal-svg", qrModal.personal.codigo, `${qrModal.personal.nombres} ${qrModal.personal.apellidos}`);
+    if (!blob) {
+      toast.error("Error al generar la imagen. Intenta de nuevo.");
+      return;
+    }
+    const link = document.createElement("a");
+    link.download = `QR_Acceso_${qrModal.personal.nombres}_${qrModal.personal.codigo}.png`;
+    link.href = URL.createObjectURL(blob);
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 5000);
   };
 
   return (
@@ -316,48 +398,110 @@ export default function PersonalClient({ initialData }: { initialData: any[] }) 
       {qrModal.open && qrModal.personal && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[60] flex items-center justify-center p-4">
           <div className="bg-zinc-900 border border-zinc-800 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="p-6 text-center border-b border-zinc-800">
-              <h3 className="text-xl font-bold text-white">Código de Acceso QR</h3>
-              <p className="text-zinc-400 text-sm">{qrModal.personal.nombres} {qrModal.personal.apellidos}</p>
+            <div className="p-6 text-center border-b border-zinc-800 flex justify-between items-center bg-zinc-950">
+              <h3 className="text-xl font-bold text-white">Carnet Digital de Personal</h3>
+              <button 
+                onClick={() => setQrModal({ open: false, personal: null })}
+                className="text-zinc-400 hover:text-white"
+              >
+                <X className="w-6 h-6" />
+              </button>
             </div>
             
-            <div className="p-8 flex flex-col items-center bg-white">
-              <div className="p-4 bg-white rounded-2xl shadow-inner">
-                <QRCodeSVG 
-                  id="qr-personal-svg"
-                  value={`${window.location.origin}/kiosco-personal?code=${qrModal.personal.codigo}`}
-                  size={200}
-                  level="H"
-                  includeMargin={true}
-                />
+            <div className="p-6 bg-zinc-900/50 flex flex-col items-center">
+              {/* Branded QR Card */}
+              <div
+                id="qr-code-container"
+                style={{
+                  width: "280px",
+                  borderRadius: "16px",
+                  overflow: "hidden",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+                  border: "3px solid #ca8a04",
+                  background: "#fff",
+                }}
+              >
+                {/* Header with brand */}
+                <div style={{
+                  background: "linear-gradient(135deg, #ca8a04 0%, #eab308 100%)",
+                  padding: "12px 14px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                }}>
+                  <img
+                    src="/icons/icon-192x192.png"
+                    alt="Mr. Gym"
+                    style={{ width: "32px", height: "32px", borderRadius: "8px", flexShrink: 0 }}
+                  />
+                  <div style={{ textAlign: "left" }}>
+                    <div style={{ color: "#fff", fontWeight: 900, fontSize: "16px", letterSpacing: "-0.5px", lineHeight: 1 }}>MR. GYM</div>
+                    <div style={{ color: "rgba(255,255,255,0.75)", fontSize: "9px", fontWeight: 600, letterSpacing: "1.5px", textTransform: "uppercase" }}>Carnet de Personal</div>
+                  </div>
+                </div>
+
+                {/* Clean QR */}
+                <div style={{ background: "#fff", padding: "14px", display: "flex", justifyContent: "center" }}>
+                  <QRCodeSVG 
+                    id="qr-personal-svg"
+                    value={`${window.location.origin}/kiosco-personal?code=${qrModal.personal.codigo}`}
+                    size={246}
+                    level="H"
+                    includeMargin={false}
+                    bgColor="#FFFFFF"
+                    fgColor="#000000"
+                  />
+                </div>
+
+                {/* Footer with code + name */}
+                <div style={{
+                  background: "#fffdf5",
+                  borderTop: "1px solid #fef08a",
+                  padding: "10px 14px 12px",
+                  textAlign: "center",
+                }}>
+                  <div style={{ fontFamily: "monospace", fontSize: "20px", fontWeight: 900, letterSpacing: "4px", color: "#ca8a04" }}>
+                    {qrModal.personal.codigo}
+                  </div>
+                  <div style={{ fontSize: "11px", color: "#555", marginTop: "2px", fontWeight: 600 }}>
+                    {qrModal.personal.nombres} {qrModal.personal.apellidos}
+                  </div>
+                </div>
               </div>
-              <p className="mt-6 text-black font-black text-2xl tracking-widest">{qrModal.personal.codigo}</p>
             </div>
 
-            <div className="p-6 space-y-3">
+            <div className="p-6 space-y-3 border-t border-zinc-800 bg-zinc-950">
               <button 
                 onClick={downloadQR}
-                className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors"
+                className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors border-none"
               >
                 <Download className="w-5 h-5" /> Descargar Imagen QR
               </button>
 
               <button 
-                onClick={() => {
-                  const text = `Hola ${qrModal.personal.nombres}, este es tu enlace de acceso directo para Mr. Gym: ${window.location.origin}/kiosco-personal?code=${qrModal.personal.codigo}`;
-                  const url = `https://wa.me/${qrModal.personal.telefono?.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
-                  window.open(url, '_blank');
+                onClick={async () => {
+                  const phone = qrModal.personal.telefono?.replace(/\D/g, "") || "";
+                  const phoneWithCountry = phone.length === 9 ? `51${phone}` : phone;
+                  const text = `Hola ${qrModal.personal.nombres}, aquí tienes tu enlace directo para marcar tu asistencia en Mr. Gym: ${window.location.origin}/kiosco-personal?code=${qrModal.personal.codigo}`;
+                  const url = `https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(text)}`;
+                  window.open(url, "_blank");
+                  logQRSent(qrModal.personal.nombres, qrModal.personal.codigo, "WhatsApp");
+
+                  // Copy to clipboard too if possible
+                  const blob = await generateCarnetBlob("qr-personal-svg", qrModal.personal.codigo, `${qrModal.personal.nombres} ${qrModal.personal.apellidos}`);
+                  if (blob) {
+                    try {
+                      const item = new ClipboardItem({ "image/png": blob });
+                      await navigator.clipboard.write([item]);
+                      toast.success("¡Imagen QR copiada al portapapeles! Puedes pegarla en WhatsApp.");
+                    } catch (e) {
+                      console.error("No se pudo copiar al portapapeles", e);
+                    }
+                  }
                 }}
-                className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors"
+                className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors border-none"
               >
-                <Send className="w-5 h-5" /> Enviar Enlace por WhatsApp
-              </button>
-              
-              <button 
-                onClick={() => setQrModal({ open: false, personal: null })}
-                className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-medium py-3 rounded-xl transition-colors"
-              >
-                Cerrar
+                <Send className="w-5 h-5" /> Enviar por WhatsApp
               </button>
             </div>
           </div>

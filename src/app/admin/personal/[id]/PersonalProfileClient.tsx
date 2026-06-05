@@ -19,7 +19,10 @@ import {
   FileText,
   Percent,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Download,
+  MessageCircle,
+  Share2
 } from "lucide-react";
 import { toast } from "sonner";
 import { 
@@ -27,7 +30,99 @@ import {
   updateAsistencia, 
   deleteAsistencia 
 } from "@/app/actions/asistencia-personal";
+import { logQRSent } from "@/app/actions/socios";
 import Link from "next/link";
+import { QRCodeSVG } from "qrcode.react";
+
+/** Genera la imagen del carnet de personal (dorado/amarillo) en un canvas y devuelve un Blob PNG. */
+async function generateCarnetBlob(
+  svgId: string,
+  codigo: string,
+  nombre: string
+): Promise<Blob | null> {
+  const svgEl = document.getElementById(svgId) as SVGSVGElement | null;
+  if (!svgEl) return null;
+
+  const svgData = new XMLSerializer().serializeToString(svgEl);
+  const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+  const svgUrl = URL.createObjectURL(svgBlob);
+
+  return new Promise((resolve) => {
+    const qrImg = new Image();
+    qrImg.onload = () => {
+      const SCALE = 3;
+      const QR = 252 * SCALE;
+      const PAD = 16 * SCALE;
+      const HDR = 64 * SCALE;
+      const FTR = 60 * SCALE;
+      const W = QR + PAD * 2;
+      const H = HDR + QR + PAD * 2 + FTR;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext("2d")!;
+
+      // Base blanca
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, W, H);
+
+      // Degradado del header (Dorado/Amarillo para Personal)
+      const grad = ctx.createLinearGradient(0, 0, W, HDR);
+      grad.addColorStop(0, "#ca8a04");
+      grad.addColorStop(1, "#eab308");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, HDR);
+
+      // Texto de cabecera
+      const txtX = PAD + 12 * SCALE;
+      ctx.fillStyle = "#ffffff";
+      ctx.font = `900 ${18 * SCALE}px Arial, sans-serif`;
+      ctx.textBaseline = "middle";
+      ctx.fillText("MR. GYM", txtX, HDR * 0.38);
+      ctx.font = `600 ${9 * SCALE}px Arial, sans-serif`;
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.fillText("CARNET DE PERSONAL", txtX, HDR * 0.72);
+
+      // Imagen QR (limpia, sobre fondo blanco)
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, HDR, W, QR + PAD * 2);
+      ctx.drawImage(qrImg, PAD, HDR + PAD, QR, QR);
+
+      // Fondo del footer (amarillo muy claro)
+      ctx.fillStyle = "#fffdf5";
+      ctx.fillRect(0, HDR + QR + PAD * 2, W, FTR);
+
+      // Línea de borde del footer
+      ctx.strokeStyle = "#fef08a";
+      ctx.lineWidth = SCALE;
+      ctx.beginPath();
+      ctx.moveTo(0, HDR + QR + PAD * 2);
+      ctx.lineTo(W, HDR + QR + PAD * 2);
+      ctx.stroke();
+
+      // Código en el footer (dorado)
+      ctx.fillStyle = "#ca8a04";
+      ctx.font = `900 ${20 * SCALE}px monospace`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(codigo, W / 2, HDR + QR + PAD * 2 + FTR * 0.35);
+
+      // Nombre en el footer
+      ctx.fillStyle = "#444444";
+      ctx.font = `600 ${10 * SCALE}px Arial, sans-serif`;
+      ctx.fillText(nombre, W / 2, HDR + QR + PAD * 2 + FTR * 0.72);
+
+      URL.revokeObjectURL(svgUrl);
+      canvas.toBlob((blob) => resolve(blob), "image/png");
+    };
+    qrImg.onerror = () => {
+      URL.revokeObjectURL(svgUrl);
+      resolve(null);
+    };
+    qrImg.src = svgUrl;
+  });
+}
 
 interface Personal {
   id: string;
@@ -65,6 +160,14 @@ export default function PersonalProfileClient({
   const router = useRouter();
   const [asistencias, setAsistencias] = useState<Asistencia[]>(initialAsistencias);
   const [filterMode, setFilterMode] = useState<"ALL" | "CYCLE">("CYCLE");
+  const [activeTab, setActiveTab] = useState<"asistencias" | "carnet">("asistencias");
+  const [qrUrl, setQrUrl] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setQrUrl(`${window.location.origin}/kiosco-personal?code=${personal.codigo}`);
+    }
+  }, [personal.codigo]);
   
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
@@ -368,9 +471,35 @@ export default function PersonalProfileClient({
 
         {/* Right Column: Worked Hours Summary & Attendance Records */}
         <div className="lg:col-span-2 space-y-6">
-          
-          {/* Card 1: worked hours summary for the current cycle */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+
+          {/* Tabs */}
+          <div className="bg-zinc-950 p-1 border border-zinc-800 rounded-xl flex gap-1 w-full">
+            <button 
+              onClick={() => setActiveTab("asistencias")} 
+              className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all ${
+                activeTab === "asistencias" 
+                  ? "bg-yellow-500 text-black shadow-lg" 
+                  : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              Asistencias y Horas
+            </button>
+            <button 
+              onClick={() => setActiveTab("carnet")} 
+              className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all ${
+                activeTab === "carnet" 
+                  ? "bg-yellow-500 text-black shadow-lg" 
+                  : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              Carnet Digital
+            </button>
+          </div>
+
+          {activeTab === "asistencias" && (
+            <>
+              {/* Card 1: worked hours summary for the current cycle */}
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
             <div className="flex justify-between items-start mb-6">
               <div>
                 <h3 className="text-lg font-bold text-white mb-1">
@@ -542,6 +671,165 @@ export default function PersonalProfileClient({
               </table>
             </div>
           </div>
+          </>
+          )}
+
+          {activeTab === "carnet" && (
+            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl">
+              <div className="flex flex-col items-center text-center">
+                <h2 className="text-xl font-bold text-white mb-4">Carnet de Personal</h2>
+
+                {/* Branded QR Card */}
+                <div
+                  id="qr-code-container"
+                  style={{
+                    width: "300px",
+                    borderRadius: "16px",
+                    overflow: "hidden",
+                    boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+                    border: "3px solid #ca8a04",
+                    margin: "0 auto",
+                    background: "#fff",
+                  }}
+                >
+                  {/* Header with brand */}
+                  <div style={{
+                    background: "linear-gradient(135deg, #ca8a04 0%, #eab308 100%)",
+                    padding: "14px 16px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                  }}>
+                    <img
+                      src="/icons/icon-192x192.png"
+                      alt="Mr. Gym"
+                      style={{ width: "36px", height: "36px", borderRadius: "8px", flexShrink: 0 }}
+                    />
+                    <div style={{ textAlign: "left" }}>
+                      <div style={{ color: "#fff", fontWeight: 900, fontSize: "18px", letterSpacing: "-0.5px", lineHeight: 1 }}>MR. GYM</div>
+                      <div style={{ color: "rgba(255,255,255,0.75)", fontSize: "10px", fontWeight: 600, letterSpacing: "2px", textTransform: "uppercase" }}>Carnet de Personal</div>
+                    </div>
+                  </div>
+
+                  {/* Clean QR — nothing behind or on top */}
+                  <div style={{ background: "#fff", padding: "16px", display: "flex", justifyContent: "center" }}>
+                    {qrUrl ? (
+                      <QRCodeSVG
+                        value={qrUrl}
+                        size={252}
+                        level="H"
+                        includeMargin={false}
+                        bgColor="#FFFFFF"
+                        fgColor="#000000"
+                        id="personal-qr-svg"
+                      />
+                    ) : (
+                      <div style={{ width: 252, height: 252 }} className="flex items-center justify-center text-zinc-400">Cargando...</div>
+                    )}
+                  </div>
+
+                  {/* Footer with code + name */}
+                  <div style={{
+                    background: "#fffdf5",
+                    borderTop: "1px solid #fef08a",
+                    padding: "10px 16px 14px",
+                    textAlign: "center",
+                  }}>
+                    <div style={{ fontFamily: "monospace", fontSize: "22px", fontWeight: 900, letterSpacing: "4px", color: "#ca8a04" }}>
+                      {personal.codigo}
+                    </div>
+                    <div style={{ fontSize: "12px", color: "#555", marginTop: "2px", fontWeight: 600 }}>
+                      {personal.nombres} {personal.apellidos}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-4 mt-8 w-full max-w-sm mx-auto">
+                  {/* Estado del Empleado */}
+                  <div className="p-4 rounded-2xl border border-zinc-800 bg-zinc-950 flex items-center gap-4 shadow-sm transition-all w-full">
+                    <div className={`p-3 rounded-full ${personal.activo ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"}`}>
+                      {personal.activo ? <CheckCircle2 size={32} /> : <XCircle size={32} />}
+                    </div>
+                    <div className="flex-1 text-left">
+                      <h3 className="font-bold text-xs opacity-70 uppercase tracking-widest mb-0.5">Estado del Empleado</h3>
+                      <div className="text-2xl font-black tracking-tight leading-none text-white">
+                        {personal.activo ? "HABILITADO" : "INACTIVO"}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="divider text-xs font-semibold opacity-50 uppercase tracking-widest my-2 text-zinc-500">Acciones del QR</div>
+
+                  {/* Botones */}
+                  <div className="grid grid-cols-1 gap-3 w-full">
+                    <button className="btn bg-yellow-500 hover:bg-yellow-400 text-black border-none w-full shadow-md font-bold py-3.5 rounded-xl flex items-center justify-center gap-2" onClick={async () => {
+                      const blob = await generateCarnetBlob("personal-qr-svg", personal.codigo, `${personal.nombres} ${personal.apellidos}`);
+                      if (!blob) { alert("Error al generar la imagen. Intenta de nuevo."); return; }
+                      const link = document.createElement("a");
+                      link.download = `QR-${personal.nombres}-${personal.codigo}.png`;
+                      link.href = URL.createObjectURL(blob);
+                      link.click();
+                      setTimeout(() => URL.revokeObjectURL(link.href), 5000);
+                    }}>
+                      <Download size={20} />
+                      Descargar Imagen
+                    </button>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <button className="btn bg-green-600 hover:bg-green-500 border-none text-white shadow-sm font-bold py-3 rounded-xl flex items-center justify-center gap-1.5" onClick={async () => {
+                        if (!personal.telefono) {
+                          alert("El empleado no tiene un número de teléfono registrado.");
+                          return;
+                        }
+                        const phone = personal.telefono.replace(/\D/g, "");
+                        const phoneWithCountry = phone.length === 9 ? `51${phone}` : phone;
+                        const text = `Hola ${personal.nombres}, aquí tienes tu enlace directo para marcar tu asistencia en Mr. Gym: ${qrUrl}`;
+                        const targetUrl = `https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(text)}`;
+
+                        window.open(targetUrl, "_blank");
+                        logQRSent(personal.nombres, personal.codigo, "WhatsApp");
+
+                        const blob = await generateCarnetBlob("personal-qr-svg", personal.codigo, `${personal.nombres} ${personal.apellidos}`);
+                        if (blob) {
+                          try {
+                            const item = new ClipboardItem({ "image/png": blob });
+                            await navigator.clipboard.write([item]);
+                            toast.success("¡Imagen QR copiada al portapapeles! Puedes pegarla en WhatsApp.");
+                          } catch (e) {
+                            console.error("No se pudo copiar al portapapeles", e);
+                          }
+                        }
+                      }}>
+                        <MessageCircle size={18} />
+                        WhatsApp
+                      </button>
+
+                      <button className="btn bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white shadow-sm font-bold py-3 rounded-xl flex items-center justify-center gap-1.5" onClick={async () => {
+                        const text = `Hola ${personal.nombres}, aquí tienes tu código de acceso para Mr. Gym: ${personal.codigo}`;
+                        const blob = await generateCarnetBlob("personal-qr-svg", personal.codigo, `${personal.nombres} ${personal.apellidos}`);
+                        if (!blob) { alert("Error al generar la imagen."); return; }
+                        const file = new File([blob], `QR-${personal.nombres}-${personal.codigo}.png`, { type: "image/png" });
+                        const shareData = { title: "Código QR de Acceso", text, files: [file] };
+                        if (navigator.canShare && navigator.canShare(shareData)) {
+                          try {
+                            await navigator.share(shareData);
+                            logQRSent(personal.nombres, personal.codigo, "Nativo (Compartir)");
+                          } catch (err: any) {
+                            console.log("Compartir cancelado o falló", err.message);
+                          }
+                        } else {
+                          alert("Tu dispositivo no soporta compartir nativamente. Usa el botón 'WhatsApp'.");
+                        }
+                      }}>
+                        <Share2 size={18} />
+                        Compartir
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
         </div>
       </div>
