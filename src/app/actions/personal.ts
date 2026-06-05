@@ -49,8 +49,9 @@ export async function getPersonalById(id: string) {
 // Obtener por código (Para el kiosco)
 export async function getPersonalByCodigo(codigo: string) {
   try {
+    const cleanCodigo = codigo.trim().replace(/[^A-Za-z0-9]/g, '').toUpperCase();
     const personal = await prisma.personal.findUnique({
-      where: { codigo },
+      where: { codigo: cleanCodigo },
     });
 
     if (!personal) return { success: false, error: "Código incorrecto o personal no encontrado" };

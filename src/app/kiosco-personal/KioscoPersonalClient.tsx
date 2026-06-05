@@ -75,7 +75,7 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
     }, 1000);
 
     const resetIdleTimer = () => {
-      setSecondsLeft(15);
+      setSecondsLeft((prev) => (prev !== 15 ? 15 : prev));
     };
 
     const events = ["mousemove", "click", "keydown", "touchstart", "scroll"];
@@ -115,6 +115,10 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
 
   const handleLogin = async (e?: React.FormEvent, overrideCode?: string) => {
     if (e) e.preventDefault();
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
     let codeToUse = (overrideCode ?? codigo).trim();
     if (!codeToUse) return;
 
