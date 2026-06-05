@@ -84,10 +84,20 @@ export default function KioscoClient() {
         setState('LOADING')
         setTimeLeft(0)
         
-        // Si el código escaneado es una URL del kiosco personal, redireccionamos
+        // Si el código escaneado es una URL del kiosco personal, redireccionamos usando ruta relativa
         if (code.includes('/kiosco-personal?code=')) {
-          window.location.href = code;
-          return;
+            try {
+                const urlObj = new URL(code.startsWith('http') ? code : `http://dummy.com${code}`);
+                const codeParam = urlObj.searchParams.get('code');
+                if (codeParam) {
+                    window.location.href = `/kiosco-personal?code=${encodeURIComponent(codeParam)}`;
+                    return;
+                }
+            } catch (err) {
+                console.error("Error al procesar URL del Kiosco de Personal:", err);
+            }
+            window.location.href = `/kiosco-personal`;
+            return;
         }
 
         try {
