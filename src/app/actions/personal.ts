@@ -156,3 +156,54 @@ export async function deletePersonal(id: string) {
     return { success: false, error: "Error al eliminar personal. Puede que tenga pagos asociados." };
   }
 }
+
+// Pagar/Cancelar un consumo específico de personal
+export async function pagarConsumoPersonal(consumoId: string, personalId: string) {
+  try {
+    const consumo = await prisma.consumoPersonal.update({
+      where: { id: consumoId },
+      data: { pagado: true },
+      include: { producto: true, personal: true }
+    });
+
+    await logAction("PAGAR_CONSUMO_PERSONAL", `Se marcó como pagado el consumo de ${consumo.cantidad}x ${consumo.producto.nombre} por S/ ${consumo.montoTotal.toFixed(2)} del empleado ${consumo.personal.nombres} ${consumo.personal.apellidos}`);
+    revalidatePath(`/admin/personal/${personalId}`);
+    
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error al pagar consumo de personal:", error);
+    return { success: false, error: "Error al registrar el pago del consumo" };
+  }
+}
+
+// Pagar/Cancelar TODOS los consumos acumulados de un empleado
+export async function pagarTodosConsumosPersonal(personalId: string) {
+  try {
+    const consumos = await prisma.consumoPersonal.findMany({
+      where: { personalId, pagado: false },
+      include: { producto: true }
+    });
+
+    if (consumos.length === 0) {
+      return { success: false, error: "No hay consumos pendientes de pago" };
+    }
+
+    const total = consumos.reduce((sum, c) => sum + c.montoTotal, 0);
+
+    await prisma.consumoPersonal.updateMany({
+      where: { personalId, pagado: false },
+      data: { pagado: true }
+    });
+
+    const personal = await prisma.personal.findUnique({ where: { id: personalId } });
+    const name = personal ? `${personal.nombres} ${personal.apellidos}` : personalId;
+
+    await logAction("PAGAR_TODOS_CONSUMOS_PERSONAL", `Se cancelaron todos los consumos pendientes de ${name} por un total de S/ ${total.toFixed(2)}`);
+    revalidatePath(`/admin/personal/${personalId}`);
+
+    return { success: true, total };
+  } catch (error: any) {
+    console.error("Error al pagar todos los consumos:", error);
+    return { success: false, error: "Error al registrar la cancelación de todos los consumos" };
+  }
+}

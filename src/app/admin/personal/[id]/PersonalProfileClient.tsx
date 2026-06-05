@@ -22,7 +22,8 @@ import {
   XCircle,
   Download,
   MessageCircle,
-  Share2
+  Share2,
+  Check
 } from "lucide-react";
 import { toast } from "sonner";
 import { 
@@ -31,6 +32,7 @@ import {
   deleteAsistencia 
 } from "@/app/actions/asistencia-personal";
 import { logQRSent } from "@/app/actions/socios";
+import { pagarConsumoPersonal, pagarTodosConsumosPersonal } from "@/app/actions/personal";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 
@@ -137,6 +139,20 @@ interface Personal {
   montoPago: number;
   horasObjetivo: number;
   activo: boolean;
+  consumos?: {
+    id: string;
+    personalId: string;
+    productoPersonalId: string;
+    cantidad: number;
+    montoTotal: number;
+    fecha: Date | string;
+    pagado: boolean;
+    producto: {
+      nombre: string;
+      precio: number;
+      fotoUrl?: string | null;
+    };
+  }[];
 }
 
 interface Asistencia {
@@ -160,7 +176,7 @@ export default function PersonalProfileClient({
   const router = useRouter();
   const [asistencias, setAsistencias] = useState<Asistencia[]>(initialAsistencias);
   const [filterMode, setFilterMode] = useState<"ALL" | "CYCLE">("CYCLE");
-  const [activeTab, setActiveTab] = useState<"asistencias" | "carnet">("asistencias");
+  const [activeTab, setActiveTab] = useState<"asistencias" | "carnet" | "consumos">("asistencias");
   const [qrUrl, setQrUrl] = useState("");
 
   useEffect(() => {
@@ -310,6 +326,34 @@ export default function PersonalProfileClient({
 
   const displayedAsistencias = filterMode === "CYCLE" ? cycleAsistencias : asistencias;
   const currentHours = filterMode === "CYCLE" ? totalHoursCycle : totalHoursAll;
+
+  // Consumos pendientes
+  const consumosPendientes = personal.consumos || [];
+  const totalConsumosPendientes = consumosPendientes.reduce((sum, c) => sum + c.montoTotal, 0);
+
+  const handlePagarConsumo = async (consumoId: string) => {
+    if (confirm("¿Estás seguro de marcar este consumo como PAGADO?")) {
+      const res = await pagarConsumoPersonal(consumoId, personal.id);
+      if (res.success) {
+        toast.success("Consumo cancelado correctamente");
+        router.refresh();
+      } else {
+        toast.error(res.error || "Error al registrar el pago");
+      }
+    }
+  };
+
+  const handlePagarTodosConsumos = async () => {
+    if (confirm(`¿Estás seguro de cancelar TODOS los consumos pendientes por un total de S/ ${totalConsumosPendientes.toFixed(2)}?`)) {
+      const res = await pagarTodosConsumosPersonal(personal.id);
+      if (res.success) {
+        toast.success(`Se cancelaron todos los consumos por S/ ${res.total?.toFixed(2)}`);
+        router.refresh();
+      } else {
+        toast.error(res.error || "Error al procesar el pago masivo");
+      }
+    }
+  };
 
   // Earnings estimation
   let estimatedEarnings = 0;
@@ -493,6 +537,16 @@ export default function PersonalProfileClient({
               }`}
             >
               Carnet Digital
+            </button>
+            <button 
+              onClick={() => setActiveTab("consumos")} 
+              className={`flex-1 py-2.5 rounded-lg text-xs font-bold transition-all ${
+                activeTab === "consumos" 
+                  ? "bg-yellow-500 text-black shadow-lg" 
+                  : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              Consumos
             </button>
           </div>
 
@@ -826,6 +880,121 @@ export default function PersonalProfileClient({
                       </button>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "consumos" && (
+            <div className="space-y-6">
+              {/* Resumen Deuda y Pago Masivo */}
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div>
+                  <h3 className="text-lg font-bold text-white mb-1">
+                    Consumos Pendientes de Pago
+                  </h3>
+                  <p className="text-zinc-400 text-xs">
+                    Lista de consumos registrados por el empleado en el kiosco que aún no han sido cobrados o descontados.
+                  </p>
+                </div>
+                
+                <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-right">
+                  <div>
+                    <p className="text-xs text-zinc-500">Deuda Total Acumulada</p>
+                    <p className="text-2xl font-black text-yellow-500">
+                      S/ {totalConsumosPendientes.toFixed(2)}
+                    </p>
+                  </div>
+                  {totalConsumosPendientes > 0 && (
+                    <button 
+                      onClick={handlePagarTodosConsumos}
+                      className="bg-yellow-500 hover:bg-yellow-400 text-black px-4 py-2.5 rounded-xl text-xs font-bold transition-colors border-none"
+                    >
+                      Cancelar Todos los Consumos
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Tabla de Consumos */}
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
+                <div className="p-6 border-b border-zinc-800 bg-zinc-950">
+                  <h3 className="text-lg font-bold text-white">Detalle de Adquisiciones</h3>
+                  <p className="text-xs text-zinc-500 mt-0.5">Historial de consumos pendientes con fecha y hora exactas</p>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm text-zinc-400">
+                    <thead className="bg-zinc-900 border-b border-zinc-800 text-xs uppercase font-semibold text-zinc-300">
+                      <tr>
+                        <th className="px-6 py-4">Fecha y Hora</th>
+                        <th className="px-6 py-4">Producto</th>
+                        <th className="px-6 py-4 text-center">Cantidad</th>
+                        <th className="px-6 py-4 text-right">Subtotal</th>
+                        <th className="px-6 py-4 text-right">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-800/50">
+                      {consumosPendientes.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-12 text-center text-zinc-500 italic">
+                            El empleado no tiene consumos pendientes de pago. ¡Está al día!
+                          </td>
+                        </tr>
+                      ) : (
+                        consumosPendientes.map((c) => {
+                          const dateObj = new Date(c.fecha);
+                          // Exact date: dd/MM/yyyy
+                          const formattedDate = dateObj.toLocaleDateString("es-PE", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric"
+                          });
+                          // Exact time: hh:mm:ss a
+                          const formattedTime = dateObj.toLocaleTimeString("es-PE", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                            hour12: true
+                          });
+
+                          return (
+                            <tr key={c.id} className="hover:bg-zinc-800/40 transition-colors">
+                              <td className="px-6 py-4">
+                                <div className="font-semibold text-white">{formattedDate}</div>
+                                <div className="text-xs text-zinc-500 font-mono">{formattedTime}</div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-3">
+                                  {c.producto.fotoUrl ? (
+                                    <img src={c.producto.fotoUrl} alt={c.producto.nombre} className="w-8 h-8 rounded-lg object-cover" />
+                                  ) : (
+                                    <div className="w-8 h-8 bg-zinc-800 rounded-lg flex items-center justify-center text-xs text-zinc-500">P</div>
+                                  )}
+                                  <div className="font-bold text-zinc-200">{c.producto.nombre}</div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 text-center text-white font-medium">
+                                {c.cantidad}
+                              </td>
+                              <td className="px-6 py-4 text-right font-bold text-white">
+                                S/ {c.montoTotal.toFixed(2)}
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <button 
+                                  onClick={() => handlePagarConsumo(c.id)}
+                                  className="bg-green-500/10 text-green-500 border border-green-500/30 hover:bg-green-500 hover:text-black px-3 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1"
+                                  title="Marcar como pagado"
+                                >
+                                  <Check className="w-3.5 h-3.5" /> Cancelar
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
