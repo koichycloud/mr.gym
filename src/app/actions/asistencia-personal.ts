@@ -144,12 +144,64 @@ export async function getResumenHoras(personalId: string) {
     }
 }
 
-// Combinar fecha (YYYY-MM-DD) y hora (HH:MM) en un objeto Date local
+// Combinar fecha (YYYY-MM-DD) y hora (HH:MM) en un objeto Date en zona horaria de Lima (UTC-5)
 function combineDateAndTime(dateStr: string, timeStr: string | null | undefined): Date | null {
   if (!dateStr || !timeStr) return null;
   const [year, month, day] = dateStr.split('-').map(Number);
   const [hours, minutes] = timeStr.split(':').map(Number);
-  return new Date(year, month - 1, day, hours, minutes, 0, 0);
+  // Crear fecha interpretando los componentes en UTC
+  const utcMs = Date.UTC(year, month - 1, day, hours, minutes, 0, 0);
+  // Lima es UTC-5, por lo que sumamos 5 horas para obtener el objeto UTC equivalente
+  const PERU_OFFSET_MS = 5 * 60 * 60 * 1000;
+  return new Date(utcMs + PERU_OFFSET_MS);
+}
+
+// Combinar fecha y horas considerando cruces de medianoche cronológicos
+function combineDatesWithCrossover(
+  fechaStr: string,
+  horaEntradaStr: string | null | undefined,
+  horaSalidaAlmuerzoStr: string | null | undefined,
+  horaEntradaAlmuerzoStr: string | null | undefined,
+  horaSalidaStr: string | null | undefined
+) {
+  const entrada = combineDateAndTime(fechaStr, horaEntradaStr);
+  let salidaAlmuerzo = combineDateAndTime(fechaStr, horaSalidaAlmuerzoStr);
+  let entradaAlmuerzo = combineDateAndTime(fechaStr, horaEntradaAlmuerzoStr);
+  let salida = combineDateAndTime(fechaStr, horaSalidaStr);
+
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+  if (entrada) {
+    if (salidaAlmuerzo) {
+      if (salidaAlmuerzo.getTime() < entrada.getTime()) {
+        salidaAlmuerzo = new Date(salidaAlmuerzo.getTime() + ONE_DAY_MS);
+      }
+      if (entradaAlmuerzo) {
+        if (entradaAlmuerzo.getTime() < salidaAlmuerzo.getTime()) {
+          entradaAlmuerzo = new Date(entradaAlmuerzo.getTime() + ONE_DAY_MS);
+        }
+        if (salida) {
+          if (salida.getTime() < entradaAlmuerzo.getTime()) {
+            salida = new Date(salida.getTime() + ONE_DAY_MS);
+          }
+        }
+      } else {
+        if (salida) {
+          if (salida.getTime() < salidaAlmuerzo.getTime()) {
+            salida = new Date(salida.getTime() + ONE_DAY_MS);
+          }
+        }
+      }
+    } else {
+      if (salida) {
+        if (salida.getTime() < entrada.getTime()) {
+          salida = new Date(salida.getTime() + ONE_DAY_MS);
+        }
+      }
+    }
+  }
+
+  return { entrada, salidaAlmuerzo, entradaAlmuerzo, salida };
 }
 
 // Crear asistencia manual
@@ -165,8 +217,9 @@ export async function createManualAsistencia(
 ) {
   try {
     const [year, month, day] = data.fecha.split('-').map(Number);
-    const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
-    const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
+    const PERU_OFFSET_MS = 5 * 60 * 60 * 1000;
+    const startOfDay = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0) + PERU_OFFSET_MS);
+    const endOfDay = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999) + PERU_OFFSET_MS);
 
     // Verificar si ya existe asistencia para este día
     const existing = await prisma.asistenciaPersonal.findFirst({
@@ -183,10 +236,13 @@ export async function createManualAsistencia(
       return { success: false, error: "Ya existe un registro de asistencia para esta fecha. Edítelo en su lugar." };
     }
 
-    const entrada = combineDateAndTime(data.fecha, data.horaEntrada);
-    const salidaAlmuerzo = combineDateAndTime(data.fecha, data.horaSalidaAlmuerzo);
-    const entradaAlmuerzo = combineDateAndTime(data.fecha, data.horaEntradaAlmuerzo);
-    const salida = combineDateAndTime(data.fecha, data.horaSalida);
+    const { entrada, salidaAlmuerzo, entradaAlmuerzo, salida } = combineDatesWithCrossover(
+      data.fecha,
+      data.horaEntrada,
+      data.horaSalidaAlmuerzo,
+      data.horaEntradaAlmuerzo,
+      data.horaSalida
+    );
 
     const horasTrabajadas = calculateNetHours(entrada, salida, salidaAlmuerzo, entradaAlmuerzo);
 
@@ -224,12 +280,16 @@ export async function updateAsistencia(
 ) {
   try {
     const [year, month, day] = data.fecha.split('-').map(Number);
-    const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
+    const PERU_OFFSET_MS = 5 * 60 * 60 * 1000;
+    const startOfDay = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0) + PERU_OFFSET_MS);
 
-    const entrada = combineDateAndTime(data.fecha, data.horaEntrada);
-    const salidaAlmuerzo = combineDateAndTime(data.fecha, data.horaSalidaAlmuerzo);
-    const entradaAlmuerzo = combineDateAndTime(data.fecha, data.horaEntradaAlmuerzo);
-    const salida = combineDateAndTime(data.fecha, data.horaSalida);
+    const { entrada, salidaAlmuerzo, entradaAlmuerzo, salida } = combineDatesWithCrossover(
+      data.fecha,
+      data.horaEntrada,
+      data.horaSalidaAlmuerzo,
+      data.horaEntradaAlmuerzo,
+      data.horaSalida
+    );
 
     const horasTrabajadas = calculateNetHours(entrada, salida, salidaAlmuerzo, entradaAlmuerzo);
 

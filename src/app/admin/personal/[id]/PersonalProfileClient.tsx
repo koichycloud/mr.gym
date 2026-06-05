@@ -177,6 +177,7 @@ export default function PersonalProfileClient({
   const [asistencias, setAsistencias] = useState<Asistencia[]>(initialAsistencias);
   const [filterMode, setFilterMode] = useState<"ALL" | "CYCLE">("CYCLE");
   const [activeTab, setActiveTab] = useState<"asistencias" | "carnet" | "consumos">("asistencias");
+  const [filterConsumos, setFilterConsumos] = useState<"PENDIENTE" | "ALL">("PENDIENTE");
   const [qrUrl, setQrUrl] = useState("");
 
   useEffect(() => {
@@ -327,9 +328,11 @@ export default function PersonalProfileClient({
   const displayedAsistencias = filterMode === "CYCLE" ? cycleAsistencias : asistencias;
   const currentHours = filterMode === "CYCLE" ? totalHoursCycle : totalHoursAll;
 
-  // Consumos pendientes
-  const consumosPendientes = personal.consumos || [];
+  // Consumos pendientes e historial completo
+  const todosConsumos = personal.consumos || [];
+  const consumosPendientes = todosConsumos.filter(c => !c.pagado);
   const totalConsumosPendientes = consumosPendientes.reduce((sum, c) => sum + c.montoTotal, 0);
+  const displayedConsumos = filterConsumos === "PENDIENTE" ? consumosPendientes : todosConsumos;
 
   const handlePagarConsumo = async (consumoId: string) => {
     if (confirm("¿Estás seguro de marcar este consumo como PAGADO?")) {
@@ -891,16 +894,16 @@ export default function PersonalProfileClient({
               <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 flex flex-col sm:flex-row justify-between items-center gap-4">
                 <div>
                   <h3 className="text-lg font-bold text-white mb-1">
-                    Consumos Pendientes de Pago
+                    Consumos del Empleado
                   </h3>
                   <p className="text-zinc-400 text-xs">
-                    Lista de consumos registrados por el empleado en el kiosco que aún no han sido cobrados o descontados.
+                    Historial de adquisiciones de productos realizadas por el empleado en el kiosco.
                   </p>
                 </div>
                 
                 <div className="flex flex-col sm:flex-row items-center gap-4 text-center sm:text-right">
                   <div>
-                    <p className="text-xs text-zinc-500">Deuda Total Acumulada</p>
+                    <p className="text-xs text-zinc-500">Deuda Pendiente</p>
                     <p className="text-2xl font-black text-yellow-500">
                       S/ {totalConsumosPendientes.toFixed(2)}
                     </p>
@@ -916,11 +919,37 @@ export default function PersonalProfileClient({
                 </div>
               </div>
 
-              {/* Tabla de Consumos */}
+              {/* Filtro e Historial */}
               <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
-                <div className="p-6 border-b border-zinc-800 bg-zinc-950">
-                  <h3 className="text-lg font-bold text-white">Detalle de Adquisiciones</h3>
-                  <p className="text-xs text-zinc-500 mt-0.5">Historial de consumos pendientes con fecha y hora exactas</p>
+                <div className="p-6 border-b border-zinc-800 bg-zinc-950 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-white">Detalle de Adquisiciones</h3>
+                    <p className="text-xs text-zinc-500 mt-0.5">Historial de consumos con fecha, hora y estado de pago</p>
+                  </div>
+                  
+                  {/* Selector de Filtro */}
+                  <div className="bg-zinc-900 p-1 border border-zinc-800 rounded-xl flex self-start sm:self-auto">
+                    <button 
+                      onClick={() => setFilterConsumos("PENDIENTE")} 
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                        filterConsumos === "PENDIENTE" 
+                          ? "bg-yellow-500 text-black shadow-lg" 
+                          : "text-zinc-400 hover:text-white"
+                      }`}
+                    >
+                      Pendientes de Pago
+                    </button>
+                    <button 
+                      onClick={() => setFilterConsumos("ALL")} 
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                        filterConsumos === "ALL" 
+                          ? "bg-yellow-500 text-black shadow-lg" 
+                          : "text-zinc-400 hover:text-white"
+                      }`}
+                    >
+                      Historial Completo
+                    </button>
+                  </div>
                 </div>
 
                 <div className="overflow-x-auto">
@@ -931,26 +960,27 @@ export default function PersonalProfileClient({
                         <th className="px-6 py-4">Producto</th>
                         <th className="px-6 py-4 text-center">Cantidad</th>
                         <th className="px-6 py-4 text-right">Subtotal</th>
+                        <th className="px-6 py-4 text-center">Estado</th>
                         <th className="px-6 py-4 text-right">Acciones</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-800/50">
-                      {consumosPendientes.length === 0 ? (
+                      {displayedConsumos.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="px-6 py-12 text-center text-zinc-500 italic">
-                            El empleado no tiene consumos pendientes de pago. ¡Está al día!
+                          <td colSpan={6} className="px-6 py-12 text-center text-zinc-500 italic">
+                            {filterConsumos === "PENDIENTE" 
+                              ? "El empleado no tiene consumos pendientes de pago. ¡Está al día!" 
+                              : "No se encontraron consumos registrados para este empleado."}
                           </td>
                         </tr>
                       ) : (
-                        consumosPendientes.map((c) => {
+                        displayedConsumos.map((c) => {
                           const dateObj = new Date(c.fecha);
-                          // Exact date: dd/MM/yyyy
                           const formattedDate = dateObj.toLocaleDateString("es-PE", {
                             day: "2-digit",
                             month: "2-digit",
                             year: "numeric"
                           });
-                          // Exact time: hh:mm:ss a
                           const formattedTime = dateObj.toLocaleTimeString("es-PE", {
                             hour: "2-digit",
                             minute: "2-digit",
@@ -980,14 +1010,29 @@ export default function PersonalProfileClient({
                               <td className="px-6 py-4 text-right font-bold text-white">
                                 S/ {c.montoTotal.toFixed(2)}
                               </td>
+                              <td className="px-6 py-4 text-center">
+                                {c.pagado ? (
+                                  <span className="bg-green-500/10 text-green-500 border border-green-500/30 px-2 py-0.5 rounded text-xs font-bold uppercase">
+                                    Cancelado
+                                  </span>
+                                ) : (
+                                  <span className="bg-yellow-500/10 text-yellow-500 border border-yellow-500/30 px-2 py-0.5 rounded text-xs font-bold uppercase">
+                                    Pendiente
+                                  </span>
+                                )}
+                              </td>
                               <td className="px-6 py-4 text-right">
-                                <button 
-                                  onClick={() => handlePagarConsumo(c.id)}
-                                  className="bg-green-500/10 text-green-500 border border-green-500/30 hover:bg-green-500 hover:text-black px-3 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1"
-                                  title="Marcar como pagado"
-                                >
-                                  <Check className="w-3.5 h-3.5" /> Cancelar
-                                </button>
+                                {!c.pagado ? (
+                                  <button 
+                                    onClick={() => handlePagarConsumo(c.id)}
+                                    className="bg-green-500/10 text-green-500 border border-green-500/30 hover:bg-green-500 hover:text-black px-3 py-1.5 rounded-lg text-xs font-bold transition-all inline-flex items-center gap-1"
+                                    title="Marcar como pagado"
+                                  >
+                                    <Check className="w-3.5 h-3.5" /> Cancelar
+                                  </button>
+                                ) : (
+                                  <span className="text-zinc-500 text-xs italic">—</span>
+                                )}
                               </td>
                             </tr>
                           );

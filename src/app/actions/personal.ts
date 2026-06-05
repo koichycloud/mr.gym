@@ -28,7 +28,6 @@ export async function getPersonalById(id: string) {
           take: 30, // Últimas 30 asistencias
         },
         consumos: {
-          where: { pagado: false },
           include: { producto: true },
           orderBy: { fecha: "desc" },
         },
