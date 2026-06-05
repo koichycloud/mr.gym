@@ -14,6 +14,7 @@ export default function KioscoClient() {
     const [result, setResult] = useState<AccessResult | null>(null)
     const [timeLeft, setTimeLeft] = useState<number>(0)
     const [selectedMode, setSelectedMode] = useState<'ENTRADA' | 'SALIDA' | 'AUTO'>('AUTO')
+    const [attemptedCode, setAttemptedCode] = useState<string>('')
     
     const [inputFeedback, setInputFeedback] = useState(false)
     
@@ -32,6 +33,7 @@ export default function KioscoClient() {
         currentInputRef.current = ''
         setTimeLeft(0)
         setSelectedMode('AUTO')
+        setAttemptedCode('')
     }, [])
 
     const resetIdleTimer = useCallback(() => {
@@ -60,6 +62,7 @@ export default function KioscoClient() {
     const handleScan = useCallback(async (scannedCode: string) => {
         const code = scannedCode.trim()
         if (!code) return
+        setAttemptedCode(code)
 
         const now = Date.now()
         const isSameCode = lastScanDataRef.current?.code === code
@@ -315,14 +318,20 @@ export default function KioscoClient() {
         }
 
         if (state === 'ERROR_NOT_FOUND') {
+            const clean = attemptedCode.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
             return (
                 <div className="flex flex-col items-center justify-center text-orange-500 text-center animate-in fade-in slide-in-from-top-10 px-8">
                     <XCircle size={180} className="mb-12 shadow-orange-500/20 shadow-2xl" />
                     <h1 className="text-[6.5rem] leading-none font-black text-orange-500 drop-shadow-sm mb-8">
                         DENEGADO
                     </h1>
-                    <p className="text-5xl font-semibold text-orange-100 bg-zinc-900/80 px-10 py-6 rounded-3xl tracking-wide max-w-4xl leading-tight">
-                        {result?.message || 'Código no reconocido o invalido.'}
+                    <p className="text-5xl font-semibold text-orange-100 bg-zinc-900/80 px-10 py-6 rounded-3xl tracking-wide max-w-4xl leading-tight flex flex-col gap-4">
+                        <span>{result?.message || 'Código no reconocido o invalido.'}</span>
+                        {attemptedCode && (
+                            <span className="block mt-4 text-3xl text-orange-400/80 font-mono">
+                                Escaneado: "{attemptedCode}" {attemptedCode !== clean && `(Limpio: "${clean}")`}
+                            </span>
+                        )}
                     </p>
                 </div>
             )
