@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createProductoPersonal, updateProductoPersonal, deleteProductoPersonal } from "@/app/actions/productos-personal";
-import { Plus, Edit2, Trash2, X, Loader2, Image as ImageIcon } from "lucide-react";
+import { Plus, Edit2, Trash2, X, Loader2, Image as ImageIcon, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 export default function ProductosPersonalClient({ initialData }: { initialData: any[] }) {
@@ -19,6 +19,32 @@ export default function ProductosPersonalClient({ initialData }: { initialData: 
     fotoUrl: "",
     activo: true,
   });
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const MAX_WIDTH = 500;
+          const scale = Math.min(1, MAX_WIDTH / img.width);
+
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+          setFormData((prev) => ({ ...prev, fotoUrl: dataUrl }));
+        };
+        img.src = reader.result as string;
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleOpenModal = (p?: any) => {
     if (p) {
@@ -148,18 +174,40 @@ export default function ProductosPersonalClient({ initialData }: { initialData: 
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 sm:col-span-1">
                     <label className="block text-sm font-medium text-zinc-400 mb-1">Precio (S/)</label>
-                    <input required type="number" step="0.1" min="0" value={formData.precio} onChange={e => setFormData({...formData, precio: parseFloat(e.target.value)})} className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white focus:border-yellow-500 focus:outline-none" />
+                    <input required type="number" step="0.1" min="0" value={formData.precio} onChange={e => setFormData({...formData, precio: parseFloat(e.target.value)})} className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white focus:border-yellow-500 focus:outline-none" inputMode="decimal" />
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-1">URL de la Foto (Opcional)</label>
-                <input type="url" value={formData.fotoUrl} onChange={e => setFormData({...formData, fotoUrl: e.target.value})} placeholder="https://ejemplo.com/foto.jpg" className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white focus:border-yellow-500 focus:outline-none" />
-                {formData.fotoUrl && (
-                  <div className="mt-2 h-32 rounded-xl bg-zinc-950 border border-zinc-800 overflow-hidden flex items-center justify-center">
-                     <img src={formData.fotoUrl} alt="Preview" className="h-full object-contain" onError={(e) => { (e.target as any).style.display = 'none'; }} />
+               <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-1">Foto del Producto (URL o Subir Archivo)</label>
+                <div className="flex flex-col gap-3">
+                  <div className="flex gap-2">
+                    <input 
+                      type="url" 
+                      value={formData.fotoUrl} 
+                      onChange={e => setFormData({...formData, fotoUrl: e.target.value})} 
+                      placeholder="https://ejemplo.com/foto.jpg o sube un archivo" 
+                      className="flex-1 bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white focus:border-yellow-500 focus:outline-none text-sm" 
+                    />
+                    <label className="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shrink-0 transition-colors">
+                      <Upload className="w-4 h-4" /> Subir
+                      <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} />
+                    </label>
                   </div>
-                )}
+                  {formData.fotoUrl && (
+                    <div className="relative mt-1 h-36 rounded-xl bg-zinc-950 border border-zinc-800 overflow-hidden flex items-center justify-center group">
+                      <img src={formData.fotoUrl} alt="Preview" className="h-full object-contain" onError={(e) => { (e.target as any).style.display = 'none'; }} />
+                      <button
+                        type="button"
+                        onClick={() => setFormData({...formData, fotoUrl: ""})}
+                        className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 shadow-lg transition-transform hover:scale-105"
+                        title="Eliminar imagen"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div>

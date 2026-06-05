@@ -361,11 +361,11 @@ export default function PersonalClient({ initialData }: { initialData: any[] }) 
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-zinc-400 mb-1">Monto Acordado (S/)</label>
-                  <input required type="number" step="0.1" value={formData.montoPago} onChange={e => setFormData({...formData, montoPago: parseFloat(e.target.value)})} className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white focus:border-yellow-500 focus:outline-none" />
+                  <input required type="number" step="0.1" value={formData.montoPago} onChange={e => setFormData({...formData, montoPago: parseFloat(e.target.value)})} className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white focus:border-yellow-500 focus:outline-none" inputMode="decimal" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-zinc-400 mb-1">Horas Objetivo (al {formData.metodoPago.toLowerCase()})</label>
-                  <input required type="number" step="1" value={formData.horasObjetivo} onChange={e => setFormData({...formData, horasObjetivo: parseFloat(e.target.value)})} className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white focus:border-yellow-500 focus:outline-none" />
+                  <input required type="number" step="1" value={formData.horasObjetivo} onChange={e => setFormData({...formData, horasObjetivo: parseFloat(e.target.value)})} className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white focus:border-yellow-500 focus:outline-none" inputMode="numeric" />
                   <p className="text-xs text-zinc-500 mt-1">Horas que debe cumplir en su ciclo de pago.</p>
                 </div>
 

@@ -259,6 +259,8 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
               placeholder="••••••"
               className="w-full bg-zinc-950 border-2 border-zinc-800 text-white text-center text-4xl py-6 rounded-2xl focus:border-yellow-500 focus:outline-none transition-all tracking-[0.3em] font-mono shadow-inner"
               autoFocus
+              inputMode="numeric"
+              pattern="[0-9]*"
             />
           </div>
 
@@ -450,6 +452,7 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
                       required
                       placeholder="0.00"
                       className="w-full bg-zinc-950 border-2 border-zinc-800 text-white text-3xl p-4 rounded-xl focus:border-yellow-500 focus:outline-none transition-colors"
+                      inputMode="decimal"
                     />
                   </div>
                   <div className="mb-8">
