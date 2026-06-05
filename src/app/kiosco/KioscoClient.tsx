@@ -175,7 +175,8 @@ export default function KioscoClient() {
                 }
             } else {
                 if (e.key.length === 1) {
-                    currentInputRef.current += e.key
+                    e.preventDefault();
+                    currentInputRef.current += e.key;
                 }
             }
         }

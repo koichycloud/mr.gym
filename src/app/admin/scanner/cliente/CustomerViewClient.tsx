@@ -62,6 +62,7 @@ export default function CustomerViewClient() {
                     }
                 }
             } else if (e.key.length === 1) {
+                e.preventDefault();
                 barcodeBuffer += e.key;
             }
 
