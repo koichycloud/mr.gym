@@ -3,7 +3,7 @@
 import prisma from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 import { revalidatePath } from "next/cache"
-import { requireAuth } from "@/lib/auth-utils"
+import { requireAuth, requireAdmin } from "@/lib/auth-utils"
 import { userSchema } from "@/lib/validations"
 import { z } from "zod"
 
@@ -30,7 +30,7 @@ export async function getUsers() {
 
 export async function createUser(data: z.infer<typeof userSchema>) {
     try {
-        await requireAuth() // 🔒 Protected
+        await requireAdmin() // 🔒 Solo ADMIN/SUPERADMIN
 
         const validation = userSchema.safeParse(data)
         if (!validation.success) {
@@ -69,10 +69,10 @@ export async function createUser(data: z.infer<typeof userSchema>) {
 
 export async function updateUserPassword(userId: string, newPassword: string) {
     try {
-        await requireAuth() // 🔒 Protected
+        await requireAdmin() // 🔒 Solo ADMIN/SUPERADMIN
 
-        if (!newPassword || newPassword.length < 6) {
-            return { success: false, error: "La contraseña debe tener al menos 6 caracteres." }
+        if (!newPassword || newPassword.length < 8) {
+            return { success: false, error: "La contraseña debe tener al menos 8 caracteres." }
         }
 
         const hashedPassword = await bcrypt.hash(newPassword, 10)
@@ -93,9 +93,12 @@ export async function updateUserPassword(userId: string, newPassword: string) {
 
 export async function deleteUser(userId: string) {
     try {
-        await requireAuth() // 🔒 Protected
-        // Prevenir borrado del admin principal si es necesario, o comprobar usuario actual
-        // Por simplicidad, permitimos borrar cualquiera por ahora salvo validaciones extra
+        const session = await requireAdmin() // 🔒 Solo ADMIN/SUPERADMIN
+
+        // Prevenir auto-eliminación
+        if (session.user.id === userId) {
+            return { success: false, error: "No puedes eliminar tu propia cuenta." }
+        }
 
         await prisma.user.delete({
             where: { id: userId }
