@@ -58,7 +58,6 @@ function KioscoClientContent() {
     const [timeLeft, setTimeLeft] = useState<number>(0)
     const [selectedMode, setSelectedMode] = useState<'ENTRADA' | 'SALIDA' | 'AUTO'>('AUTO')
     const [attemptedCode, setAttemptedCode] = useState<string>('')
-    const [scannedCode, setScannedCode] = useState('')
     
     const [inputFeedback, setInputFeedback] = useState(false)
     
@@ -74,10 +73,10 @@ function KioscoClientContent() {
     const returnToIdle = useCallback(() => {
         setState('IDLE')
         setResult(null)
-        setScannedCode('')
         setTimeLeft(0)
         setSelectedMode('AUTO')
         setAttemptedCode('')
+        if (inputRef.current) inputRef.current.value = ''
     }, [])
 
     const resetIdleTimer = useCallback(() => {
@@ -261,24 +260,12 @@ function KioscoClientContent() {
         }
     }, [focusInput])
 
-    // Limpiar entrada si pasa mucho tiempo sin completar escaneo (evita basura)
-    useEffect(() => {
-        if (scannedCode.length > 0) {
-            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
-            typingTimeoutRef.current = setTimeout(() => {
-                setScannedCode('')
-            }, 1500)
-        }
-    }, [scannedCode])
-
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const val = e.target.value
-        setScannedCode(val)
-
+    const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        // Despertar de protector de pantalla ante cualquier tecla
         setState(prev => prev === 'SCREENSAVER' ? 'IDLE' : prev)
         resetIdleTimer()
 
-        // Feedback visual de que se recibió una tecla
+        // Feedback de tecla recibida
         if (!feedbackRef.current) {
             feedbackRef.current = true
             setInputFeedback(true)
@@ -287,16 +274,21 @@ function KioscoClientContent() {
                 setInputFeedback(false)
             }, 100)
         }
-    }
 
-    const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        // Limpiar entrada si se queda a medias por más de 1.5s
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+        const target = e.currentTarget
+        typingTimeoutRef.current = setTimeout(() => {
+            target.value = ''
+        }, 1500)
+
         if (e.key === 'Enter') {
             e.preventDefault()
-            const codeToScan = scannedCode.trim()
+            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+            const codeToScan = target.value.trim()
             if (codeToScan.length > 0) {
-                if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
                 handleScan(codeToScan)
-                setScannedCode('')
+                target.value = '' // Limpiar de inmediato sin re-renders
             }
         }
     }
@@ -536,8 +528,6 @@ function KioscoClientContent() {
                 <input 
                     ref={inputRef}
                     type="text"
-                    value={scannedCode}
-                    onChange={handleInputChange}
                     onKeyDown={handleInputKeyDown}
                     onBlur={handleInputBlur}
                     className="absolute opacity-0 w-0 h-0 pointer-events-none"
