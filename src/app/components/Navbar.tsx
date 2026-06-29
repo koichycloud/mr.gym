@@ -54,6 +54,14 @@ export default function Navbar() {
 
     const hasPermission = (p: string) => isAdmin || permissions.includes(p);
 
+    const hasAdminAccess = isAdmin || 
+        permissions.includes('PERSONAL_VER') || 
+        permissions.includes('PERSONAL_EDITAR') || 
+        permissions.includes('NOMINA_VER') || 
+        permissions.includes('NOMINA_EDITAR') || 
+        permissions.includes('BITACORA_VER') || 
+        permissions.includes('PRODUCTOS_PERSONAL');
+
     return (
         <>
             {/* TOP NAVBAR (Desktop & Mobile Header) */}
@@ -108,7 +116,7 @@ export default function Navbar() {
                                 </Link>
                             </li>
                         )}
-                        {isAdmin && (
+                        {hasAdminAccess && (
                             <li ref={adminMenuRef} className="relative">
                                 <button
                                     onClick={() => setAdminMenuOpen(o => !o)}
@@ -119,10 +127,18 @@ export default function Navbar() {
                                 </button>
                                 {adminMenuOpen && (
                                     <ul className="absolute top-full left-0 mt-1 z-[100] menu p-2 shadow-xl bg-base-100 border border-base-200 rounded-2xl w-52 animate-in fade-in zoom-in-95 duration-100">
-                                        <li onClick={() => setAdminMenuOpen(false)}><Link href="/admin/bitacora"><FileText size={16} /> Bitácora</Link></li>
-                                        <li onClick={() => setAdminMenuOpen(false)}><Link href="/admin/personal"><Users size={16} /> Personal</Link></li>
-                                        <li onClick={() => setAdminMenuOpen(false)}><Link href="/admin/nomina"><Banknote size={16} /> Nómina</Link></li>
-                                        <li onClick={() => setAdminMenuOpen(false)}><Link href="/admin/productos-personal"><PackageSearch size={16} /> Prods. Personal</Link></li>
+                                        {hasPermission('BITACORA_VER') && (
+                                            <li onClick={() => setAdminMenuOpen(false)}><Link href="/admin/bitacora"><FileText size={16} /> Bitácora</Link></li>
+                                        )}
+                                        {(hasPermission('PERSONAL_VER') || hasPermission('PERSONAL_EDITAR')) && (
+                                            <li onClick={() => setAdminMenuOpen(false)}><Link href="/admin/personal"><Users size={16} /> Personal</Link></li>
+                                        )}
+                                        {(hasPermission('NOMINA_VER') || hasPermission('NOMINA_EDITAR')) && (
+                                            <li onClick={() => setAdminMenuOpen(false)}><Link href="/admin/nomina"><Banknote size={16} /> Nómina</Link></li>
+                                        )}
+                                        {hasPermission('PRODUCTOS_PERSONAL') && (
+                                            <li onClick={() => setAdminMenuOpen(false)}><Link href="/admin/productos-personal"><PackageSearch size={16} /> Prods. Personal</Link></li>
+                                        )}
                                     </ul>
                                 )}
                             </li>
@@ -194,12 +210,12 @@ export default function Navbar() {
                                 {hasPermission('PLANES_GESTIONAR') && (
                                     <li><Link href="/planes"><FileText size={16} /> Planes</Link></li>
                                 )}
-                                {isAdmin && (
+                                {hasAdminAccess && (
                                     <>
-                                        <li><Link href="/admin/bitacora"><FileText size={16} /> Bitácora</Link></li>
-                                        <li><Link href="/admin/personal"><Users size={16} /> Personal</Link></li>
-                                        <li><Link href="/admin/nomina"><Banknote size={16} /> Nómina</Link></li>
-                                        <li><Link href="/admin/productos-personal"><PackageSearch size={16} /> Prods. Personal</Link></li>
+                                        {hasPermission('BITACORA_VER') && <li><Link href="/admin/bitacora"><FileText size={16} /> Bitácora</Link></li>}
+                                        {(hasPermission('PERSONAL_VER') || hasPermission('PERSONAL_EDITAR')) && <li><Link href="/admin/personal"><Users size={16} /> Personal</Link></li>}
+                                        {(hasPermission('NOMINA_VER') || hasPermission('NOMINA_EDITAR')) && <li><Link href="/admin/nomina"><Banknote size={16} /> Nómina</Link></li>}
+                                        {hasPermission('PRODUCTOS_PERSONAL') && <li><Link href="/admin/productos-personal"><PackageSearch size={16} /> Prods. Personal</Link></li>}
                                     </>
                                 )}
                                 <li><Link href="/perfil"><UserCog size={16} /> Mi Perfil</Link></li>

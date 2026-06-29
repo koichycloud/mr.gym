@@ -117,6 +117,8 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
     const [asistenciasData, setAsistenciasData] = useState<any>(null)
     const [loadingAsistencias, setLoadingAsistencias] = useState(false)
     const [viewingPhoto, setViewingPhoto] = useState<string | null>(null)
+    const [asistenciasLimit, setAsistenciasLimit] = useState<number>(50)
+    const [generatingAttendancePdf, setGeneratingAttendancePdf] = useState(false)
 
     if (!socio) return <div>Cargando...</div>
 
@@ -132,16 +134,51 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
         return await updateSubscription(id, newDate, meses)
     }
 
-    // Load attendance data when tab is activated
+    const handleExportAttendancePDF = async () => {
+        setGeneratingAttendancePdf(true)
+        try {
+            const allData = await getAsistenciasPorSocio(socio.id, -1)
+            if (!allData || !allData.asistencias || allData.asistencias.length === 0) {
+                alert('No hay registros de asistencia para exportar')
+                return
+            }
+
+            const { generatePDFReport } = await import('@/lib/pdf-utils')
+
+            const columns = ['#', 'Fecha', 'Hora', 'Tipo de Acceso']
+            const rows = allData.asistencias.map((a: any, idx: number) => [
+                String(allData.asistencias.length - idx),
+                format(new Date(a.fecha), 'dd/MM/yyyy'),
+                format(new Date(a.fecha), 'hh:mm:ss a'),
+                a.tipo
+            ])
+
+            generatePDFReport({
+                title: 'Reporte de Asistencias',
+                subtitle: `Socio: ${socio.nombres} ${socio.apellidos} | Código: ${socio.codigo}`,
+                columns,
+                rows,
+                fileName: `asistencias_${socio.codigo}_${socio.nombres.replace(/\s+/g, '_')}`
+            })
+
+        } catch (error) {
+            console.error('Error generating attendance PDF:', error)
+            alert('Ocurrió un error al generar el reporte PDF')
+        } finally {
+            setGeneratingAttendancePdf(false)
+        }
+    }
+
+    // Load attendance data when tab is activated or limit changes
     useEffect(() => {
-        if (activeTab === 'asistencias' && !asistenciasData) {
+        if (activeTab === 'asistencias') {
             setLoadingAsistencias(true)
-            getAsistenciasPorSocio(socio.id, 50).then(data => {
+            getAsistenciasPorSocio(socio.id, asistenciasLimit).then(data => {
                 setAsistenciasData(data)
                 setLoadingAsistencias(false)
             })
         }
-    }, [activeTab, socio.id, asistenciasData])
+    }, [activeTab, socio.id, asistenciasLimit])
 
     return (
         <div className="min-h-screen bg-transparent p-4 md:p-8 pb-24 lg:pb-8">
@@ -434,7 +471,41 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                 {/* Attendance Table */}
                                 <div className="card bg-base-100 shadow-xl">
                                     <div className="card-body">
-                                        <h2 className="card-title">Historial de Asistencias (Últimas 50)</h2>
+                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 border-b pb-4">
+                                            <div>
+                                                <h2 className="card-title text-2xl font-black">Historial de Asistencias</h2>
+                                                <p className="text-xs opacity-60 mt-1">
+                                                    Mostrando {asistenciasLimit > 0 ? `las últimas ${asistenciasLimit}` : 'todas las'} asistencias ({asistenciasData.asistencias.length} de {asistenciasData.stats.total})
+                                                </p>
+                                            </div>
+                                            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                                                {/* Select for limit */}
+                                                <select 
+                                                    value={asistenciasLimit} 
+                                                    onChange={(e) => setAsistenciasLimit(Number(e.target.value))}
+                                                    className="select select-bordered select-sm w-full sm:w-auto"
+                                                >
+                                                    <option value={50}>Últimas 50</option>
+                                                    <option value={100}>Últimas 100</option>
+                                                    <option value={500}>Últimas 500</option>
+                                                    <option value={-1}>Ver todas (Sin límite)</option>
+                                                </select>
+
+                                                {/* Button for PDF */}
+                                                <button
+                                                    onClick={handleExportAttendancePDF}
+                                                    disabled={generatingAttendancePdf || asistenciasData.asistencias.length === 0}
+                                                    className="btn btn-outline btn-primary btn-sm flex-1 sm:flex-none font-bold"
+                                                >
+                                                    {generatingAttendancePdf ? (
+                                                        <span className="loading loading-spinner loading-xs"></span>
+                                                    ) : (
+                                                        <Download size={14} className="mr-1" />
+                                                    )}
+                                                    PDF Asistencias
+                                                </button>
+                                            </div>
+                                        </div>
                                         {asistenciasData.asistencias.length === 0 ? (
                                             <div className="text-center py-12 text-base-content/50">
                                                 <CalendarDays size={48} className="mx-auto mb-4 opacity-45" />

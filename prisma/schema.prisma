@@ -47,6 +47,9 @@ model CodigoHistorial {
   codigo      String
   fechaCambio DateTime @default(now())
   socio       Socio    @relation(fields: [socioId], references: [id], onDelete: Cascade)
+
+  @@index([codigo])
+  @@index([socioId])
 }
 
 model Suscripcion {
@@ -162,6 +165,7 @@ model Personal {
   montoPago       Float    // Monto según el método
   horasObjetivo   Float    // Horas que debe cumplir en su ciclo (ej. 40 semanales, 80 quincenales)
   activo          Boolean  @default(true)
+  fotoUrl         String?  // URL de la foto del personal (Base64)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

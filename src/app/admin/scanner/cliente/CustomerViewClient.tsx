@@ -4,10 +4,77 @@ import { useEffect, useState, useRef } from 'react'
 import { CheckCircle, XCircle, User } from 'lucide-react'
 import { validateAccess, AccessResult } from '@/app/actions/access'
 
+let globalAudioCtx: any = null;
+
+const initAudio = () => {
+  if (globalAudioCtx) return;
+  try {
+    const AudioContextClass = typeof window !== 'undefined' ? (window.AudioContext || (window as any).webkitAudioContext) : null;
+    if (AudioContextClass) {
+      globalAudioCtx = new AudioContextClass();
+      const buffer = globalAudioCtx.createBuffer(1, 1, 22050);
+      const source = globalAudioCtx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(globalAudioCtx.destination);
+      source.start(0);
+    }
+  } catch (e) {
+    console.error("AudioContext initialization failed", e);
+  }
+};
+
+const playWarningSound = () => {
+  try {
+    initAudio();
+    if (!globalAudioCtx) return;
+    if (globalAudioCtx.state === 'suspended') {
+      globalAudioCtx.resume();
+    }
+    const ctx = globalAudioCtx;
+    
+    const playTone = (time: number, freq: number, duration: number) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(freq, time);
+      
+      gain.gain.setValueAtTime(0.15, time);
+      gain.gain.exponentialRampToValueAtTime(0.01, time + duration);
+      
+      osc.start(time);
+      osc.stop(time + duration);
+    };
+
+    playTone(ctx.currentTime, 130, 0.25);
+    playTone(ctx.currentTime + 0.3, 110, 0.35);
+  } catch (err) {
+    console.error("Failed to play warning sound", err);
+  }
+};
+
 export default function CustomerViewClient() {
     const [lastScan, setLastScan] = useState<AccessResult | null>(null)
     const [showWelcome, setShowWelcome] = useState(false)
     const [loading, setLoading] = useState(false)
+
+    // Audio unlock listener
+    useEffect(() => {
+        const handleUnlock = () => {
+            initAudio();
+            if (globalAudioCtx && globalAudioCtx.state === 'suspended') {
+                globalAudioCtx.resume();
+            }
+        };
+        window.addEventListener('click', handleUnlock);
+        window.addEventListener('touchstart', handleUnlock);
+        return () => {
+            window.removeEventListener('click', handleUnlock);
+            window.removeEventListener('touchstart', handleUnlock);
+        };
+    }, []);
 
     // Auto-hide scanner effect
     useEffect(() => {
@@ -55,6 +122,9 @@ export default function CustomerViewClient() {
                         const validation = await validateAccess(codeToScan)
                         setLastScan(validation)
                         setShowWelcome(true)
+                        if (!validation.success) {
+                            playWarningSound();
+                        }
                     } catch (error) {
                         console.error('Error validating access:', error)
                     } finally {
@@ -82,8 +152,12 @@ export default function CustomerViewClient() {
 
         channel.onmessage = (event) => {
             if (event.data.type === 'SCAN_RESULT') {
-                setLastScan(event.data.payload)
+                const validation = event.data.payload;
+                setLastScan(validation)
                 setShowWelcome(true)
+                if (!validation.success) {
+                    playWarningSound();
+                }
             }
         }
 
@@ -112,8 +186,9 @@ export default function CustomerViewClient() {
                     <p className="text-[51px] font-light text-white/90 drop-shadow-lg">
                         Bienvenido al mejor lugar para entrenar.
                     </p>
-                    <div className="mt-16 animate-pulse bg-black/50 px-8 py-4 rounded-full border border-white/20 backdrop-blur-md">
-                        <p className="text-[28px] text-white font-bold">Por favor, escanea tu código para ingresar 👋</p>
+                    <div className="mt-16 bg-black/50 px-8 py-4 rounded-full border border-white/20 backdrop-blur-md flex flex-col items-center gap-2">
+                        <p className="text-[28px] text-white font-bold animate-pulse">Por favor, escanea tu código para ingresar 👋</p>
+                        <p className="text-[14px] text-white/50">🔔 Toca la pantalla una vez para habilitar el sonido de alertas de vencimiento.</p>
                     </div>
                 </div>
             </div>

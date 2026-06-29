@@ -1,14 +1,11 @@
 import KioscoPersonalClient from "./KioscoPersonalClient";
-import { getProductosPersonal } from "@/app/actions/productos-personal";
 
 export const metadata = {
   title: "Kiosco Personal | Mr. Gym",
   description: "Kiosco de asistencia y gestión para el personal de Mr. Gym",
 };
 
-export default async function KioscoPersonalPage() {
-  const { productos } = await getProductosPersonal();
-  
+export default function KioscoPersonalPage() {
   return (
     <div className="min-h-screen bg-black/95 relative overflow-hidden flex flex-col">
       {/* Background with watermark */}
@@ -32,7 +29,7 @@ export default async function KioscoPersonalPage() {
 
         {/* Client Component for interaction */}
         <div className="flex-1 flex items-center justify-center">
-          <KioscoPersonalClient initialProductos={productos || []} />
+          <KioscoPersonalClient />
         </div>
       </div>
     </div>

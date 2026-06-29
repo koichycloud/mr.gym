@@ -8,15 +8,22 @@ export async function getAsistenciasPorSocio(socioId: string, limit?: number) {
     try {
         await requireAuth()
 
-        const asistencias = await prisma.asistencia.findMany({
+        const queryOptions: any = {
             where: {
                 socioId
             },
             orderBy: {
                 fecha: 'desc'
-            },
-            take: limit || 50 // Default to last 50 records
-        })
+            }
+        }
+
+        if (limit !== undefined && limit > 0) {
+            queryOptions.take = limit
+        } else if (limit === undefined) {
+            queryOptions.take = 50
+        } // If limit <= 0, we retrieve all records without any database limit
+
+        const asistencias = await prisma.asistencia.findMany(queryOptions)
 
         // Calculate stats
         const total = await prisma.asistencia.count({

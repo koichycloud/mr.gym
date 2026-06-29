@@ -1,24 +1,69 @@
 "use client";
 
-import { useState, useRef, useEffect, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import React, { useState, useRef, useEffect, Suspense, Component, ErrorInfo, ReactNode } from "react";
+import { useSearchParams } from "next/navigation";
 import { getPersonalByCodigo } from "@/app/actions/personal";
 import { markAsistencia, getTodayAsistencia, getResumenHoras } from "@/app/actions/asistencia-personal";
 import { registrarConsumo, solicitarAdelanto } from "@/app/actions/nomina-personal";
-import { Loader2, Clock, Coffee, LogIn, LogOut, PackageSearch, Banknote, CheckCircle2, AlertCircle, X, QrCode } from "lucide-react";
+import { getProductosPersonal } from "@/app/actions/productos-personal";
+import { Loader2, Clock, Coffee, LogIn, LogOut, PackageSearch, Banknote, AlertCircle, X, QrCode } from "lucide-react";
 import { toast } from "sonner";
 
-export default function KioscoPersonalClient({ initialProductos }: { initialProductos: any[] }) {
+// --- ERROR BOUNDARY PARA PREVENIR ERRORES INESPERADOS ---
+interface ErrorBoundaryProps {
+  children: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+}
+
+class KioscoPersonalErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  public state: ErrorBoundaryState = {
+    hasError: false
+  };
+
+  public static getDerivedStateFromError(_: Error): ErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("Uncaught error in KioscoPersonal:", error, errorInfo);
+    // Recargar con cache-buster para restaurar el portal
+    setTimeout(() => {
+      window.location.href = window.location.pathname + '?t=' + Date.now();
+    }, 3000);
+  }
+
+  public render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-black flex flex-col items-center justify-center text-center p-8 select-none">
+          <div className="animate-pulse text-yellow-500 mb-8">
+            <Clock size={120} className="mx-auto animate-spin" style={{ animationDuration: '3s' }} />
+          </div>
+          <h1 className="text-4xl font-black text-white mb-4 uppercase tracking-tighter">Actualizando Portal</h1>
+          <p className="text-zinc-500 text-lg">Se ha detectado un error. Reiniciando la pantalla...</p>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+export default function KioscoPersonalClient() {
   return (
     <Suspense fallback={<div className="animate-pulse text-white">Cargando...</div>}>
-      <KioscoPersonalContent initialProductos={initialProductos} />
+      <KioscoPersonalErrorBoundary>
+        <KioscoPersonalContent />
+      </KioscoPersonalErrorBoundary>
     </Suspense>
   );
 }
 
-function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }) {
+function KioscoPersonalContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const autoCode = searchParams.get("code");
   const [codigo, setCodigo] = useState("");
   const [loading, setLoading] = useState(false);
@@ -38,9 +83,12 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
   const [selectedProducto, setSelectedProducto] = useState<any>(null);
   const [cantidadProducto, setCantidadProducto] = useState(1);
 
+  // Lazy Loaded Products state
+  const [productos, setProductos] = useState<any[]>([]);
+  const [loadingProductos, setLoadingProductos] = useState(false);
+
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const logoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auto-focus cuando no hay sesión
   useEffect(() => {
@@ -49,7 +97,30 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
     }
   }, [personal]);
 
-  // Auto-logout tras 15 segundos de inactividad con contador visible y reinicio por interacción
+  // Cargar productos bajo demanda al abrir el panel de consumos
+  useEffect(() => {
+    if (showConsumos && productos.length === 0) {
+      const fetchProductos = async () => {
+        setLoadingProductos(true);
+        try {
+          const res = await getProductosPersonal();
+          if (res.success) {
+            setProductos(res.productos || []);
+          } else {
+            toast.error(res.error || "Error al cargar catálogo de productos");
+          }
+        } catch (err) {
+          console.error("Error cargando productos de personal:", err);
+          toast.error("Error de conexión al obtener catálogo");
+        } finally {
+          setLoadingProductos(false);
+        }
+      };
+      fetchProductos();
+    }
+  }, [showConsumos, productos.length]);
+
+  // Auto-logout tras 15 segundos de inactividad con redirección limpia
   useEffect(() => {
     if (!personal) return;
 
@@ -60,7 +131,7 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
       setAsistencia(null);
       setShowConsumos(false);
       setShowAdelantos(false);
-      router.push("/kiosco"); // Redirigir de vuelta al kiosco de socios
+      window.location.href = '/kiosco?t=' + Date.now(); // Redirigir limpiando caché
     };
 
     const interval = setInterval(() => {
@@ -89,29 +160,74 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
         window.removeEventListener(event, resetIdleTimer);
       });
     };
-  }, [personal, router]);
+  }, [personal]);
 
   // Auto-login from QR/Link
   useEffect(() => {
     if (autoCode && !personal) {
       const triggerAutoLogin = async () => {
         setLoading(true);
-        const res = await getPersonalByCodigo(autoCode);
-        if (res.success && res.personal) {
-          setPersonal(res.personal);
-          await refreshData(res.personal.id);
-        } else {
-          toast.error(res.error || "Enlace de acceso inválido");
-          // Redirigir de vuelta al kiosco principal en 5 segundos si el código es inválido
+        try {
+          const res = await getPersonalByCodigo(autoCode);
+          if (res.success && res.personal) {
+            setPersonal(res.personal);
+            await refreshData(res.personal.id);
+          } else {
+            toast.error(res.error || "Enlace de acceso inválido");
+            setTimeout(() => {
+              window.location.href = '/kiosco?t=' + Date.now();
+            }, 5000);
+          }
+        } catch (err) {
+          console.error("Error en auto login de personal:", err);
+          toast.error("Error de conexión. Actualizando sistema...");
           setTimeout(() => {
-            router.push("/kiosco");
-          }, 5000);
+            window.location.href = window.location.pathname + '?t=' + Date.now();
+          }, 3000);
+        } finally {
+          setLoading(false);
         }
-        setLoading(false);
       };
       triggerAutoLogin();
     }
   }, [autoCode]);
+
+  // --- ESCUCHA DE ERRORES DE RED Y DESPLIEGUE EN TIEMPO REAL ---
+  useEffect(() => {
+    const handleGlobalError = (event: ErrorEvent) => {
+        console.error("Global error detected in Personal Kiosco:", event.error);
+        const errorMsg = event.message || "";
+        if (
+            errorMsg.includes("chunk") || 
+            errorMsg.includes("LoadException") || 
+            errorMsg.includes("Failed to fetch") ||
+            errorMsg.includes("Server Action") ||
+            errorMsg.includes("NEXT_REDIRECT")
+        ) {
+            window.location.href = window.location.pathname + '?t=' + Date.now();
+        }
+    };
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+        console.error("Unhandled promise rejection in Personal Kiosco:", event.reason);
+        const reasonMsg = String(event.reason || "");
+        if (
+            reasonMsg.includes("chunk") || 
+            reasonMsg.includes("Failed to fetch") ||
+            reasonMsg.includes("Server Action")
+        ) {
+            window.location.href = window.location.pathname + '?t=' + Date.now();
+        }
+    };
+
+    window.addEventListener('error', handleGlobalError)
+    window.addEventListener('unhandledrejection', handleUnhandledRejection)
+
+    return () => {
+        window.removeEventListener('error', handleGlobalError)
+        window.removeEventListener('unhandledrejection', handleUnhandledRejection)
+    };
+  }, []);
 
   const handleLogin = async (e?: React.FormEvent, overrideCode?: string) => {
     if (e) e.preventDefault();
@@ -122,10 +238,8 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
     let codeToUse = (overrideCode ?? codigo).trim();
     if (!codeToUse) return;
 
-    // Si el scanner lee la URL completa, extraemos solo el código
     if (codeToUse.includes("code=")) {
       try {
-        // Intentar parsear como URL completa
         const urlToParse = codeToUse.startsWith('http') ? codeToUse : `https://x.com/${codeToUse}`;
         const url = new URL(urlToParse);
         codeToUse = url.searchParams.get("code") || codeToUse;
@@ -136,25 +250,33 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
     }
 
     setLoading(true);
-    const res = await getPersonalByCodigo(codeToUse);
-    if (res.success && res.personal) {
-      setPersonal(res.personal);
-      await refreshData(res.personal.id);
+    try {
+      const res = await getPersonalByCodigo(codeToUse);
+      if (res.success && res.personal) {
+        setPersonal(res.personal);
+        await refreshData(res.personal.id);
+        setCodigo("");
+      } else {
+        toast.error(res.error || "Código inválido");
+        setCodigo("");
+        if (inputRef.current) inputRef.current.focus();
+      }
+    } catch (err) {
+      console.error("Error de conexión en login de personal:", err);
+      toast.error("Error de conexión. Actualizando sistema...");
       setCodigo("");
-    } else {
-      toast.error(res.error || "Código inválido");
-      setCodigo("");
-      if (inputRef.current) inputRef.current.focus();
+      setTimeout(() => {
+        window.location.href = window.location.pathname + '?t=' + Date.now();
+      }, 3000);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  // Handler del input — debounce para auto-submit del lector óptico
   const handleCodigoChange = (val: string) => {
     setCodigo(val);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (val.trim()) {
-      // Los lectores ópticos escriben todo en <100ms; esperamos 300ms sin cambios
       debounceRef.current = setTimeout(() => {
         handleLogin(undefined, val.trim());
       }, 300);
@@ -162,13 +284,17 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
   };
 
   const refreshData = async (personalId: string) => {
-    const todayRes = await getTodayAsistencia(personalId);
-    if (todayRes.success) {
-      setAsistencia(todayRes.asistencia);
-    }
-    const resumenRes = await getResumenHoras(personalId);
-    if (resumenRes.success) {
-      setResumenHoras(resumenRes.totalHoras || 0);
+    try {
+      const todayRes = await getTodayAsistencia(personalId);
+      if (todayRes.success) {
+        setAsistencia(todayRes.asistencia);
+      }
+      const resumenRes = await getResumenHoras(personalId);
+      if (resumenRes.success) {
+        setResumenHoras(resumenRes.totalHoras || 0);
+      }
+    } catch (err) {
+      console.error("Error actualizando datos de personal:", err);
     }
   };
 
@@ -177,19 +303,28 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
     setAsistencia(null);
     setShowConsumos(false);
     setShowAdelantos(false);
-    router.push("/kiosco"); // Redirigir de vuelta al kiosco de socios
+    window.location.href = '/kiosco?t=' + Date.now(); // Salida limpia sin caché
   };
 
   const handleAsistencia = async (tipo: 'ENTRADA' | 'SALIDA_ALMUERZO' | 'ENTRADA_ALMUERZO' | 'SALIDA') => {
     setActionLoading(true);
-    const res = await markAsistencia(personal.id, tipo);
-    if (res.success) {
-      toast.success(res.message);
-      await refreshData(personal.id);
-    } else {
-      toast.error(res.error || "Error al marcar asistencia");
+    try {
+      const res = await markAsistencia(personal.id, tipo);
+      if (res.success) {
+        toast.success(res.message);
+        await refreshData(personal.id);
+      } else {
+        toast.error(res.error || "Error al marcar asistencia");
+      }
+    } catch (err) {
+      console.error("Error al registrar asistencia de personal:", err);
+      toast.error("Error de conexión. Actualizando sistema...");
+      setTimeout(() => {
+        window.location.href = window.location.pathname + '?t=' + Date.now();
+      }, 3000);
+    } finally {
+      setActionLoading(false);
     }
-    setActionLoading(false);
   };
 
   const handleConsumoSubmit = async (e: React.FormEvent) => {
@@ -197,16 +332,25 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
     if (!selectedProducto || cantidadProducto < 1) return;
 
     setActionLoading(true);
-    const res = await registrarConsumo(personal.id, selectedProducto.id, cantidadProducto);
-    if (res.success) {
-      toast.success("Consumo registrado. Se descontará en tu próximo pago.");
-      setShowConsumos(false);
-      setSelectedProducto(null);
-      setCantidadProducto(1);
-    } else {
-      toast.error(res.error || "Error al registrar consumo");
+    try {
+      const res = await registrarConsumo(personal.id, selectedProducto.id, cantidadProducto);
+      if (res.success) {
+        toast.success("Consumo registrado. Se descontará en tu próximo pago.");
+        setShowConsumos(false);
+        setSelectedProducto(null);
+        setCantidadProducto(1);
+      } else {
+        toast.error(res.error || "Error al registrar consumo");
+      }
+    } catch (err) {
+      console.error("Error al registrar consumo de personal:", err);
+      toast.error("Error de conexión. Actualizando sistema...");
+      setTimeout(() => {
+        window.location.href = window.location.pathname + '?t=' + Date.now();
+      }, 3000);
+    } finally {
+      setActionLoading(false);
     }
-    setActionLoading(false);
   };
 
   const handleAdelantoSubmit = async (e: React.FormEvent) => {
@@ -218,21 +362,29 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
     }
 
     setActionLoading(true);
-    const res = await solicitarAdelanto(personal.id, monto, adelantoMotivo);
-    if (res.success) {
-      toast.success("Adelanto solicitado. Espera la aprobación del administrador.");
-      setShowAdelantos(false);
-      setAdelantoMonto("");
-      setAdelantoMotivo("");
-    } else {
-      toast.error(res.error || "Error al solicitar adelanto");
+    try {
+      const res = await solicitarAdelanto(personal.id, monto, adelantoMotivo);
+      if (res.success) {
+        toast.success("Adelanto solicitado. Espera la aprobación del administrador.");
+        setShowAdelantos(false);
+        setAdelantoMonto("");
+        setAdelantoMotivo("");
+      } else {
+        toast.error(res.error || "Error al solicitar adelanto");
+      }
+    } catch (err) {
+      console.error("Error al solicitar adelanto de personal:", err);
+      toast.error("Error de conexión. Actualizando sistema...");
+      setTimeout(() => {
+        window.location.href = window.location.pathname + '?t=' + Date.now();
+      }, 3000);
+    } finally {
+      setActionLoading(false);
     }
-    setActionLoading(false);
   };
 
   // --- LOGIN VIEW ---
   if (!personal) {
-    // Si viene de un QR y está cargando, mostramos un estado más claro
     if (autoCode && loading) {
       return (
         <div className="flex flex-col items-center justify-center text-center animate-pulse">
@@ -245,7 +397,7 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
 
     return (
       <div className="w-full max-w-md">
-        <form onSubmit={handleLogin} className="bg-zinc-900/80 backdrop-blur-md p-8 rounded-3xl border border-zinc-800 shadow-2xl flex flex-col items-center">
+        <form onSubmit={handleLogin} className="bg-zinc-900/80 backdrop-blur-md p-8 rounded-3xl border border-zinc-800 shadow-2xl flex flex-col items-center select-none">
           <div className="bg-yellow-500/10 p-4 rounded-full mb-6">
             <LogIn className="w-12 h-12 text-yellow-500" />
           </div>
@@ -271,15 +423,15 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
           <button
             type="submit"
             disabled={loading || !codigo}
-            className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold text-xl py-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold text-xl py-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
           >
             {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : "INGRESAR"}
           </button>
 
           <button
             type="button"
-            onClick={() => router.push("/kiosco")}
-            className="w-full mt-4 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold text-md py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+            onClick={() => { window.location.href = '/kiosco?t=' + Date.now(); }}
+            className="w-full mt-4 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold text-md py-3 rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer"
           >
             VOLVER AL KIOSCO
           </button>
@@ -292,7 +444,7 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
   const faltan = personal.horasObjetivo ? Math.max(0, personal.horasObjetivo - resumenHoras).toFixed(1) : 0;
   
   return (
-    <div className="w-full max-w-4xl bg-zinc-900/90 backdrop-blur-xl rounded-3xl border border-zinc-800 shadow-2xl overflow-hidden flex flex-col md:flex-row relative">
+    <div className="w-full max-w-4xl bg-zinc-900/90 backdrop-blur-xl rounded-3xl border border-zinc-800 shadow-2xl overflow-hidden flex flex-col md:flex-row relative select-none">
       
       {/* Contador de inactividad visible */}
       <div className="absolute top-4 right-4 z-10">
@@ -360,7 +512,7 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
           <div className="absolute inset-0 z-20 bg-zinc-950/95 backdrop-blur-sm p-6 overflow-y-auto">
             <button 
               onClick={() => { setShowConsumos(false); setShowAdelantos(false); }}
-              className="absolute top-4 right-4 p-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-full transition-colors"
+              className="absolute top-4 right-4 p-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-full transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -389,9 +541,9 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
                      <div className="mb-6">
                        <label className="block text-zinc-400 mb-2">Cantidad</label>
                        <div className="flex items-center gap-4">
-                         <button type="button" onClick={() => setCantidadProducto(Math.max(1, cantidadProducto - 1))} className="w-12 h-12 bg-zinc-800 text-white text-2xl rounded-xl hover:bg-zinc-700">-</button>
-                         <span className="text-3xl font-bold text-white w-16 text-center">{cantidadProducto}</span>
-                         <button type="button" onClick={() => setCantidadProducto(cantidadProducto + 1)} className="w-12 h-12 bg-zinc-800 text-white text-2xl rounded-xl hover:bg-zinc-700">+</button>
+                          <button type="button" onClick={() => setCantidadProducto(Math.max(1, cantidadProducto - 1))} className="w-12 h-12 bg-zinc-800 text-white text-2xl rounded-xl hover:bg-zinc-700 cursor-pointer">-</button>
+                          <span className="text-3xl font-bold text-white w-16 text-center">{cantidadProducto}</span>
+                          <button type="button" onClick={() => setCantidadProducto(cantidadProducto + 1)} className="w-12 h-12 bg-zinc-800 text-white text-2xl rounded-xl hover:bg-zinc-700 cursor-pointer">+</button>
                        </div>
                      </div>
                      
@@ -401,40 +553,49 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
                      </div>
 
                      <div className="flex gap-4">
-                        <button type="button" onClick={() => setSelectedProducto(null)} className="flex-1 py-4 text-white bg-zinc-800 hover:bg-zinc-700 rounded-xl font-bold transition-colors">Volver</button>
-                        <button type="submit" disabled={actionLoading} className="flex-1 py-4 text-black bg-yellow-500 hover:bg-yellow-400 rounded-xl font-bold transition-colors disabled:opacity-50 flex justify-center items-center">
+                        <button type="button" onClick={() => setSelectedProducto(null)} className="flex-1 py-4 text-white bg-zinc-800 hover:bg-zinc-700 rounded-xl font-bold transition-colors cursor-pointer">Volver</button>
+                        <button type="submit" disabled={actionLoading} className="flex-1 py-4 text-black bg-yellow-500 hover:bg-yellow-400 rounded-xl font-bold transition-colors disabled:opacity-50 flex justify-center items-center cursor-pointer">
                           {actionLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : "Confirmar Consumo"}
                         </button>
                      </div>
                    </form>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                    {initialProductos.map((prod) => (
-                      <button
-                        key={prod.id}
-                        onClick={() => { setSelectedProducto(prod); setCantidadProducto(1); }}
-                        className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden hover:border-yellow-500 hover:shadow-lg transition-all text-left flex flex-col group"
-                      >
-                        <div className="h-32 w-full bg-zinc-950 flex items-center justify-center overflow-hidden">
-                           {prod.fotoUrl ? (
-                              <img src={prod.fotoUrl} alt={prod.nombre} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                           ) : (
-                              <PackageSearch className="w-10 h-10 text-zinc-700" />
-                           )}
-                        </div>
-                        <div className="p-4 flex-1 flex flex-col">
-                          <h4 className="text-white font-bold mb-1 line-clamp-1">{prod.nombre}</h4>
-                          <span className="text-yellow-500 font-bold mt-auto">S/ {prod.precio.toFixed(2)}</span>
-                        </div>
-                      </button>
-                    ))}
-                    {initialProductos.length === 0 && (
-                      <div className="col-span-full py-12 text-center text-zinc-500 flex flex-col items-center">
-                        <PackageSearch className="w-12 h-12 mb-4 opacity-20" />
-                        No hay productos disponibles
+                  <>
+                    {loadingProductos ? (
+                      <div className="flex flex-col items-center justify-center py-20 text-zinc-400">
+                        <Loader2 className="w-12 h-12 animate-spin text-yellow-500 mb-4" />
+                        <p className="text-lg">Cargando catálogo...</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        {productos.map((prod) => (
+                          <button
+                            key={prod.id}
+                            onClick={() => { setSelectedProducto(prod); setCantidadProducto(1); }}
+                            className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden hover:border-yellow-500 hover:shadow-lg transition-all text-left flex flex-col group cursor-pointer"
+                          >
+                            <div className="h-32 w-full bg-zinc-950 flex items-center justify-center overflow-hidden">
+                               {prod.fotoUrl ? (
+                                  <img src={prod.fotoUrl} alt={prod.nombre} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                               ) : (
+                                  <PackageSearch className="w-10 h-10 text-zinc-700" />
+                               )}
+                            </div>
+                            <div className="p-4 flex-1 flex flex-col">
+                              <h4 className="text-white font-bold mb-1 line-clamp-1">{prod.nombre}</h4>
+                              <span className="text-yellow-500 font-bold mt-auto">S/ {prod.precio.toFixed(2)}</span>
+                            </div>
+                          </button>
+                        ))}
+                        {productos.length === 0 && (
+                          <div className="col-span-full py-12 text-center text-zinc-500 flex flex-col items-center">
+                            <PackageSearch className="w-12 h-12 mb-4 opacity-20" />
+                            No hay productos disponibles
+                          </div>
+                        )}
                       </div>
                     )}
-                  </div>
+                  </>
                 )}
               </div>
             )}
@@ -449,15 +610,62 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
                   <div className="mb-6">
                     <label className="block text-zinc-400 mb-2 font-medium">Monto (S/)</label>
                     <input 
-                      type="number" 
-                      step="0.10"
+                      type="text" 
+                      readOnly
                       value={adelantoMonto}
-                      onChange={(e) => setAdelantoMonto(e.target.value)}
                       required
                       placeholder="0.00"
-                      className="w-full bg-zinc-950 border-2 border-zinc-800 text-white text-3xl p-4 rounded-xl focus:border-yellow-500 focus:outline-none transition-colors"
-                      inputMode="decimal"
+                      className="w-full bg-zinc-950 border-2 border-zinc-800 text-white text-center text-4xl p-4 rounded-xl focus:border-yellow-500 focus:outline-none transition-colors font-mono"
                     />
+
+                    {/* Teclado Numérico Visual */}
+                    <div className="grid grid-cols-3 gap-3 mt-4 max-w-sm mx-auto">
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                        <button
+                          key={num}
+                          type="button"
+                          onClick={() => {
+                            setAdelantoMonto(prev => prev + num);
+                          }}
+                          className="py-4 bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 text-white font-bold text-2xl rounded-xl transition-all cursor-pointer"
+                        >
+                          {num}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!adelantoMonto.includes('.')) {
+                            setAdelantoMonto(prev => {
+                              // Si está vacío, agregar 0.
+                              if (prev === "") return "0.";
+                              return prev + ".";
+                            });
+                          }
+                        }}
+                        className="py-4 bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 text-white font-bold text-2xl rounded-xl transition-all cursor-pointer"
+                      >
+                        .
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAdelantoMonto(prev => prev + '0');
+                        }}
+                        className="py-4 bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 text-white font-bold text-2xl rounded-xl transition-all cursor-pointer"
+                      >
+                        0
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAdelantoMonto(prev => prev.slice(0, -1));
+                        }}
+                        className="py-4 bg-red-600/20 border border-red-500/30 hover:bg-red-600/30 active:bg-red-650 text-red-400 font-bold text-2xl rounded-xl transition-all cursor-pointer"
+                      >
+                        ⌫
+                      </button>
+                    </div>
                   </div>
                   <div className="mb-8">
                     <label className="block text-zinc-400 mb-2 font-medium">Motivo (Opcional)</label>
@@ -469,7 +677,7 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
                       className="w-full bg-zinc-950 border-2 border-zinc-800 text-white p-4 rounded-xl focus:border-yellow-500 focus:outline-none transition-colors"
                     />
                   </div>
-                  <button type="submit" disabled={actionLoading || !adelantoMonto} className="w-full py-4 text-black bg-yellow-500 hover:bg-yellow-400 rounded-xl font-bold text-lg transition-colors disabled:opacity-50 flex justify-center items-center">
+                  <button type="submit" disabled={actionLoading || !adelantoMonto} className="w-full py-4 text-black bg-yellow-500 hover:bg-yellow-400 rounded-xl font-bold text-lg transition-colors disabled:opacity-50 flex justify-center items-center cursor-pointer">
                     {actionLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : "Enviar Solicitud"}
                   </button>
                   <p className="text-zinc-500 text-sm mt-4 text-center">
@@ -488,20 +696,20 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
           <button 
             onClick={() => handleAsistencia('ENTRADA')}
             disabled={actionLoading || asistencia?.horaEntrada}
-            className={`p-6 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all border-2 
+            className={`p-6 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all border-2 cursor-pointer 
               ${asistencia?.horaEntrada 
                 ? 'bg-zinc-800 border-zinc-700 text-zinc-500' 
                 : 'bg-green-500/10 border-green-500 text-green-500 hover:bg-green-500 hover:text-black'}`}
           >
             <LogIn className="w-10 h-10" />
             <span className="font-bold text-lg uppercase tracking-wide">Entrada</span>
-            {asistencia?.horaEntrada && <span className="text-xs bg-zinc-950 px-3 py-1 rounded-full text-zinc-400">{new Date(asistencia.horaEntrada).toLocaleTimeString()}</span>}
+            {asistencia?.horaEntrada && <span className="text-xs bg-zinc-950 px-3 py-1 rounded-full text-zinc-400">{new Date(asistencia.horaEntrada).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'America/Lima' })}</span>}
           </button>
-
+ 
           <button 
             onClick={() => handleAsistencia('SALIDA')}
             disabled={actionLoading || !asistencia?.horaEntrada || asistencia?.horaSalida || (asistencia?.horaSalidaAlmuerzo && !asistencia?.horaEntradaAlmuerzo)}
-            className={`p-6 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all border-2 
+            className={`p-6 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all border-2 cursor-pointer 
               ${asistencia?.horaSalida 
                 ? 'bg-zinc-800 border-zinc-700 text-zinc-500' 
                 : (!asistencia?.horaEntrada || (asistencia?.horaSalidaAlmuerzo && !asistencia?.horaEntradaAlmuerzo))
@@ -510,13 +718,13 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
           >
             <LogOut className="w-10 h-10" />
             <span className="font-bold text-lg uppercase tracking-wide">Salida</span>
-            {asistencia?.horaSalida && <span className="text-xs bg-zinc-950 px-3 py-1 rounded-full text-zinc-400">{new Date(asistencia.horaSalida).toLocaleTimeString()}</span>}
+            {asistencia?.horaSalida && <span className="text-xs bg-zinc-950 px-3 py-1 rounded-full text-zinc-400">{new Date(asistencia.horaSalida).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'America/Lima' })}</span>}
           </button>
-
+ 
           <button 
             onClick={() => handleAsistencia('SALIDA_ALMUERZO')}
             disabled={actionLoading || !asistencia?.horaEntrada || asistencia?.horaSalidaAlmuerzo || asistencia?.horaSalida}
-            className={`p-6 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all border-2 
+            className={`p-6 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all border-2 cursor-pointer 
               ${asistencia?.horaSalidaAlmuerzo 
                 ? 'bg-zinc-800 border-zinc-700 text-zinc-500' 
                 : (!asistencia?.horaEntrada || asistencia?.horaSalida)
@@ -525,13 +733,13 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
           >
             <Coffee className="w-10 h-10" />
             <span className="font-bold text-lg uppercase tracking-wide text-center">Salida<br/>Almuerzo</span>
-            {asistencia?.horaSalidaAlmuerzo && <span className="text-xs bg-zinc-950 px-3 py-1 rounded-full text-zinc-400">{new Date(asistencia.horaSalidaAlmuerzo).toLocaleTimeString()}</span>}
+            {asistencia?.horaSalidaAlmuerzo && <span className="text-xs bg-zinc-950 px-3 py-1 rounded-full text-zinc-400">{new Date(asistencia.horaSalidaAlmuerzo).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'America/Lima' })}</span>}
           </button>
-
+ 
           <button 
             onClick={() => handleAsistencia('ENTRADA_ALMUERZO')}
             disabled={actionLoading || !asistencia?.horaSalidaAlmuerzo || asistencia?.horaEntradaAlmuerzo || asistencia?.horaSalida}
-            className={`p-6 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all border-2 
+            className={`p-6 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all border-2 cursor-pointer 
               ${asistencia?.horaEntradaAlmuerzo 
                 ? 'bg-zinc-800 border-zinc-700 text-zinc-500' 
                 : (!asistencia?.horaSalidaAlmuerzo || asistencia?.horaSalida)
@@ -540,7 +748,7 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
           >
             <LogIn className="w-10 h-10" />
             <span className="font-bold text-lg uppercase tracking-wide text-center">Retorno<br/>Almuerzo</span>
-            {asistencia?.horaEntradaAlmuerzo && <span className="text-xs bg-zinc-950 px-3 py-1 rounded-full text-zinc-400">{new Date(asistencia.horaEntradaAlmuerzo).toLocaleTimeString()}</span>}
+            {asistencia?.horaEntradaAlmuerzo && <span className="text-xs bg-zinc-950 px-3 py-1 rounded-full text-zinc-400">{new Date(asistencia.horaEntradaAlmuerzo).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'America/Lima' })}</span>}
           </button>
         </div>
 
@@ -549,14 +757,14 @@ function KioscoPersonalContent({ initialProductos }: { initialProductos: any[] }
         <div className="grid grid-cols-2 gap-4">
           <button 
             onClick={() => setShowConsumos(true)}
-            className="p-4 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-white font-medium flex items-center justify-center gap-3 transition-colors"
+            className="p-4 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-white font-medium flex items-center justify-center gap-3 transition-colors cursor-pointer"
           >
             <PackageSearch className="w-5 h-5 text-yellow-500" />
             Registrar Consumo
           </button>
           <button 
             onClick={() => setShowAdelantos(true)}
-            className="p-4 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-white font-medium flex items-center justify-center gap-3 transition-colors"
+            className="p-4 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-white font-medium flex items-center justify-center gap-3 transition-colors cursor-pointer"
           >
             <Banknote className="w-5 h-5 text-green-500" />
             Pedir Adelanto

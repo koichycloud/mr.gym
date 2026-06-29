@@ -13,15 +13,24 @@ function calculateNetHours(
 ): number | null {
   if (!entrada || !salida) return null;
 
-  const totalTime = salida.getTime() - entrada.getTime();
-  let breakTime = 0;
+  let totalMs = 0;
 
   if (salidaAlmuerzo && entradaAlmuerzo) {
-    breakTime = entradaAlmuerzo.getTime() - salidaAlmuerzo.getTime();
+    const firstSegment = salidaAlmuerzo.getTime() - entrada.getTime();
+    const secondSegment = salida.getTime() - entradaAlmuerzo.getTime();
+    totalMs = (firstSegment > 0 ? firstSegment : 0) + (secondSegment > 0 ? secondSegment : 0);
+  } else if (salidaAlmuerzo && !entradaAlmuerzo) {
+    const firstSegment = salidaAlmuerzo.getTime() - entrada.getTime();
+    totalMs = firstSegment > 0 ? firstSegment : 0;
+  } else if (!salidaAlmuerzo && entradaAlmuerzo) {
+    const secondSegment = salida.getTime() - entradaAlmuerzo.getTime();
+    totalMs = secondSegment > 0 ? secondSegment : 0;
+  } else {
+    const totalSegment = salida.getTime() - entrada.getTime();
+    totalMs = totalSegment > 0 ? totalSegment : 0;
   }
 
-  const netTimeMs = totalTime - breakTime;
-  return netTimeMs > 0 ? netTimeMs / (1000 * 60 * 60) : 0; // Devolver horas
+  return totalMs / (1000 * 60 * 60); // Devolver horas
 }
 
 // Obtener o crear el registro del día de hoy para un personal
@@ -59,10 +68,28 @@ export async function getTodayAsistencia(personalId: string) {
 // Marcar un evento de asistencia (Entrada, Salida Almuerzo, Entrada Almuerzo, Salida)
 export async function markAsistencia(personalId: string, tipo: 'ENTRADA' | 'SALIDA_ALMUERZO' | 'ENTRADA_ALMUERZO' | 'SALIDA') {
   try {
-    const todayRes = await getTodayAsistencia(personalId);
-    if (!todayRes.success || !todayRes.asistencia) return { success: false, error: todayRes.error };
+    let asistencia;
+    if (tipo === 'ENTRADA') {
+      const todayRes = await getTodayAsistencia(personalId);
+      if (!todayRes.success || !todayRes.asistencia) return { success: false, error: todayRes.error };
+      asistencia = todayRes.asistencia;
+    } else {
+      // Buscar el registro abierto más reciente para almuerzos o salida final (soporta cruces de fecha/UTC)
+      asistencia = await prisma.asistenciaPersonal.findFirst({
+        where: {
+          personalId,
+          horaEntrada: { not: null },
+          horaSalida: null
+        },
+        orderBy: { fecha: 'desc' }
+      });
 
-    const asistenciaId = todayRes.asistencia.id;
+      if (!asistencia) {
+        return { success: false, error: "Debes marcar entrada primero antes de registrar almuerzo o salida." };
+      }
+    }
+
+    const asistenciaId = asistencia.id;
     const now = new Date();
     
     // Obtenemos de nuevo por seguridad
@@ -121,25 +148,87 @@ export async function markAsistencia(personalId: string, tipo: 'ENTRADA' | 'SALI
   }
 }
 
-// Obtener resumen de horas de la semana/quincena actual (aprox. últimos 15 días)
 export async function getResumenHoras(personalId: string) {
     try {
-        const hace15Dias = new Date();
-        hace15Dias.setDate(hace15Dias.getDate() - 15);
+        const personal = await prisma.personal.findUnique({
+            where: { id: personalId }
+        });
+        if (!personal) return { success: false, error: "Personal no encontrado" };
+
+        const now = new Date();
+        const PERU_OFFSET_MS = 5 * 60 * 60 * 1000;
+        const nowPeru = new Date(now.getTime() - PERU_OFFSET_MS);
+
+        let startPeru = new Date(nowPeru);
+
+        if (personal.metodoPago === "POR_HORA" || personal.metodoPago === "POR_DIA" || personal.metodoPago === "SEMANAL") {
+            const day = nowPeru.getUTCDay();
+            const diffToMonday = nowPeru.getUTCDate() - day + (day === 0 ? -6 : 1);
+            startPeru.setUTCDate(diffToMonday);
+            startPeru.setUTCHours(0, 0, 0, 0);
+        } else if (personal.metodoPago === "QUINCENAL") {
+            const dayOfMonth = nowPeru.getUTCDate();
+            if (dayOfMonth <= 15) {
+                startPeru.setUTCDate(1);
+            } else {
+                startPeru.setUTCDate(16);
+            }
+            startPeru.setUTCHours(0, 0, 0, 0);
+        } else if (personal.metodoPago === "MENSUAL") {
+            startPeru.setUTCDate(1);
+            startPeru.setUTCHours(0, 0, 0, 0);
+        } else {
+            startPeru.setUTCDate(startPeru.getUTCDate() - 15);
+            startPeru.setUTCHours(0, 0, 0, 0);
+        }
+
+        const startOfCycle = new Date(startPeru.getTime() + PERU_OFFSET_MS);
 
         const asistencias = await prisma.asistenciaPersonal.findMany({
             where: {
                 personalId,
-                fecha: { gte: hace15Dias }
+                fecha: { gte: startOfCycle }
             },
             orderBy: { fecha: 'asc' }
         });
 
-        // Sumar horas trabajadas
-        const totalHoras = asistencias.reduce((sum, a) => sum + (a.horasTrabajadas || 0), 0);
+        // Sumar horas trabajadas (calculando en tiempo real para turnos activos)
+        const totalHoras = asistencias.reduce((sum, a) => {
+            if (a.horasTrabajadas !== null) {
+                return sum + a.horasTrabajadas;
+            }
+            if (a.horaEntrada && !a.horaSalida) {
+                // Calcular tramo activo en tiempo real hasta "ahora"
+                const entradaTime = a.horaEntrada.getTime();
+                const refTime = now.getTime();
+                
+                const salidaAlmuerzoTime = a.horaSalidaAlmuerzo ? a.horaSalidaAlmuerzo.getTime() : null;
+                const entradaAlmuerzoTime = a.horaEntradaAlmuerzo ? a.horaEntradaAlmuerzo.getTime() : null;
+
+                let totalMs = 0;
+
+                if (salidaAlmuerzoTime && entradaAlmuerzoTime) {
+                    const firstSegment = salidaAlmuerzoTime - entradaTime;
+                    const secondSegment = refTime - entradaAlmuerzoTime;
+                    totalMs = (firstSegment > 0 ? firstSegment : 0) + (secondSegment > 0 ? secondSegment : 0);
+                } else if (salidaAlmuerzoTime && !entradaAlmuerzoTime) {
+                    const firstSegment = salidaAlmuerzoTime - entradaTime;
+                    totalMs = firstSegment > 0 ? firstSegment : 0;
+                } else if (!salidaAlmuerzoTime && entradaAlmuerzoTime) {
+                    const secondSegment = refTime - entradaAlmuerzoTime;
+                    totalMs = secondSegment > 0 ? secondSegment : 0;
+                } else {
+                    const totalSegment = refTime - entradaTime;
+                    totalMs = totalSegment > 0 ? totalSegment : 0;
+                }
+                return sum + (totalMs / (1000 * 60 * 60));
+            }
+            return sum;
+        }, 0);
 
         return { success: true, totalHoras, asistencias };
     } catch (error: any) {
+        console.error("Error en getResumenHoras:", error);
         return { success: false, error: "Error al calcular horas" };
     }
 }

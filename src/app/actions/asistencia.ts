@@ -142,16 +142,24 @@ export async function getEstadisticasAsistencia() {
 
         const horasPico: Record<number, number> = {}
         asistenciasHoy.forEach(a => {
-            const hora = new Date(a.fecha).getHours()
+            const aDate = new Date(a.fecha);
+            // Convert to Peru time (subtract 5 hours)
+            const localDate = new Date(aDate.getTime() - (5 * 60 * 60 * 1000));
+            const hora = localDate.getUTCHours();
             horasPico[hora] = (horasPico[hora] || 0) + 1
         })
 
         let horaPico = '-'
         let maxAsistencias = 0
-        Object.entries(horasPico).forEach(([hora, count]) => {
+        Object.entries(horasPico).forEach(([horaStr, count]) => {
+            const h = parseInt(horaStr);
             if (count > maxAsistencias) {
-                maxAsistencias = count
-                horaPico = `${hora}:00 - ${parseInt(hora) + 1}:00`
+                maxAsistencias = count;
+                const startHour = h % 12 || 12;
+                const startAmpm = h >= 12 ? 'PM' : 'AM';
+                const endHour = (h + 1) % 12 || 12;
+                const endAmpm = (h + 1) >= 12 ? 'PM' : 'AM';
+                horaPico = `${String(startHour).padStart(2, '0')}:00 ${startAmpm} - ${String(endHour).padStart(2, '0')}:00 ${endAmpm}`;
             }
         })
 
@@ -172,7 +180,7 @@ export async function getEstadisticasAsistencia() {
             const aDate = new Date(a.fecha);
             // Convert to Lima time
             const localDate = new Date(aDate.getTime() - (5 * 60 * 60 * 1000));
-            const dateStr = localDate.getFullYear() + '-' + String(localDate.getMonth() + 1).padStart(2, '0') + '-' + String(localDate.getDate()).padStart(2, '0');
+            const dateStr = localDate.getUTCFullYear() + '-' + String(localDate.getUTCMonth() + 1).padStart(2, '0') + '-' + String(localDate.getUTCDate()).padStart(2, '0');
             const found = diasSemanaArr.find(d => d.fecha === dateStr);
             if (found) {
                 found.asistencias++;

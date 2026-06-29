@@ -13,21 +13,41 @@ export async function getExpiringSubscriptions() {
     const today = getLimaStartOfDay()
     const limitDate = addDays(today, 10)
 
-    const subscriptions = await prisma.suscripcion.findMany({
+    const socios = await prisma.socio.findMany({
         where: {
-            estado: 'ACTIVA',
-            fechaFin: {
-                lte: limitDate,
-                gte: today
+            suscripciones: {
+                some: {
+                    estado: 'ACTIVA',
+                    fechaFin: {
+                        lte: limitDate,
+                        gte: today
+                    }
+                },
+                none: {
+                    fechaFin: {
+                        gt: limitDate
+                    }
+                }
             }
         },
         include: {
-            socio: true
-        },
-        orderBy: {
-            fechaFin: 'asc'
+            suscripciones: {
+                orderBy: { fechaFin: 'desc' },
+                take: 1
+            }
         }
     })
+
+    const subscriptions = socios.map(socio => {
+        const latestSub = socio.suscripciones[0]!
+        const { suscripciones, ...socioData } = socio
+        return {
+            ...latestSub,
+            socio: socioData
+        }
+    })
+
+    subscriptions.sort((a: any, b: any) => new Date(a.fechaFin).getTime() - new Date(b.fechaFin).getTime())
 
     return subscriptions
 }
@@ -35,25 +55,33 @@ export async function getExpiringSubscriptions() {
 export async function getExpiredSubscriptions() {
     const today = getLimaStartOfDay()
 
-    const subscriptions = await prisma.suscripcion.findMany({
+    const socios = await prisma.socio.findMany({
         where: {
-            OR: [
-                // Subscriptions explicitly marked as VENCIDA
-                { estado: 'VENCIDA' },
-                // Subscriptions still marked ACTIVA but past their end date
-                {
-                    estado: 'ACTIVA',
+            suscripciones: {
+                some: {},
+                every: {
                     fechaFin: { lt: today }
                 }
-            ]
+            }
         },
         include: {
-            socio: true
-        },
-        orderBy: {
-            fechaFin: 'desc'
+            suscripciones: {
+                orderBy: { fechaFin: 'desc' },
+                take: 1
+            }
         }
     })
+
+    const subscriptions = socios.map(socio => {
+        const latestSub = socio.suscripciones[0]!
+        const { suscripciones, ...socioData } = socio
+        return {
+            ...latestSub,
+            socio: socioData
+        }
+    })
+
+    subscriptions.sort((a: any, b: any) => new Date(b.fechaFin).getTime() - new Date(a.fechaFin).getTime())
 
     return subscriptions
 }
@@ -200,31 +228,40 @@ export async function updateSubscription(id: string, newDate: Date, meses: numbe
 export async function getExpiredSubscriptionsDetailed() {
     const today = getLimaStartOfDay()
 
-    const subscriptions = await prisma.suscripcion.findMany({
+    const socios = await prisma.socio.findMany({
         where: {
-            OR: [
-                // Subscriptions explicitly marked as VENCIDA
-                { estado: 'VENCIDA' },
-                // Subscriptions still marked ACTIVA but past their end date
-                {
-                    estado: 'ACTIVA',
+            suscripciones: {
+                some: {},
+                every: {
                     fechaFin: { lt: today }
-                }
-            ]
-        },
-        include: {
-            socio: {
-                include: {
-                    historialCodigos: {
-                        orderBy: { fechaCambio: 'desc' }
-                    }
                 }
             }
         },
-        orderBy: {
-            fechaFin: 'desc'
+        include: {
+            suscripciones: {
+                orderBy: { fechaFin: 'desc' },
+                take: 1,
+                include: { plan: true }
+            },
+            historialCodigos: {
+                orderBy: { fechaCambio: 'desc' }
+            }
         }
     })
+
+    const subscriptions = socios.map(socio => {
+        const latestSub = socio.suscripciones[0]!
+        const { suscripciones, ...socioData } = socio
+        return {
+            ...latestSub,
+            socio: {
+                ...socioData,
+                documento: `${socio.tipoDocumento} ${socio.numeroDocumento}`
+            }
+        }
+    })
+
+    subscriptions.sort((a: any, b: any) => new Date(b.fechaFin).getTime() - new Date(a.fechaFin).getTime())
 
     return subscriptions
 }
@@ -232,27 +269,48 @@ export async function getExpiringSubscriptionsDetailed() {
     const today = getLimaStartOfDay()
     const limitDate = addDays(today, 10)
 
-    const subscriptions = await prisma.suscripcion.findMany({
+    const socios = await prisma.socio.findMany({
         where: {
-            estado: 'ACTIVA',
-            fechaFin: {
-                lte: limitDate,
-                gte: today
-            }
-        },
-        include: {
-            socio: {
-                include: {
-                    historialCodigos: {
-                        orderBy: { fechaCambio: 'desc' }
+            suscripciones: {
+                some: {
+                    estado: 'ACTIVA',
+                    fechaFin: {
+                        lte: limitDate,
+                        gte: today
+                    }
+                },
+                none: {
+                    fechaFin: {
+                        gt: limitDate
                     }
                 }
             }
         },
-        orderBy: {
-            fechaFin: 'asc'
+        include: {
+            suscripciones: {
+                orderBy: { fechaFin: 'desc' },
+                take: 1,
+                include: { plan: true }
+            },
+            historialCodigos: {
+                orderBy: { fechaCambio: 'desc' }
+            }
         }
     })
+
+    const subscriptions = socios.map(socio => {
+        const latestSub = socio.suscripciones[0]!
+        const { suscripciones, ...socioData } = socio
+        return {
+            ...latestSub,
+            socio: {
+                ...socioData,
+                documento: `${socio.tipoDocumento} ${socio.numeroDocumento}`
+            }
+        }
+    })
+
+    subscriptions.sort((a: any, b: any) => new Date(a.fechaFin).getTime() - new Date(b.fechaFin).getTime())
 
     return subscriptions
 }

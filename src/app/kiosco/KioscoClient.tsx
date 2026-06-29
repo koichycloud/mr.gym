@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef, Component, ErrorInfo, ReactNode } from 'react'
 import { validateKioskAccess, AccessResult } from '../actions/kiosco'
 import { CheckCircle, XCircle, AlertTriangle, ScanLine, Dumbbell, DoorOpen, Clock, Keyboard } from 'lucide-react'
 
@@ -9,28 +9,72 @@ type KioskState = 'IDLE' | 'LOADING' | 'SUCCESS' | 'SUCCESS_EXIT' | 'ERROR_NOT_F
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutos
 const DISPLAY_SECONDS = 5 // Segundos en pantalla antes de regresar a IDLE
 
-export default function KioscoClient() {
+// --- ERROR BOUNDARY PARA PREVENIR PANTALLAS BLANCAS ---
+interface ErrorBoundaryProps {
+  children: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+}
+
+class KioscoErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  public state: ErrorBoundaryState = {
+    hasError: false
+  };
+
+  public static getDerivedStateFromError(_: Error): ErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("Uncaught error in Kiosco:", error, errorInfo);
+    // Recargar con cache-buster para recuperar el sistema
+    setTimeout(() => {
+      window.location.href = window.location.pathname + '?t=' + Date.now();
+    }, 3000);
+  }
+
+  public render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-black flex flex-col items-center justify-center text-center p-8 select-none">
+          <div className="animate-pulse text-red-500 mb-8">
+            <Dumbbell size={120} className="mx-auto animate-spin" style={{ animationDuration: '3s' }} />
+          </div>
+          <h1 className="text-4xl font-black text-white mb-4 uppercase tracking-tighter">Actualizando Sistema</h1>
+          <p className="text-zinc-500 text-lg">Se ha detectado un error en la aplicación. Recargando...</p>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+function KioscoClientContent() {
     const [state, setState] = useState<KioskState>('IDLE')
     const [result, setResult] = useState<AccessResult | null>(null)
     const [timeLeft, setTimeLeft] = useState<number>(0)
     const [selectedMode, setSelectedMode] = useState<'ENTRADA' | 'SALIDA' | 'AUTO'>('AUTO')
     const [attemptedCode, setAttemptedCode] = useState<string>('')
+    const [scannedCode, setScannedCode] = useState('')
     
     const [inputFeedback, setInputFeedback] = useState(false)
     
     const resetTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const idleTimerRef = useRef<NodeJS.Timeout | null>(null)
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+    const inputRef = useRef<HTMLInputElement>(null)
     
     const isProcessingRef = useRef(false)
-    const currentInputRef = useRef('')
     const feedbackRef = useRef(false)
     const lastScanDataRef = useRef<{ code: string; time: number } | null>(null)
 
     const returnToIdle = useCallback(() => {
         setState('IDLE')
         setResult(null)
-        currentInputRef.current = ''
+        setScannedCode('')
         setTimeLeft(0)
         setSelectedMode('AUTO')
         setAttemptedCode('')
@@ -84,19 +128,21 @@ export default function KioscoClient() {
         setState('LOADING')
         setTimeLeft(0)
         
-        // Si el código escaneado es una URL del kiosco personal, redireccionamos usando ruta relativa
+        // Si el código escaneado es una URL del kiosco personal, redireccionamos usando ruta relativa con cache-buster
         if (code.includes('/kiosco-personal?code=')) {
             try {
                 const urlObj = new URL(code.startsWith('http') ? code : `http://dummy.com${code}`);
                 const codeParam = urlObj.searchParams.get('code');
                 if (codeParam) {
-                    window.location.href = `/kiosco-personal?code=${encodeURIComponent(codeParam)}`;
+                    window.location.href = `/kiosco-personal?code=${encodeURIComponent(codeParam)}&t=${Date.now()}`;
+                    isProcessingRef.current = false;
                     return;
                 }
             } catch (err) {
                 console.error("Error al procesar URL del Kiosco de Personal:", err);
             }
-            window.location.href = `/kiosco-personal`;
+            window.location.href = `/kiosco-personal?t=${Date.now()}`;
+            isProcessingRef.current = false;
             return;
         }
 
@@ -104,7 +150,7 @@ export default function KioscoClient() {
             const scanResult = await validateKioskAccess(code, selectedMode)
             
             if (scanResult.success && scanResult.message === 'PERSONAL_REDIRECT') {
-                window.location.href = `/kiosco-personal?code=${encodeURIComponent(code)}`;
+                window.location.href = `/kiosco-personal?code=${encodeURIComponent(code)}&t=${Date.now()}`;
                 return;
             }
 
@@ -128,9 +174,13 @@ export default function KioscoClient() {
 
         } catch (error) {
             console.error("No se pudo conectar servidor", error)
-            setResult({ success: false, message: 'Error de Conexión', reason: 'NOT_FOUND' })
+            setResult({ success: false, message: 'Error de Conexión. Actualizando sistema...', reason: 'NOT_FOUND' })
             setState('ERROR_NOT_FOUND')
             startCountdown()
+            // Recarga con cache-buster para saltar la caché de Vercel/navegador
+            setTimeout(() => {
+                window.location.href = window.location.pathname + '?t=' + Date.now();
+            }, 3000)
         } finally {
             isProcessingRef.current = false
         }
@@ -156,51 +206,106 @@ export default function KioscoClient() {
         }
     }, [resetIdleTimer])
 
+    // --- ESCUCHA DE ERRORES DE RED Y DESPLIEGUE EN TIEMPO REAL ---
     useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            resetIdleTimer()
-            setState(prev => prev === 'SCREENSAVER' ? 'IDLE' : prev)
-
-            if (e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt') return
-
-            // Feedback visual de que se recibió una tecla
-            if (!feedbackRef.current) {
-                feedbackRef.current = true
-                setInputFeedback(true)
-                setTimeout(() => {
-                    feedbackRef.current = false
-                    setInputFeedback(false)
-                }, 100)
+        const handleGlobalError = (event: ErrorEvent) => {
+            console.error("Global error detected in Kiosco:", event.error);
+            const errorMsg = event.message || "";
+            if (
+                errorMsg.includes("chunk") || 
+                errorMsg.includes("LoadException") || 
+                errorMsg.includes("Failed to fetch") ||
+                errorMsg.includes("Server Action") ||
+                errorMsg.includes("NEXT_REDIRECT")
+            ) {
+                window.location.href = window.location.pathname + '?t=' + Date.now();
             }
+        };
 
-            // Si pasa mucho tiempo sin completar el escaneo, limpiamos para evitar basura
-            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
-            typingTimeoutRef.current = setTimeout(() => {
-                currentInputRef.current = ''
-            }, 1500)
-
-            if (e.key === 'Enter' || e.key === 'Return') {
-                e.preventDefault() 
-                if (currentInputRef.current.length > 0) {
-                    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
-                    handleScan(currentInputRef.current)
-                    currentInputRef.current = '' 
-                }
-            } else {
-                if (e.key.length === 1) {
-                    e.preventDefault();
-                    currentInputRef.current += e.key;
-                }
+        const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+            console.error("Unhandled promise rejection in Kiosco:", event.reason);
+            const reasonMsg = String(event.reason || "");
+            if (
+                reasonMsg.includes("chunk") || 
+                reasonMsg.includes("Failed to fetch") ||
+                reasonMsg.includes("Server Action")
+            ) {
+                window.location.href = window.location.pathname + '?t=' + Date.now();
             }
-        }
+        };
 
-        window.addEventListener('keydown', handleKeyDown)
+        window.addEventListener('error', handleGlobalError)
+        window.addEventListener('unhandledrejection', handleUnhandledRejection)
 
         return () => {
-            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
-            window.removeEventListener('keydown', handleKeyDown)
+            window.removeEventListener('error', handleGlobalError)
+            window.removeEventListener('unhandledrejection', handleUnhandledRejection)
+        };
+    }, []);
+
+    const focusInput = useCallback(() => {
+        if (inputRef.current) {
+            inputRef.current.focus()
         }
-    }, [handleScan, resetIdleTimer])
+    }, [])
+
+    useEffect(() => {
+        focusInput()
+
+        const handleDocClick = () => {
+            focusInput()
+        }
+        document.addEventListener('click', handleDocClick)
+        return () => {
+            document.removeEventListener('click', handleDocClick)
+        }
+    }, [focusInput])
+
+    // Limpiar entrada si pasa mucho tiempo sin completar escaneo (evita basura)
+    useEffect(() => {
+        if (scannedCode.length > 0) {
+            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+            typingTimeoutRef.current = setTimeout(() => {
+                setScannedCode('')
+            }, 1500)
+        }
+    }, [scannedCode])
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value
+        setScannedCode(val)
+
+        setState(prev => prev === 'SCREENSAVER' ? 'IDLE' : prev)
+        resetIdleTimer()
+
+        // Feedback visual de que se recibió una tecla
+        if (!feedbackRef.current) {
+            feedbackRef.current = true
+            setInputFeedback(true)
+            setTimeout(() => {
+                feedbackRef.current = false
+                setInputFeedback(false)
+            }, 100)
+        }
+    }
+
+    const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            e.preventDefault()
+            const codeToScan = scannedCode.trim()
+            if (codeToScan.length > 0) {
+                if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+                handleScan(codeToScan)
+                setScannedCode('')
+            }
+        }
+    }
+
+    const handleInputBlur = () => {
+        setTimeout(() => {
+            focusInput()
+        }, 50)
+    }
 
     const renderPhotoCircle = (colorClass: string) => (
         <div className={`w-[26rem] h-[26rem] rounded-full flex items-center justify-center overflow-hidden border-8 shadow-2xl mb-10 bg-black/60 ${colorClass}`}>
@@ -424,9 +529,29 @@ export default function KioscoClient() {
                 {renderContent()}
                 
                 <div className="fixed bottom-4 right-4 text-white/5 text-[10px] z-50">
-                    Modo Kiosco Activo | V1.2
+                    Modo Kiosco Activo | V1.3
                 </div>
+
+                {/* Input oculto para escaneo por hardware */}
+                <input 
+                    ref={inputRef}
+                    type="text"
+                    value={scannedCode}
+                    onChange={handleInputChange}
+                    onKeyDown={handleInputKeyDown}
+                    onBlur={handleInputBlur}
+                    className="absolute opacity-0 w-0 h-0 pointer-events-none"
+                    autoFocus
+                />
             </div>
         </div>
     )
+}
+
+export default function KioscoClient() {
+  return (
+    <KioscoErrorBoundary>
+      <KioscoClientContent />
+    </KioscoErrorBoundary>
+  )
 }

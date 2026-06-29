@@ -296,7 +296,7 @@ export default function AsistenciaClient({ asistenciasIniciales, statsIniciales 
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    <div className="badge badge-success badge-sm">
+                                                    <div className={`badge badge-sm ${a.tipo.toUpperCase() === 'SALIDA' ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'badge-success'}`}>
                                                         {a.tipo}
                                                     </div>
                                                 </td>
@@ -322,7 +322,7 @@ export default function AsistenciaClient({ asistenciasIniciales, statsIniciales 
                                         </div>
                                         <div className="text-right shrink-0">
                                             <p className="font-bold text-primary text-sm">{format(new Date(a.fecha), 'hh:mm a')}</p>
-                                            <div className="badge badge-success badge-xs">{a.tipo}</div>
+                                            <div className={`badge badge-xs ${a.tipo.toUpperCase() === 'SALIDA' ? 'bg-blue-100 text-blue-800 border border-blue-200' : 'badge-success'}`}>{a.tipo}</div>
                                         </div>
                                     </div>
                                 ))}

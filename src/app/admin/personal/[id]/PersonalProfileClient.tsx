@@ -139,6 +139,7 @@ interface Personal {
   montoPago: number;
   horasObjetivo: number;
   activo: boolean;
+  fotoUrl?: string | null;
   consumos?: {
     id: string;
     personalId: string;
@@ -206,29 +207,57 @@ export default function PersonalProfileClient({
     setAsistencias(initialAsistencias);
   }, [initialAsistencias]);
 
-  // Helper: Date format "Lunes, 1 de Enero de 2026"
-  const formatLocalDate = (dateVal: Date | string) => {
-    if (typeof dateVal === "string" && dateVal.includes("T")) {
-      const parts = dateVal.split("T")[0].split("-");
-      if (parts.length === 3) {
-        const year = parseInt(parts[0], 10);
-        const month = parseInt(parts[1], 10) - 1;
-        const date = parseInt(parts[2], 10);
-        const localD = new Date(year, month, date);
-        const dayOfWeek = localD.getDay();
-        const weekdays = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
-        const months = [
-          "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-          "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-        ];
-        return `${weekdays[dayOfWeek]}, ${date} de ${months[month]} de ${year}`;
-      }
+  const [nowDate, setNowDate] = useState<Date>(new Date());
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNowDate(new Date());
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const getRecordHours = (a: Asistencia, referenceDate: Date): number => {
+    if (a.horasTrabajadas !== null) {
+      return a.horasTrabajadas;
     }
+    if (a.horaEntrada && !a.horaSalida) {
+      const entradaDate = new Date(a.horaEntrada);
+      const refTime = referenceDate.getTime();
+
+      const salidaAlmuerzoTime = a.horaSalidaAlmuerzo ? new Date(a.horaSalidaAlmuerzo).getTime() : null;
+      const entradaAlmuerzoTime = a.horaEntradaAlmuerzo ? new Date(a.horaEntradaAlmuerzo).getTime() : null;
+
+      let totalMs = 0;
+
+      if (salidaAlmuerzoTime && entradaAlmuerzoTime) {
+        const firstSegment = salidaAlmuerzoTime - entradaDate.getTime();
+        const secondSegment = refTime - entradaAlmuerzoTime;
+        totalMs = (firstSegment > 0 ? firstSegment : 0) + (secondSegment > 0 ? secondSegment : 0);
+      } else if (salidaAlmuerzoTime && !entradaAlmuerzoTime) {
+        const firstSegment = salidaAlmuerzoTime - entradaDate.getTime();
+        totalMs = firstSegment > 0 ? firstSegment : 0;
+      } else if (!salidaAlmuerzoTime && entradaAlmuerzoTime) {
+        const secondSegment = refTime - entradaAlmuerzoTime;
+        totalMs = secondSegment > 0 ? secondSegment : 0;
+      } else {
+        const totalSegment = refTime - entradaDate.getTime();
+        totalMs = totalSegment > 0 ? totalSegment : 0;
+      }
+      return totalMs / (1000 * 60 * 60);
+    }
+    return 0;
+  };
+
+  // Helper: Date format "Lunes, 1 de Enero de 2026" en hora de Perú (UTC-5)
+  const formatLocalDate = (dateVal: Date | string) => {
     const d = new Date(dateVal);
-    const year = d.getFullYear();
-    const month = d.getMonth();
-    const date = d.getDate();
-    const dayOfWeek = d.getDay();
+    const PERU_OFFSET_MS = 5 * 60 * 60 * 1000;
+    const peruDate = new Date(d.getTime() - PERU_OFFSET_MS);
+
+    const year = peruDate.getUTCFullYear();
+    const month = peruDate.getUTCMonth();
+    const date = peruDate.getUTCDate();
+    const dayOfWeek = peruDate.getUTCDay();
 
     const weekdays = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
     const months = [
@@ -239,76 +268,99 @@ export default function PersonalProfileClient({
     return `${weekdays[dayOfWeek]}, ${date} de ${months[month]} de ${year}`;
   };
 
-  // Helper: Time format "HH:MM" local
+  // Helper: Time format "hh:mm AM/PM" en hora de Perú (UTC-5)
   const formatLocalTime = (dateVal: Date | string | null | undefined) => {
     if (!dateVal) return "-";
     const d = new Date(dateVal);
-    const hours = String(d.getHours()).padStart(2, '0');
-    const minutes = String(d.getMinutes()).padStart(2, '0');
-    return `${hours}:${minutes}`;
+    const PERU_OFFSET_MS = 5 * 60 * 60 * 1000;
+    const peruDate = new Date(d.getTime() - PERU_OFFSET_MS);
+    let hours = peruDate.getUTCHours();
+    const minutes = String(peruDate.getUTCMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // 0 should be 12
+    const hoursStr = String(hours).padStart(2, '0');
+    return `${hoursStr}:${minutes} ${ampm}`;
   };
 
-  // Convert Date object to "YYYY-MM-DD" local for inputs
+  // Convert Date object to "YYYY-MM-DD" en hora de Perú (UTC-5) para inputs
   const getLocalDateString = (dateVal: Date | string) => {
-    if (typeof dateVal === "string" && dateVal.includes("T")) {
-      return dateVal.split("T")[0];
-    }
     const d = new Date(dateVal);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
+    const PERU_OFFSET_MS = 5 * 60 * 60 * 1000;
+    const peruDate = new Date(d.getTime() - PERU_OFFSET_MS);
+    const year = peruDate.getUTCFullYear();
+    const month = String(peruDate.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(peruDate.getUTCDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   };
 
-  // Convert Date object to "HH:MM" local for inputs
+  // Convert Date object to "HH:MM" en hora de Perú (UTC-5) para inputs
   const getLocalTimeString = (dateVal: Date | string | null | undefined) => {
     if (!dateVal) return "";
     const d = new Date(dateVal);
-    const hours = String(d.getHours()).padStart(2, '0');
-    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const PERU_OFFSET_MS = 5 * 60 * 60 * 1000;
+    const peruDate = new Date(d.getTime() - PERU_OFFSET_MS);
+    const hours = String(peruDate.getUTCHours()).padStart(2, '0');
+    const minutes = String(peruDate.getUTCMinutes()).padStart(2, '0');
     return `${hours}:${minutes}`;
   };
 
-  // Define payment cycle based on method
+  // Define payment cycle based on method en hora de Perú (UTC-5)
   const getCycleDates = (metodo: string) => {
     const now = new Date();
-    let start = new Date();
-    let end = new Date();
+    const PERU_OFFSET_MS = 5 * 60 * 60 * 1000;
+    const nowPeru = new Date(now.getTime() - PERU_OFFSET_MS);
+    
+    let startPeru = new Date(nowPeru);
+    let endPeru = new Date(nowPeru);
     let name = "";
 
     if (metodo === "POR_HORA" || metodo === "POR_DIA" || metodo === "SEMANAL") {
-      const day = now.getDay();
-      const diffToMonday = now.getDate() - day + (day === 0 ? -6 : 1);
-      start = new Date(now.getFullYear(), now.getMonth(), diffToMonday, 0, 0, 0, 0);
+      const day = nowPeru.getUTCDay();
+      const diffToMonday = nowPeru.getUTCDate() - day + (day === 0 ? -6 : 1);
+      startPeru.setUTCDate(diffToMonday);
+      startPeru.setUTCHours(0, 0, 0, 0);
       
-      end = new Date(start);
-      end.setDate(start.getDate() + 6);
-      end.setHours(23, 59, 59, 999);
+      endPeru = new Date(startPeru);
+      endPeru.setUTCDate(startPeru.getUTCDate() + 6);
+      endPeru.setUTCHours(23, 59, 59, 999);
       
       name = "Semana Actual";
     } else if (metodo === "QUINCENAL") {
-      const dayOfMonth = now.getDate();
+      const dayOfMonth = nowPeru.getUTCDate();
       if (dayOfMonth <= 15) {
-        start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-        end = new Date(now.getFullYear(), now.getMonth(), 15, 23, 59, 59, 999);
+        startPeru.setUTCDate(1);
+        startPeru.setUTCHours(0, 0, 0, 0);
+        endPeru.setUTCDate(15);
+        endPeru.setUTCHours(23, 59, 59, 999);
         name = "1ra Quincena del Mes";
       } else {
-        start = new Date(now.getFullYear(), now.getMonth(), 16, 0, 0, 0, 0);
-        end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        startPeru.setUTCDate(16);
+        startPeru.setUTCHours(0, 0, 0, 0);
+        endPeru.setUTCMonth(endPeru.getUTCMonth() + 1);
+        endPeru.setUTCDate(0);
+        endPeru.setUTCHours(23, 59, 59, 999);
         name = "2da Quincena del Mes";
       }
     } else if (metodo === "MENSUAL") {
-      start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-      end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      startPeru.setUTCDate(1);
+      startPeru.setUTCHours(0, 0, 0, 0);
+      
+      endPeru.setUTCMonth(endPeru.getUTCMonth() + 1);
+      endPeru.setUTCDate(0);
+      endPeru.setUTCHours(23, 59, 59, 999);
+      
       name = "Mes Actual";
     } else {
-      start = new Date();
-      start.setDate(now.getDate() - 30);
-      start.setHours(0, 0, 0, 0);
-      end = new Date();
-      end.setHours(23, 59, 59, 999);
+      startPeru.setUTCDate(nowPeru.getUTCDate() - 30);
+      startPeru.setUTCHours(0, 0, 0, 0);
+      
+      endPeru.setUTCHours(23, 59, 59, 999);
       name = "Últimos 30 Días";
     }
+
+    const start = new Date(startPeru.getTime() + PERU_OFFSET_MS);
+    const end = new Date(endPeru.getTime() + PERU_OFFSET_MS);
 
     return { start, end, name };
   };
@@ -322,8 +374,8 @@ export default function PersonalProfileClient({
   });
 
   // Calculate worked hours
-  const totalHoursAll = asistencias.reduce((sum, a) => sum + (a.horasTrabajadas || 0), 0);
-  const totalHoursCycle = cycleAsistencias.reduce((sum, a) => sum + (a.horasTrabajadas || 0), 0);
+  const totalHoursAll = asistencias.reduce((sum, a) => sum + getRecordHours(a, nowDate), 0);
+  const totalHoursCycle = cycleAsistencias.reduce((sum, a) => sum + getRecordHours(a, nowDate), 0);
 
   const displayedAsistencias = filterMode === "CYCLE" ? cycleAsistencias : asistencias;
   const currentHours = filterMode === "CYCLE" ? totalHoursCycle : totalHoursAll;
@@ -476,9 +528,15 @@ export default function PersonalProfileClient({
             <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-500/5 rounded-bl-[100%]"></div>
             
             <div className="flex flex-col items-center text-center pb-6 border-b border-zinc-800/80">
-              <div className="w-20 h-20 bg-zinc-800 border border-zinc-700 text-yellow-500 rounded-2xl flex items-center justify-center mb-4">
-                <User className="w-10 h-10" />
-              </div>
+              {personal.fotoUrl ? (
+                <div className="w-20 h-20 border border-zinc-700 rounded-2xl overflow-hidden mb-4 shadow-xl bg-zinc-800">
+                  <img src={personal.fotoUrl} alt={`${personal.nombres} ${personal.apellidos}`} className="w-full h-full object-cover" />
+                </div>
+              ) : (
+                <div className="w-20 h-20 bg-zinc-800 border border-zinc-700 text-yellow-500 rounded-2xl flex items-center justify-center mb-4">
+                  <User className="w-10 h-10" />
+                </div>
+              )}
               <h2 className="text-xl font-bold text-white mb-1">
                 {personal.nombres} {personal.apellidos}
               </h2>
@@ -699,6 +757,16 @@ export default function PersonalProfileClient({
                             <span className="bg-zinc-950 px-2.5 py-1 border border-zinc-800 text-yellow-500 font-mono font-bold rounded">
                               {a.horasTrabajadas.toFixed(2)}h
                             </span>
+                          ) : a.horaEntrada && !a.horaSalida ? (
+                            <div className="flex flex-col items-center gap-1">
+                              <span className="bg-green-950/80 px-2.5 py-1 border border-green-800/50 text-green-400 font-mono font-bold rounded flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                                {getRecordHours(a, nowDate).toFixed(2)}h
+                              </span>
+                              <span className="text-[10px] text-green-500 font-bold uppercase tracking-wider">
+                                En progreso
+                              </span>
+                            </div>
                           ) : (
                             <span className="text-zinc-600 italic">Incompleto</span>
                           )}

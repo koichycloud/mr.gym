@@ -6,6 +6,7 @@ import { Plus, Edit2, Trash2, X, Loader2, Link, QrCode, Share2, Send, Download }
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 import { logQRSent } from "@/app/actions/socios";
+import PhotoCapture from "@/app/components/PhotoCapture";
 
 /** Genera la imagen del carnet de personal (dorado/amarillo) en un canvas y devuelve un Blob PNG. */
 async function generateCarnetBlob(
@@ -105,7 +106,20 @@ export default function PersonalClient({ initialData }: { initialData: any[] }) 
   
   // Form state
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    nombres: string;
+    apellidos: string;
+    dni: string;
+    telefono: string;
+    rol: string;
+    metodoPago: string;
+    montoPago: number;
+    horasObjetivo: number;
+    activo: boolean;
+    codigo: string;
+    tipoDocumento: string;
+    fotoUrl: string | null;
+  }>({
     nombres: "",
     apellidos: "",
     dni: "",
@@ -116,7 +130,8 @@ export default function PersonalClient({ initialData }: { initialData: any[] }) 
     horasObjetivo: 40,
     activo: true,
     codigo: "",
-    tipoDocumento: "DNI"
+    tipoDocumento: "DNI",
+    fotoUrl: null
   });
 
   const handleOpenModal = (p?: any) => {
@@ -133,7 +148,8 @@ export default function PersonalClient({ initialData }: { initialData: any[] }) 
         horasObjetivo: p.horasObjetivo,
         activo: p.activo,
         codigo: p.codigo,
-        tipoDocumento: p.tipoDocumento || "DNI"
+        tipoDocumento: p.tipoDocumento || "DNI",
+        fotoUrl: p.fotoUrl || null
       });
     } else {
       setEditingId(null);
@@ -148,7 +164,8 @@ export default function PersonalClient({ initialData }: { initialData: any[] }) 
         horasObjetivo: 40,
         activo: true,
         codigo: "",
-        tipoDocumento: "DNI"
+        tipoDocumento: "DNI",
+        fotoUrl: null
       });
     }
     setShowModal(true);
@@ -245,8 +262,21 @@ export default function PersonalClient({ initialData }: { initialData: any[] }) 
               personal.map((p) => (
                 <tr key={p.id} className="hover:bg-zinc-800/50 transition-colors">
                   <td className="px-6 py-4">
-                    <div className="font-bold text-white">{p.nombres} {p.apellidos}</div>
-                    <div className="text-xs">{p.tipoDocumento || 'DNI'}: {p.dni}</div>
+                    <div className="flex items-center gap-3">
+                      {p.fotoUrl ? (
+                        <div className="w-10 h-10 rounded-full overflow-hidden border border-zinc-700 shrink-0 bg-zinc-800 shadow-inner">
+                          <img src={p.fotoUrl} alt={`${p.nombres} ${p.apellidos}`} className="w-full h-full object-cover" />
+                        </div>
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0 text-yellow-500 font-bold uppercase text-xs">
+                          {p.nombres.charAt(0)}{p.apellidos.charAt(0)}
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-bold text-white">{p.nombres} {p.apellidos}</div>
+                        <div className="text-xs">{p.tipoDocumento || 'DNI'}: {p.dni}</div>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-6 py-4"><span className="bg-zinc-800 px-2 py-1 rounded text-yellow-500 font-medium">{p.rol}</span></td>
                   <td className="px-6 py-4">{p.metodoPago.replace('_', ' ')}</td>
@@ -304,6 +334,13 @@ export default function PersonalClient({ initialData }: { initialData: any[] }) 
             </div>
             
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
+              <div className="flex justify-center mb-6">
+                <PhotoCapture
+                  currentPhoto={formData.fotoUrl}
+                  onPhotoCapture={(photo) => setFormData(prev => ({ ...prev, fotoUrl: photo }))}
+                />
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-zinc-400 mb-1">Nombres</label>

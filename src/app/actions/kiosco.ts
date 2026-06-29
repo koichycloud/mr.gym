@@ -177,8 +177,8 @@ async function ejecutarLimpiezaAsistencias() {
 }
 
 export async function validateKioskAccess(codigo: string, mode: 'ENTRADA' | 'SALIDA' | 'AUTO' = 'AUTO'): Promise<AccessResult> {
-    // Ejecutar limpieza automática en segundo plano (Lazy)
-    ejecutarLimpiezaAsistencias().catch(console.error)
+    // Esperar la limpieza para evitar fugas de conexiones en Serverless
+    await ejecutarLimpiezaAsistencias().catch(console.error)
 
     // Normalize: trim whitespace and strip non-alphanumeric chars to handle scanner artifacts
     const cleanCodigo = codigo.trim().replace(/[^A-Za-z0-9]/g, '').toUpperCase()

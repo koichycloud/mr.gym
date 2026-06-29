@@ -6,6 +6,57 @@ import { CheckCircle, XCircle, User, AlertTriangle, Monitor } from 'lucide-react
 import Link from 'next/link'
 import { Toaster, toast } from 'sonner' // Import sonner
 
+let globalAudioCtx: any = null;
+
+const initAudio = () => {
+  if (globalAudioCtx) return;
+  try {
+    const AudioContextClass = typeof window !== 'undefined' ? (window.AudioContext || (window as any).webkitAudioContext) : null;
+    if (AudioContextClass) {
+      globalAudioCtx = new AudioContextClass();
+      const buffer = globalAudioCtx.createBuffer(1, 1, 22050);
+      const source = globalAudioCtx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(globalAudioCtx.destination);
+      source.start(0);
+    }
+  } catch (e) {
+    console.error("AudioContext initialization failed", e);
+  }
+};
+
+const playWarningSound = () => {
+  try {
+    initAudio();
+    if (!globalAudioCtx) return;
+    if (globalAudioCtx.state === 'suspended') {
+      globalAudioCtx.resume();
+    }
+    const ctx = globalAudioCtx;
+    
+    const playTone = (time: number, freq: number, duration: number) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(freq, time);
+      
+      gain.gain.setValueAtTime(0.15, time);
+      gain.gain.exponentialRampToValueAtTime(0.01, time + duration);
+      
+      osc.start(time);
+      osc.stop(time + duration);
+    };
+
+    playTone(ctx.currentTime, 130, 0.25);
+    playTone(ctx.currentTime + 0.3, 110, 0.35);
+  } catch (err) {
+    console.error("Failed to play warning sound", err);
+  }
+};
+
 export default function ScannerPage() {
     const [scanning, setScanning] = useState(true)
     const [result, setResult] = useState<AccessResult | null>(null)
@@ -25,6 +76,21 @@ export default function ScannerPage() {
     // Check permission status on mount
     const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default')
     const [swActive, setSwActive] = useState(false)
+    // Audio unlock listener
+    useEffect(() => {
+        const handleUnlock = () => {
+            initAudio();
+            if (globalAudioCtx && globalAudioCtx.state === 'suspended') {
+                globalAudioCtx.resume();
+            }
+        };
+        window.addEventListener('click', handleUnlock);
+        window.addEventListener('touchstart', handleUnlock);
+        return () => {
+            window.removeEventListener('click', handleUnlock);
+            window.removeEventListener('touchstart', handleUnlock);
+        };
+    }, []);
 
     useEffect(() => {
         if ('Notification' in window) {
@@ -152,6 +218,7 @@ export default function ScannerPage() {
                     style: { background: '#dcfce7', color: '#166534', fontSize: '1.2rem' }
                 })
             } else {
+                playWarningSound();
                 toast.error(`DENEGADO: ${validation.message}`, {
                     duration: 5000,
                     style: { background: '#fee2e2', color: '#991b1b', fontSize: '1.2rem' }
@@ -351,6 +418,9 @@ export default function ScannerPage() {
                             <Monitor size={64} className="opacity-80" />
                             <h2 className="text-3xl font-black">Sistema Kiosco Activo</h2>
                             <p className="opacity-80 text-lg">Pase el carnet o código QR del socio por el lector óptico.</p>
+                            <p className="text-xs opacity-60 bg-base-300/40 px-4 py-2 rounded-full border border-base-200/20 mt-2">
+                                🔔 Toca la pantalla una vez para habilitar el sonido de alertas.
+                            </p>
                         </div>
 
                         {/* Manual / USB Input */}

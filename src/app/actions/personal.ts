@@ -74,6 +74,7 @@ export async function createPersonal(data: {
   montoPago: number;
   horasObjetivo: number;
   tipoDocumento: string;
+  fotoUrl?: string | null;
 }) {
   try {
     // Generar un código único (ej: P + DNI o número aleatorio)
@@ -119,6 +120,7 @@ export async function updatePersonal(id: string, data: {
   activo: boolean;
   codigo: string;
   tipoDocumento: string;
+  fotoUrl?: string | null;
 }) {
   try {
     const personal = await prisma.personal.update({

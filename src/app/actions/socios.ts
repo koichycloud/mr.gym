@@ -179,13 +179,18 @@ export async function getSocios(params?: {
         subscriptionFilter = {
             suscripciones: {
                 some: {
+                    estado: 'ACTIVA',
                     fechaFin: { gte: today, lte: sevenDaysLater }
+                },
+                none: {
+                    fechaFin: { gt: sevenDaysLater }
                 }
             }
         }
     } else if (filterType === 'vencidos') {
         subscriptionFilter = {
             suscripciones: {
+                some: {},
                 every: { fechaFin: { lt: today } }
             }
         }
@@ -263,9 +268,24 @@ export async function exportSocios(params?: {
 
     let subscriptionFilter: any = {}
     if (filterType === 'expiring') {
-        subscriptionFilter = { suscripciones: { some: { fechaFin: { gte: today, lte: sevenDaysLater } } } }
+        subscriptionFilter = {
+            suscripciones: {
+                some: {
+                    estado: 'ACTIVA',
+                    fechaFin: { gte: today, lte: sevenDaysLater }
+                },
+                none: {
+                    fechaFin: { gt: sevenDaysLater }
+                }
+            }
+        }
     } else if (filterType === 'vencidos') {
-        subscriptionFilter = { suscripciones: { every: { fechaFin: { lt: today } } } }
+        subscriptionFilter = {
+            suscripciones: {
+                some: {},
+                every: { fechaFin: { lt: today } }
+            }
+        }
     }
 
     return prisma.socio.findMany({
