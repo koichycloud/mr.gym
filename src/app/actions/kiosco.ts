@@ -54,6 +54,9 @@ async function sendTelegramAlert(socioName: string, daysLeft: number) {
     }
 }
 
+// Caché en memoria para evitar consultar la base de datos en cada escaneo
+const cacheLimpieza: Record<string, boolean> = {}
+
 /**
  * Función de limpieza "Lazy" que cierra sesiones olvidadas.
  * Se ejecuta silenciosamente con el primer escaneo de cada turno.
@@ -73,50 +76,56 @@ async function ejecutarLimpiezaAsistencias() {
             const fechaKey = hoy.toISOString().split('T')[0]
             const logAccion = `CLEANUP_MORNING_${fechaKey}`
             
-            const yaLimpiado = await prisma.auditLog.findFirst({
-                where: { accion: logAccion }
-            })
-
-            if (!yaLimpiado) {
-                console.log(`[CLEANUP] Iniciando cierre automático del turno mañana (${fechaKey})...`)
-                
-                // Límite del turno mañana: 1:30 PM
-                const limiteMañana = new Date(hoy.getTime())
-                limiteMañana.setUTCHours(13 + 5, 30, 0, 0) // 13:30 Lima = 18:30 UTC
-
-                // Encontrar socios que entraron pero no salieron en la mañana
-                // Buscamos todas las asistencias de hoy antes de las 1:30pm
-                const asistenciasHoy = await prisma.asistencia.findMany({
-                    where: { fecha: { gte: hoy, lt: limiteMañana } },
-                    orderBy: { fecha: 'asc' }
+            if (!cacheLimpieza[logAccion]) {
+                const yaLimpiado = await prisma.auditLog.findFirst({
+                    where: { accion: logAccion }
                 })
 
-                // Agrupar por socio para ver su último estado en ese rango
-                const ultimoEstado: Record<string, string> = {}
-                asistenciasHoy.forEach(a => {
-                    ultimoEstado[a.socioId] = a.tipo
-                })
+                if (yaLimpiado) {
+                    cacheLimpieza[logAccion] = true
+                } else {
+                    console.log(`[CLEANUP] Iniciando cierre automático del turno mañana (${fechaKey})...`)
+                    
+                    // Límite del turno mañana: 1:30 PM
+                    const limiteMañana = new Date(hoy.getTime())
+                    limiteMañana.setUTCHours(13 + 5, 30, 0, 0) // 13:30 Lima = 18:30 UTC
 
-                const sociosSinSalida = Object.keys(ultimoEstado).filter(id => ultimoEstado[id] === 'ENTRADA')
-
-                if (sociosSinSalida.length > 0) {
-                    await prisma.asistencia.createMany({
-                        data: sociosSinSalida.map(id => ({
-                            socioId: id,
-                            tipo: 'SALIDA',
-                            fecha: limiteMañana
-                        }))
+                    // Encontrar socios que entraron pero no salieron en la mañana
+                    // Buscamos todas las asistencias de hoy antes de las 1:30pm
+                    const asistenciasHoy = await prisma.asistencia.findMany({
+                        where: { fecha: { gte: hoy, lt: limiteMañana } },
+                        orderBy: { fecha: 'asc' }
                     })
-                    console.log(`[CLEANUP] Se cerraron ${sociosSinSalida.length} sesiones de la mañana.`)
-                }
 
-                await prisma.auditLog.create({
-                    data: {
-                        usuario: 'SYSTEM',
-                        accion: logAccion,
-                        detalles: `Cierre automático de turno mañana. Socios afectados: ${sociosSinSalida.length}`
+                    // Agrupar por socio para ver su último estado en ese rango
+                    const ultimoEstado: Record<string, string> = {}
+                    asistenciasHoy.forEach(a => {
+                        ultimoEstado[a.socioId] = a.tipo
+                    })
+
+                    const sociosSinSalida = Object.keys(ultimoEstado).filter(id => ultimoEstado[id] === 'ENTRADA')
+
+                    if (sociosSinSalida.length > 0) {
+                        await prisma.asistencia.createMany({
+                            data: sociosSinSalida.map(id => ({
+                                socioId: id,
+                                tipo: 'SALIDA',
+                                fecha: limiteMañana
+                            }))
+                        })
+                        console.log(`[CLEANUP] Se cerraron ${sociosSinSalida.length} sesiones de la mañana.`)
                     }
-                })
+
+                    await prisma.auditLog.create({
+                        data: {
+                            usuario: 'SYSTEM',
+                            accion: logAccion,
+                            detalles: `Cierre automático de turno mañana. Socios afectados: ${sociosSinSalida.length}`
+                        }
+                    })
+                    
+                    cacheLimpieza[logAccion] = true
+                }
             }
         }
 
@@ -127,48 +136,54 @@ async function ejecutarLimpiezaAsistencias() {
             const fechaKeyAyer = ayer.toISOString().split('T')[0]
             const logAccionNoche = `CLEANUP_NIGHT_${fechaKeyAyer}`
 
-            const yaLimpiadoNoche = await prisma.auditLog.findFirst({
-                where: { accion: logAccionNoche }
-            })
-
-            if (!yaLimpiadoNoche) {
-                console.log(`[CLEANUP] Iniciando cierre automático del turno noche anterior (${fechaKeyAyer})...`)
-                
-                const inicioAyer = getLimaStartOfDay(ayer)
-                const limiteNocheAyer = new Date(inicioAyer.getTime())
-                limiteNocheAyer.setUTCHours(22 + 5, 30, 0, 0) // 22:30 Lima = 03:30 UTC del día siguiente
-
-                // Encontrar asistencias de "ayer" (desde inicio de ayer hasta inicio de hoy)
-                const asistenciasAyer = await prisma.asistencia.findMany({
-                    where: { fecha: { gte: inicioAyer, lt: hoy } },
-                    orderBy: { fecha: 'asc' }
+            if (!cacheLimpieza[logAccionNoche]) {
+                const yaLimpiadoNoche = await prisma.auditLog.findFirst({
+                    where: { accion: logAccionNoche }
                 })
 
-                const ultimoEstadoAyer: Record<string, string> = {}
-                asistenciasAyer.forEach(a => {
-                    ultimoEstadoAyer[a.socioId] = a.tipo
-                })
+                if (yaLimpiadoNoche) {
+                    cacheLimpieza[logAccionNoche] = true
+                } else {
+                    console.log(`[CLEANUP] Iniciando cierre automático del turno noche anterior (${fechaKeyAyer})...`)
+                    
+                    const inicioAyer = getLimaStartOfDay(ayer)
+                    const limiteNocheAyer = new Date(inicioAyer.getTime())
+                    limiteNocheAyer.setUTCHours(22 + 5, 30, 0, 0) // 22:30 Lima = 03:30 UTC del día siguiente
 
-                const sociosSinSalidaNoche = Object.keys(ultimoEstadoAyer).filter(id => ultimoEstadoAyer[id] === 'ENTRADA')
-
-                if (sociosSinSalidaNoche.length > 0) {
-                    await prisma.asistencia.createMany({
-                        data: sociosSinSalidaNoche.map(id => ({
-                            socioId: id,
-                            tipo: 'SALIDA',
-                            fecha: limiteNocheAyer
-                        }))
+                    // Encontrar asistencias de "ayer" (desde inicio de ayer hasta inicio de hoy)
+                    const asistenciasAyer = await prisma.asistencia.findMany({
+                        where: { fecha: { gte: inicioAyer, lt: hoy } },
+                        orderBy: { fecha: 'asc' }
                     })
-                    console.log(`[CLEANUP] Se cerraron ${sociosSinSalidaNoche.length} sesiones de la noche anterior.`)
-                }
 
-                await prisma.auditLog.create({
-                    data: {
-                        usuario: 'SYSTEM',
-                        accion: logAccionNoche,
-                        detalles: `Cierre automático de turno noche. Socios afectados: ${sociosSinSalidaNoche.length}`
+                    const ultimoEstadoAyer: Record<string, string> = {}
+                    asistenciasAyer.forEach(a => {
+                        ultimoEstadoAyer[a.socioId] = a.tipo
+                    })
+
+                    const sociosSinSalidaNoche = Object.keys(ultimoEstadoAyer).filter(id => ultimoEstadoAyer[id] === 'ENTRADA')
+
+                    if (sociosSinSalidaNoche.length > 0) {
+                        await prisma.asistencia.createMany({
+                            data: sociosSinSalidaNoche.map(id => ({
+                                socioId: id,
+                                tipo: 'SALIDA',
+                                fecha: limiteNocheAyer
+                            }))
+                        })
+                        console.log(`[CLEANUP] Se cerraron ${sociosSinSalidaNoche.length} sesiones de la noche anterior.`)
                     }
-                })
+
+                    await prisma.auditLog.create({
+                        data: {
+                            usuario: 'SYSTEM',
+                            accion: logAccionNoche,
+                            detalles: `Cierre automático de turno noche. Socios afectados: ${sociosSinSalidaNoche.length}`
+                        }
+                    })
+                    
+                    cacheLimpieza[logAccionNoche] = true
+                }
             }
         }
     } catch (e) {
@@ -177,32 +192,13 @@ async function ejecutarLimpiezaAsistencias() {
 }
 
 export async function validateKioskAccess(codigo: string, mode: 'ENTRADA' | 'SALIDA' | 'AUTO' = 'AUTO'): Promise<AccessResult> {
-    // Esperar la limpieza para evitar fugas de conexiones en Serverless
-    await ejecutarLimpiezaAsistencias().catch(console.error)
+    // Ejecutar la limpieza en segundo plano sin bloquear el escaneo del socio
+    ejecutarLimpiezaAsistencias().catch(e => console.error('[CLEANUP] Error en limpieza:', e))
 
     // Normalize: trim whitespace and strip non-alphanumeric chars to handle scanner artifacts
     const cleanCodigo = codigo.trim().replace(/[^A-Za-z0-9]/g, '').toUpperCase()
     console.log(`[KIOSCO] Intento de acceso - Código: "${cleanCodigo}" (raw: "${codigo}"), Modo: ${mode}`);
     try {
-        // Verificar si el código pertenece a un miembro del personal activo
-        const personal = await prisma.personal.findUnique({
-            where: { codigo: cleanCodigo, activo: true }
-        })
-
-        if (personal) {
-            console.log(`[KIOSCO] Personal detectado: ${personal.nombres} ${personal.apellidos} (${personal.codigo})`);
-            return {
-                success: true,
-                message: 'PERSONAL_REDIRECT',
-                tipoAcceso: 'ENTRADA',
-                socio: {
-                    nombres: personal.nombres,
-                    apellidos: personal.apellidos,
-                    estado: 'ACTIVO'
-                }
-            }
-        }
-
         type SocioWithSubs = {
             id: string
             codigo: string
@@ -217,39 +213,44 @@ export async function validateKioskAccess(codigo: string, mode: 'ENTRADA' | 'SAL
             }[]
         }
 
-        // 1. Try to find by current codigo first
-        let socio: SocioWithSubs | null = await prisma.socio.findUnique({
-            where: { codigo: cleanCodigo },
-            select: {
-                id: true, codigo: true, nombres: true, apellidos: true, fotoUrl: true,
-                suscripciones: {
-                    orderBy: { fechaFin: 'desc' },
-                    take: 1,
-                    select: { fechaFin: true, fechaInicio: true, estado: true, meses: true }
-                }
-            }
-        })
-
-        // 2. If not found, check if it's a historic code (old printed QR codes still in circulation)
-        if (!socio) {
-            const historial = await prisma.codigoHistorial.findFirst({
-                where: { codigo: cleanCodigo },
+        // Consultar en paralelo si es personal activo o socio (por código actual o histórico)
+        const [personal, socio]: [any, SocioWithSubs | null] = await Promise.all([
+            prisma.personal.findUnique({
+                where: { codigo: cleanCodigo, activo: true }
+            }),
+            prisma.socio.findFirst({
+                where: {
+                    OR: [
+                        { codigo: cleanCodigo },
+                        { historialCodigos: { some: { codigo: cleanCodigo } } }
+                    ]
+                },
                 select: {
-                    socio: {
-                        select: {
-                            id: true, codigo: true, nombres: true, apellidos: true, fotoUrl: true,
-                            suscripciones: {
-                                orderBy: { fechaFin: 'desc' },
-                                take: 1,
-                                select: { fechaFin: true, fechaInicio: true, estado: true, meses: true }
-                            }
-                        }
+                    id: true,
+                    codigo: true,
+                    nombres: true,
+                    apellidos: true,
+                    fotoUrl: true,
+                    suscripciones: {
+                        orderBy: { fechaFin: 'desc' },
+                        take: 1,
+                        select: { fechaFin: true, fechaInicio: true, estado: true, meses: true }
                     }
                 }
             })
-            if (historial?.socio) {
-                socio = historial.socio
-                console.log(`[KIOSCO] Código histórico "${cleanCodigo}" resuelto al socio "${socio.codigo}"`)
+        ])
+
+        if (personal) {
+            console.log(`[KIOSCO] Personal detectado: ${personal.nombres} ${personal.apellidos} (${personal.codigo})`);
+            return {
+                success: true,
+                message: 'PERSONAL_REDIRECT',
+                tipoAcceso: 'ENTRADA',
+                socio: {
+                    nombres: personal.nombres,
+                    apellidos: personal.apellidos,
+                    estado: 'ACTIVO'
+                }
             }
         }
 
