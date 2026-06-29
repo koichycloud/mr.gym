@@ -42,7 +42,8 @@ export async function getAsistenciasHoy() {
                         codigo: true,
                         nombres: true,
                         apellidos: true,
-                        sexo: true
+                        sexo: true,
+                        fotoUrl: true
                     }
                 }
             },
@@ -78,7 +79,8 @@ export async function getAsistenciasPorFecha(fecha: Date) {
                         codigo: true,
                         nombres: true,
                         apellidos: true,
-                        sexo: true
+                        sexo: true,
+                        fotoUrl: true
                     }
                 }
             },

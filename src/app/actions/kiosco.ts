@@ -265,6 +265,17 @@ export async function validateKioskAccess(codigo: string, mode: 'ENTRADA' | 'SAL
         const suscripcion = socio.suscripciones[0]
 
         if (!suscripcion) {
+            try {
+                await prisma.asistencia.create({
+                    data: {
+                        socioId: socio.id,
+                        tipo: 'ENTRADA'
+                    }
+                })
+            } catch (err) {
+                console.error('Error registrando asistencia sin suscripción:', err)
+            }
+
             return {
                 success: false,
                 message: 'Sin suscripción',
@@ -290,6 +301,17 @@ export async function validateKioskAccess(codigo: string, mode: 'ENTRADA' | 'SAL
         }
 
         if (diffDays < 0) {
+            try {
+                await prisma.asistencia.create({
+                    data: {
+                        socioId: socio.id,
+                        tipo: 'ENTRADA'
+                    }
+                })
+            } catch (err) {
+                console.error('Error registrando asistencia de socio vencido:', err)
+            }
+
             return {
                 success: false,
                 message: 'Suscripción Vencida',
