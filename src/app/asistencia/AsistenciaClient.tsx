@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { getAsistenciasPorFecha } from '../actions/asistencia'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { CalendarDays, Clock, Users, TrendingUp, BarChart3 } from 'lucide-react'
+import { CalendarDays, Clock, Users, TrendingUp, BarChart3, XCircle } from 'lucide-react'
 import {
     BarChart,
     Bar,
@@ -57,6 +57,7 @@ const COLORES_BARRAS = [
 export default function AsistenciaClient({ asistenciasIniciales, statsIniciales }: Props) {
     const [asistencias, setAsistencias] = useState<Asistencia[]>(asistenciasIniciales)
     const [stats] = useState<Stats>(statsIniciales)
+    const [viewingPhoto, setViewingPhoto] = useState<{ url: string; name: string } | null>(null)
     const [fechaSeleccionada, setFechaSeleccionada] = useState(
         format(new Date(), 'yyyy-MM-dd')
     )
@@ -293,7 +294,10 @@ export default function AsistenciaClient({ asistenciasIniciales, statsIniciales 
                                                  <td className="font-mono">{a.socio.codigo}</td>
                                                  <td>
                                                      <div className="flex items-center gap-3">
-                                                         <div className="avatar">
+                                                         <div 
+                                                             className={`avatar ${a.socio.fotoUrl ? 'cursor-pointer hover:scale-105 transition-transform' : ''}`}
+                                                             onClick={() => a.socio.fotoUrl && setViewingPhoto({ url: a.socio.fotoUrl, name: `${a.socio.nombres} ${a.socio.apellidos}` })}
+                                                         >
                                                              <div className="mask mask-squircle w-10 h-10 bg-base-200">
                                                                  {a.socio.fotoUrl ? (
                                                                      <img src={a.socio.fotoUrl} alt={a.socio.nombres || ''} />
@@ -332,7 +336,10 @@ export default function AsistenciaClient({ asistenciasIniciales, statsIniciales 
                                          <div className="text-xs font-mono opacity-40 w-6 text-center shrink-0">
                                              {asistencias.length - index}
                                          </div>
-                                         <div className="avatar shrink-0">
+                                         <div 
+                                             className={`avatar shrink-0 ${a.socio.fotoUrl ? 'cursor-pointer hover:scale-105 transition-transform' : ''}`}
+                                             onClick={() => a.socio.fotoUrl && setViewingPhoto({ url: a.socio.fotoUrl, name: `${a.socio.nombres} ${a.socio.apellidos}` })}
+                                         >
                                              <div className="w-10 h-10 rounded-full bg-base-200">
                                                  {a.socio.fotoUrl ? (
                                                      <img src={a.socio.fotoUrl} alt={a.socio.nombres || ''} />
@@ -358,7 +365,28 @@ export default function AsistenciaClient({ asistenciasIniciales, statsIniciales 
                     )}
                 </div>
             </div>
+
+            {/* Photo Zoom Modal */}
+            {viewingPhoto && (
+                <div className="modal modal-open z-[9999]" onClick={() => setViewingPhoto(null)}>
+                    <div className="modal-box p-0 bg-transparent shadow-none max-w-4xl w-auto overflow-visible relative" onClick={e => e.stopPropagation()}>
+                        <button
+                            className="btn btn-circle btn-sm absolute -top-10 right-0 md:-right-10 bg-base-100 border-none shadow-lg"
+                            onClick={() => setViewingPhoto(null)}
+                        >
+                            <XCircle size={24} />
+                        </button>
+                        <img
+                            src={viewingPhoto.url}
+                            alt="Foto ampliada"
+                            className="max-h-[85vh] w-auto mx-auto rounded-2xl shadow-2xl border-4 border-white/10 ring-1 ring-white/20"
+                        />
+                        <div className="text-center mt-4 text-white font-bold text-lg drop-shadow-lg">
+                            {viewingPhoto.name}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
-
