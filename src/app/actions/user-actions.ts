@@ -32,7 +32,7 @@ export async function getUsers() {
 
 export async function createUser(data: z.infer<typeof userSchema>) {
     try {
-        await requireAuth() // 🔒 Protected
+        await requireAdmin() // 🔒 Solo ADMIN/SUPERADMIN
 
         const validation = userSchema.safeParse(data)
         if (!validation.success) {
@@ -78,10 +78,10 @@ export async function createUser(data: z.infer<typeof userSchema>) {
 
 export async function updateUserPassword(userId: string, newPassword: string) {
     try {
-        await requireAuth() // 🔒 Protected
+        await requireAdmin() // 🔒 Solo ADMIN/SUPERADMIN
 
-        if (!newPassword || newPassword.length < 6) {
-            return { success: false, error: "La contraseña debe tener al menos 6 caracteres." }
+        if (!newPassword || newPassword.length < 8) {
+            return { success: false, error: "La contraseña debe tener al menos 8 caracteres." }
         }
 
         const hashedPassword = await bcrypt.hash(newPassword, 10)
@@ -137,8 +137,12 @@ export async function updateUser(userId: string, data: z.infer<typeof userSchema
 
 export async function deleteUser(userId: string) {
     try {
-        await requireAdmin() // 🔒 Admin Only
-        
+        const session = await requireAdmin() // 🔒 Solo ADMIN/SUPERADMIN
+
+        // Prevenir auto-eliminación
+        if (session.user.id === userId) {
+            return { success: false, error: "No puedes eliminar tu propia cuenta." }
+        }
         await prisma.user.delete({
             where: { id: userId }
         })
