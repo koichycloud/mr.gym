@@ -334,6 +334,7 @@ export async function updateSocio(id: string, data: z.infer<typeof socioSchema>)
             tipoDocumento: z.string(),
             numeroDocumento: z.string(),
             fechaNacimiento: z.coerce.date(),
+            isCorrection: z.boolean().optional(),
         })
 
         const validation = updateSchema.safeParse(data)
@@ -341,7 +342,7 @@ export async function updateSocio(id: string, data: z.infer<typeof socioSchema>)
             return { success: false, error: validation.error.issues[0].message }
         }
 
-        const { suscripcion, ...socioData } = validation.data
+        const { suscripcion, isCorrection, ...socioData } = validation.data
         const formattedCode = socioData.codigo.padStart(6, '0')
 
         // We need to fetch the existing socio to compare the old code and see if
@@ -370,9 +371,10 @@ export async function updateSocio(id: string, data: z.infer<typeof socioSchema>)
         }
 
         // If the code is modified, we must ALWAYS save the old code to history
-        // independently of whether a new subscription is being created or not.
+        // independently of whether a new subscription is being created or not,
+        // UNLESS it is marked as a correction.
         let historialCreate = undefined
-        if (oldSocio.codigo !== formattedCode) {
+        if (oldSocio.codigo !== formattedCode && !isCorrection) {
             historialCreate = {
                 create: [{
                     codigo: oldSocio.codigo,

@@ -39,6 +39,7 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
     // If new (no initialData or empty id), we start locked.
     const [dniVerified, setDniVerified] = useState(!!initialData?.id)
     const [isChecking, setIsChecking] = useState(false)
+    const [isCorrection, setIsCorrection] = useState(false)
 
     const [formData, setFormData] = useState({
         codigo: initialData?.codigo || '',
@@ -76,6 +77,13 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
             setPlanes(data)
         })
     }, [])
+
+    // Reset correction checkbox if code goes back to initial
+    useEffect(() => {
+        if (initialData?.codigo && formData.codigo === initialData.codigo) {
+            setIsCorrection(false)
+        }
+    }, [formData.codigo, initialData])
 
     const selectedPlan = planes.find(p => p.id === selectedPlanId)
 
@@ -230,6 +238,7 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
         try {
             const payload = {
                 ...formData,
+                isCorrection,
                 fechaNacimiento: new Date(formData.fechaNacimiento),
                 ...(includeSubscription ? {
                     suscripcion: {
@@ -297,15 +306,22 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
                                     onBlur={handleCodeBlur}
                                     className="input input-bordered w-full"
                                     required
-                                    disabled={!dniVerified && !initialData?.id} // Allow editing code if verifying? No, user requested lock.
-                                // Actually user said "subsequent boxes". Code is usually auto-generated or manual. 
-                                // Let's keep code editable or at least visible. 
-                                // The request says: "text boxes AFTER document number must be blocked". 
-                                // Code is usually BEFORE or separate. Let's leave code enabled or read-only based on verified.
-                                // If we follow strict "after document number", code is usually first. 
-                                // But typically you verify DNI first before assigning code.
-                                // Let's disable code too if it's new.
+                                    disabled={!dniVerified && !initialData?.id}
                                 />
+                                {!!initialData?.id && formData.codigo.padStart(6, '0') !== (initialData?.codigo || '') && (
+                                    <label className="label cursor-pointer justify-start gap-2 mt-1">
+                                        <input
+                                            type="checkbox"
+                                            name="isCorrection"
+                                            checked={isCorrection}
+                                            onChange={(e) => setIsCorrection(e.target.checked)}
+                                            className="checkbox checkbox-primary checkbox-sm"
+                                        />
+                                        <span className="label-text text-xs text-error font-medium">
+                                            Es una corrección (no guardar "{initialData?.codigo}" en historial)
+                                        </span>
+                                    </label>
+                                )}
                             </div>
 
                             <div className="form-control">
