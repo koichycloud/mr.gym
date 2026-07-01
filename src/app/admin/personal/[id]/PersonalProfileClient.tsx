@@ -140,6 +140,8 @@ interface Personal {
   horasObjetivo: number;
   activo: boolean;
   fotoUrl?: string | null;
+  horaEntradaManana?: string | null;
+  horaEntradaTarde?: string | null;
   consumos?: {
     id: string;
     personalId: string;
@@ -428,6 +430,75 @@ export default function PersonalProfileClient({
     ? Math.min(Math.round((totalHoursCycle / personal.horasObjetivo) * 100), 100) 
     : 0;
 
+  // Tardiness Calculations helper
+  const parseTimeToMinutes = (timeStr: string): number => {
+    const [h, m] = timeStr.split(":").map(Number);
+    return h * 60 + m;
+  };
+
+  const getPeruTimeMinutes = (dateVal: Date | string): number => {
+    const d = new Date(dateVal);
+    const PERU_OFFSET_MS = 5 * 60 * 60 * 1000;
+    const peruDate = new Date(d.getTime() - PERU_OFFSET_MS);
+    return peruDate.getUTCHours() * 60 + peruDate.getUTCMinutes();
+  };
+
+  const getLateness = (a: Asistencia) => {
+    let manana = 0;
+    let tarde = 0;
+
+    if (a.horaEntrada && personal.horaEntradaManana) {
+      const entryMin = getPeruTimeMinutes(a.horaEntrada);
+      const schedMin = parseTimeToMinutes(personal.horaEntradaManana);
+      if (entryMin > schedMin) {
+        manana = entryMin - schedMin;
+      }
+    }
+
+    if (a.horaEntradaAlmuerzo && personal.horaEntradaTarde) {
+      const entryMin = getPeruTimeMinutes(a.horaEntradaAlmuerzo);
+      const schedMin = parseTimeToMinutes(personal.horaEntradaTarde);
+      if (entryMin > schedMin) {
+        tarde = entryMin - schedMin;
+      }
+    }
+
+    return { manana, tarde, total: manana + tarde };
+  };
+
+  // Group lateness by periods
+  let latenessToday = 0;
+  let latenessWeek = 0;
+  let latenessMonth = 0;
+  let latenessTotal = 0;
+
+  const todayMidnight = new Date();
+  todayMidnight.setHours(0, 0, 0, 0);
+
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  oneWeekAgo.setHours(0, 0, 0, 0);
+
+  const oneMonthAgo = new Date();
+  oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+  oneMonthAgo.setHours(0, 0, 0, 0);
+
+  asistencias.forEach(a => {
+    const late = getLateness(a);
+    const asistDate = new Date(a.fecha);
+    
+    latenessTotal += late.total;
+    if (asistDate >= todayMidnight) {
+      latenessToday += late.total;
+    }
+    if (asistDate >= oneWeekAgo) {
+      latenessWeek += late.total;
+    }
+    if (asistDate >= oneMonthAgo) {
+      latenessMonth += late.total;
+    }
+  });
+
   // Open modal for Adding
   const handleOpenAddModal = () => {
     setIsEditing(false);
@@ -566,9 +637,17 @@ export default function PersonalProfileClient({
                 <span className="text-zinc-400 flex items-center gap-2"><DollarSign className="w-4 h-4 text-zinc-500" /> Monto Pago</span>
                 <span className="text-yellow-500 font-bold">S/ {personal.montoPago.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between items-center py-2">
+              <div className="flex justify-between items-center py-2 border-b border-zinc-800/40">
                 <span className="text-zinc-400 flex items-center gap-2"><Percent className="w-4 h-4 text-zinc-500" /> Horas Obj.</span>
                 <span className="text-white font-bold">{personal.horasObjetivo} hrs/ciclo</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-zinc-800/40">
+                <span className="text-zinc-400 flex items-center gap-2"><Clock className="w-4 h-4 text-zinc-500" /> Entrada Mañana</span>
+                <span className="text-white font-semibold">{personal.horaEntradaManana || "No asignada"}</span>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-zinc-400 flex items-center gap-2"><Clock className="w-4 h-4 text-zinc-500" /> Entrada Tarde</span>
+                <span className="text-white font-semibold">{personal.horaEntradaTarde || "No asignada"}</span>
               </div>
             </div>
           </div>
@@ -656,6 +735,47 @@ export default function PersonalProfileClient({
             </div>
           </div>
 
+          {/* Card: Tardiness summary (Llegadas Tarde) */}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-red-500" />
+              Control de Tardanzas (Minutos de Retraso)
+            </h3>
+            
+            {(!personal.horaEntradaManana && !personal.horaEntradaTarde) ? (
+              <p className="text-zinc-500 text-sm italic">
+                Para calcular tardanzas, configura los horarios de entrada del personal.
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-800 text-center">
+                  <p className="text-zinc-400 text-xs uppercase font-bold tracking-wide">Hoy</p>
+                  <p className={`text-2xl font-black mt-2 ${latenessToday > 0 ? "text-red-500" : "text-green-500"}`}>
+                    {latenessToday} min
+                  </p>
+                </div>
+                <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-800 text-center">
+                  <p className="text-zinc-400 text-xs uppercase font-bold tracking-wide">Esta Semana</p>
+                  <p className={`text-2xl font-black mt-2 ${latenessWeek > 0 ? "text-red-500" : "text-green-500"}`}>
+                    {latenessWeek} min
+                  </p>
+                </div>
+                <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-800 text-center">
+                  <p className="text-zinc-400 text-xs uppercase font-bold tracking-wide">Este Mes</p>
+                  <p className={`text-2xl font-black mt-2 ${latenessMonth > 0 ? "text-red-500" : "text-green-500"}`}>
+                    {latenessMonth} min
+                  </p>
+                </div>
+                <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-800 text-center">
+                  <p className="text-zinc-400 text-xs uppercase font-bold tracking-wide">Historial Total</p>
+                  <p className={`text-2xl font-black mt-2 ${latenessTotal > 0 ? "text-red-500" : "text-green-500"}`}>
+                    {latenessTotal} min
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Card 2: Attendance records table */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden">
             <div className="p-6 border-b border-zinc-800 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 bg-zinc-950">
@@ -728,28 +848,40 @@ export default function PersonalProfileClient({
                         <td className="px-6 py-4">
                           <span className="flex items-center gap-1.5 text-zinc-200">
                             <Clock className="w-3.5 h-3.5 text-zinc-500" />
-                            {formatLocalTime(a.horaEntrada)}
+                            {a.horaEntrada ? formatLocalTime(a.horaEntrada) : "00:00"}
+                            {(() => {
+                              const late = getLateness(a);
+                              return late.manana > 0 ? (
+                                <span className="bg-red-500/10 border border-red-500/20 text-red-500 px-1.5 py-0.5 rounded text-[10px] font-bold ml-1">
+                                  +{late.manana}m
+                                </span>
+                              ) : null;
+                            })()}
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          {a.horaSalidaAlmuerzo || a.horaEntradaAlmuerzo ? (
-                            <span className="flex items-center gap-1 text-zinc-300">
-                              <span className="bg-zinc-950 px-2 py-0.5 border border-zinc-800 text-zinc-400 rounded text-xs">
-                                {formatLocalTime(a.horaSalidaAlmuerzo)}
-                              </span>
-                              <span className="text-zinc-600">→</span>
-                              <span className="bg-zinc-950 px-2 py-0.5 border border-zinc-800 text-zinc-400 rounded text-xs">
-                                {formatLocalTime(a.horaEntradaAlmuerzo)}
-                              </span>
+                          <span className="flex items-center gap-1 text-zinc-300">
+                            <span className="bg-zinc-950 px-2 py-0.5 border border-zinc-800 text-zinc-400 rounded text-xs">
+                              {a.horaSalidaAlmuerzo ? formatLocalTime(a.horaSalidaAlmuerzo) : "00:00"}
                             </span>
-                          ) : (
-                            <span className="text-zinc-600">-</span>
-                          )}
+                            <span className="text-zinc-600">→</span>
+                            <span className="bg-zinc-950 px-2 py-0.5 border border-zinc-800 text-zinc-400 rounded text-xs flex items-center">
+                              {a.horaEntradaAlmuerzo ? formatLocalTime(a.horaEntradaAlmuerzo) : "00:00"}
+                              {(() => {
+                                const late = getLateness(a);
+                                return late.tarde > 0 ? (
+                                  <span className="bg-red-500/10 border border-red-500/20 text-red-500 px-1.5 py-0.5 rounded text-[10px] font-bold ml-1">
+                                    +{late.tarde}m
+                                  </span>
+                                ) : null;
+                              })()}
+                            </span>
+                          </span>
                         </td>
                         <td className="px-6 py-4">
                           <span className="flex items-center gap-1.5 text-zinc-200">
                             <Clock className="w-3.5 h-3.5 text-zinc-500" />
-                            {formatLocalTime(a.horaSalida)}
+                            {a.horaSalida ? formatLocalTime(a.horaSalida) : "00:00"}
                           </span>
                         </td>
                         <td className="px-6 py-4 text-center">

@@ -169,6 +169,9 @@ model Personal {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  horaEntradaManana String? // e.g. "08:00"
+  horaEntradaTarde  String? // e.g. "14:00"
+
   asistencias     AsistenciaPersonal[]
   consumos        ConsumoPersonal[]
   adelantos       AdelantoPersonal[]

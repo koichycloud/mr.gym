@@ -5,16 +5,33 @@ import { revalidatePath } from "next/cache";
 import { getLimaStartOfDay, getLimaEndOfDay } from "@/lib/date-utils";
 
 // Calcular las horas netas trabajadas
+// Calcular las horas netas trabajadas
 function calculateNetHours(
   entrada?: Date | null, 
   salida?: Date | null, 
   salidaAlmuerzo?: Date | null, 
   entradaAlmuerzo?: Date | null
 ): number | null {
-  if (!entrada || !salida) return null;
+  // Caso 1: Solo turno tarde (no vino en la mañana)
+  if (!entrada) {
+    if (entradaAlmuerzo && salida) {
+      const totalSegment = salida.getTime() - entradaAlmuerzo.getTime();
+      return (totalSegment > 0 ? totalSegment : 0) / (1000 * 60 * 60);
+    }
+    return null;
+  }
 
+  // Caso 2: Solo turno mañana (vino en la mañana pero no en la tarde)
+  if (entrada && !salida) {
+    if (salidaAlmuerzo) {
+      const totalSegment = salidaAlmuerzo.getTime() - entrada.getTime();
+      return (totalSegment > 0 ? totalSegment : 0) / (1000 * 60 * 60);
+    }
+    return null;
+  }
+
+  // Caso 3: Ambos turnos (mañana y tarde)
   let totalMs = 0;
-
   if (salidaAlmuerzo && entradaAlmuerzo) {
     const firstSegment = salidaAlmuerzo.getTime() - entrada.getTime();
     const secondSegment = salida.getTime() - entradaAlmuerzo.getTime();
@@ -68,27 +85,9 @@ export async function getTodayAsistencia(personalId: string) {
 // Marcar un evento de asistencia (Entrada, Salida Almuerzo, Entrada Almuerzo, Salida)
 export async function markAsistencia(personalId: string, tipo: 'ENTRADA' | 'SALIDA_ALMUERZO' | 'ENTRADA_ALMUERZO' | 'SALIDA') {
   try {
-    let asistencia;
-    if (tipo === 'ENTRADA') {
-      const todayRes = await getTodayAsistencia(personalId);
-      if (!todayRes.success || !todayRes.asistencia) return { success: false, error: todayRes.error };
-      asistencia = todayRes.asistencia;
-    } else {
-      // Buscar el registro abierto más reciente para almuerzos o salida final (soporta cruces de fecha/UTC)
-      asistencia = await prisma.asistenciaPersonal.findFirst({
-        where: {
-          personalId,
-          horaEntrada: { not: null },
-          horaSalida: null
-        },
-        orderBy: { fecha: 'desc' }
-      });
-
-      if (!asistencia) {
-        return { success: false, error: "Debes marcar entrada primero antes de registrar almuerzo o salida." };
-      }
-    }
-
+    const todayRes = await getTodayAsistencia(personalId);
+    if (!todayRes.success || !todayRes.asistencia) return { success: false, error: todayRes.error };
+    const asistencia = todayRes.asistencia;
     const asistenciaId = asistencia.id;
     const now = new Date();
     
@@ -101,27 +100,34 @@ export async function markAsistencia(personalId: string, tipo: 'ENTRADA' | 'SALI
 
     switch (tipo) {
       case 'ENTRADA':
-        if (current.horaEntrada) return { success: false, error: "Ya marcaste tu entrada hoy." };
+        if (current.horaEntrada) return { success: false, error: "Ya marcaste tu Entrada Mañana hoy." };
         updateData.horaEntrada = now;
-        message = "Entrada registrada correctamente.";
+        message = "Entrada Mañana registrada correctamente.";
         break;
       case 'SALIDA_ALMUERZO':
-        if (!current.horaEntrada) return { success: false, error: "Debes marcar entrada primero." };
-        if (current.horaSalidaAlmuerzo) return { success: false, error: "Ya marcaste tu salida a almorzar." };
+        if (!current.horaEntrada) return { success: false, error: "Debes marcar Entrada Mañana primero." };
+        if (current.horaSalidaAlmuerzo) return { success: false, error: "Ya marcaste tu Salida Mañana." };
         updateData.horaSalidaAlmuerzo = now;
-        message = "Salida a almorzar registrada.";
+        updateData.horasTrabajadas = calculateNetHours(
+            current.horaEntrada,
+            current.horaSalida, // keep current exit if any
+            now,
+            current.horaEntradaAlmuerzo
+        );
+        message = "Salida Mañana registrada correctamente.";
         break;
       case 'ENTRADA_ALMUERZO':
-        if (!current.horaSalidaAlmuerzo) return { success: false, error: "Debes marcar salida a almorzar primero." };
-        if (current.horaEntradaAlmuerzo) return { success: false, error: "Ya marcaste tu retorno de almuerzo." };
+        if (current.horaEntradaAlmuerzo) return { success: false, error: "Ya marcaste tu Entrada Tarde." };
         updateData.horaEntradaAlmuerzo = now;
-        message = "Retorno de almuerzo registrado.";
+        message = "Entrada Tarde registrada correctamente.";
         break;
       case 'SALIDA':
-        if (!current.horaEntrada) return { success: false, error: "Debes marcar entrada primero." };
-        if (current.horaSalida) return { success: false, error: "Ya marcaste tu salida final hoy." };
-        if (current.horaSalidaAlmuerzo && !current.horaEntradaAlmuerzo) {
-           return { success: false, error: "Debes marcar tu retorno de almuerzo antes de salir." };
+        if (!current.horaEntrada && !current.horaEntradaAlmuerzo) {
+          return { success: false, error: "Debes marcar Entrada Mañana o Entrada Tarde primero." };
+        }
+        if (current.horaSalida) return { success: false, error: "Ya marcaste tu Salida Tarde hoy." };
+        if (current.horaEntrada && current.horaSalidaAlmuerzo && !current.horaEntradaAlmuerzo) {
+           return { success: false, error: "Debes marcar tu Entrada Tarde antes de marcar tu Salida Tarde." };
         }
         updateData.horaSalida = now;
         updateData.horasTrabajadas = calculateNetHours(
@@ -130,7 +136,7 @@ export async function markAsistencia(personalId: string, tipo: 'ENTRADA' | 'SALI
             current.horaSalidaAlmuerzo,
             current.horaEntradaAlmuerzo
         );
-        message = "Salida final registrada. ¡Buen trabajo!";
+        message = "Salida Tarde registrada correctamente. ¡Buen trabajo!";
         break;
     }
 

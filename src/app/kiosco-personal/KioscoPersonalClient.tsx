@@ -606,8 +606,9 @@ function KioscoPersonalContent() {
                   <Banknote className="w-8 h-8 text-yellow-500" />
                   Solicitar Adelanto
                 </h3>
-                <form onSubmit={handleAdelantoSubmit} className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl max-w-md mx-auto mt-12">
-                  <div className="mb-6">
+                <form onSubmit={handleAdelantoSubmit} className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl max-w-3xl mx-auto mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Columna Izquierda: Teclado Numérico y Monto */}
+                  <div className="flex flex-col">
                     <label className="block text-zinc-400 mb-2 font-medium">Monto (S/)</label>
                     <input 
                       type="text" 
@@ -615,11 +616,11 @@ function KioscoPersonalContent() {
                       value={adelantoMonto}
                       required
                       placeholder="0.00"
-                      className="w-full bg-zinc-950 border-2 border-zinc-800 text-white text-center text-4xl p-4 rounded-xl focus:border-yellow-500 focus:outline-none transition-colors font-mono"
+                      className="w-full bg-zinc-950 border-2 border-zinc-800 text-white text-center text-4xl p-3 rounded-xl focus:border-yellow-500 focus:outline-none transition-colors font-mono"
                     />
 
                     {/* Teclado Numérico Visual */}
-                    <div className="grid grid-cols-3 gap-3 mt-4 max-w-sm mx-auto">
+                    <div className="grid grid-cols-3 gap-2 mt-4 w-full">
                       {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                         <button
                           key={num}
@@ -627,7 +628,7 @@ function KioscoPersonalContent() {
                           onClick={() => {
                             setAdelantoMonto(prev => prev + num);
                           }}
-                          className="py-4 bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 text-white font-bold text-2xl rounded-xl transition-all cursor-pointer"
+                          className="py-3 bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 text-white font-bold text-xl rounded-xl transition-all cursor-pointer"
                         >
                           {num}
                         </button>
@@ -643,7 +644,7 @@ function KioscoPersonalContent() {
                             });
                           }
                         }}
-                        className="py-4 bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 text-white font-bold text-2xl rounded-xl transition-all cursor-pointer"
+                        className="py-3 bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 text-white font-bold text-xl rounded-xl transition-all cursor-pointer"
                       >
                         .
                       </button>
@@ -652,7 +653,7 @@ function KioscoPersonalContent() {
                         onClick={() => {
                           setAdelantoMonto(prev => prev + '0');
                         }}
-                        className="py-4 bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 text-white font-bold text-2xl rounded-xl transition-all cursor-pointer"
+                        className="py-3 bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 text-white font-bold text-xl rounded-xl transition-all cursor-pointer"
                       >
                         0
                       </button>
@@ -661,28 +662,35 @@ function KioscoPersonalContent() {
                         onClick={() => {
                           setAdelantoMonto(prev => prev.slice(0, -1));
                         }}
-                        className="py-4 bg-red-600/20 border border-red-500/30 hover:bg-red-600/30 active:bg-red-650 text-red-400 font-bold text-2xl rounded-xl transition-all cursor-pointer"
+                        className="py-3 bg-red-600/20 border border-red-500/30 hover:bg-red-600/30 active:bg-red-650 text-red-400 font-bold text-xl rounded-xl transition-all cursor-pointer"
                       >
                         ⌫
                       </button>
                     </div>
                   </div>
-                  <div className="mb-8">
-                    <label className="block text-zinc-400 mb-2 font-medium">Motivo (Opcional)</label>
-                    <input 
-                      type="text" 
-                      value={adelantoMotivo}
-                      onChange={(e) => setAdelantoMotivo(e.target.value)}
-                      placeholder="Ej. Pasajes, Almuerzo..."
-                      className="w-full bg-zinc-950 border-2 border-zinc-800 text-white p-4 rounded-xl focus:border-yellow-500 focus:outline-none transition-colors"
-                    />
+
+                  {/* Columna Derecha: Motivo y Botón de Enviar */}
+                  <div className="flex flex-col justify-between">
+                    <div>
+                      <label className="block text-zinc-400 mb-2 font-medium">Motivo (Opcional)</label>
+                      <textarea 
+                        value={adelantoMotivo}
+                        onChange={(e) => setAdelantoMotivo(e.target.value)}
+                        placeholder="Ej. Pasajes, Almuerzo..."
+                        rows={4}
+                        className="w-full bg-zinc-950 border-2 border-zinc-800 text-white p-3 rounded-xl focus:border-yellow-500 focus:outline-none transition-colors resize-none"
+                      />
+                    </div>
+                    
+                    <div className="mt-6 md:mt-0">
+                      <button type="submit" disabled={actionLoading || !adelantoMonto} className="w-full py-4 text-black bg-yellow-500 hover:bg-yellow-400 rounded-xl font-bold text-lg transition-colors disabled:opacity-50 flex justify-center items-center cursor-pointer">
+                        {actionLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : "Enviar Solicitud"}
+                      </button>
+                      <p className="text-zinc-500 text-sm mt-3 text-center">
+                        La solicitud será enviada al administrador para su aprobación.
+                      </p>
+                    </div>
                   </div>
-                  <button type="submit" disabled={actionLoading || !adelantoMonto} className="w-full py-4 text-black bg-yellow-500 hover:bg-yellow-400 rounded-xl font-bold text-lg transition-colors disabled:opacity-50 flex justify-center items-center cursor-pointer">
-                    {actionLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : "Enviar Solicitud"}
-                  </button>
-                  <p className="text-zinc-500 text-sm mt-4 text-center">
-                    La solicitud será enviada al administrador para su aprobación.
-                  </p>
                 </form>
               </div>
             )}
@@ -702,53 +710,51 @@ function KioscoPersonalContent() {
                 : 'bg-green-500/10 border-green-500 text-green-500 hover:bg-green-500 hover:text-black'}`}
           >
             <LogIn className="w-10 h-10" />
-            <span className="font-bold text-lg uppercase tracking-wide">Entrada</span>
+            <span className="font-bold text-lg uppercase tracking-wide">Entrada Mañana</span>
             {asistencia?.horaEntrada && <span className="text-xs bg-zinc-950 px-3 py-1 rounded-full text-zinc-400">{new Date(asistencia.horaEntrada).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'America/Lima' })}</span>}
           </button>
  
           <button 
-            onClick={() => handleAsistencia('SALIDA')}
-            disabled={actionLoading || !asistencia?.horaEntrada || asistencia?.horaSalida || (asistencia?.horaSalidaAlmuerzo && !asistencia?.horaEntradaAlmuerzo)}
-            className={`p-6 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all border-2 cursor-pointer 
-              ${asistencia?.horaSalida 
-                ? 'bg-zinc-800 border-zinc-700 text-zinc-500' 
-                : (!asistencia?.horaEntrada || (asistencia?.horaSalidaAlmuerzo && !asistencia?.horaEntradaAlmuerzo))
-                  ? 'bg-zinc-900 border-zinc-800 text-zinc-700 cursor-not-allowed'
-                  : 'bg-red-500/10 border-red-500 text-red-500 hover:bg-red-500 hover:text-black'}`}
-          >
-            <LogOut className="w-10 h-10" />
-            <span className="font-bold text-lg uppercase tracking-wide">Salida</span>
-            {asistencia?.horaSalida && <span className="text-xs bg-zinc-950 px-3 py-1 rounded-full text-zinc-400">{new Date(asistencia.horaSalida).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'America/Lima' })}</span>}
-          </button>
- 
-          <button 
             onClick={() => handleAsistencia('SALIDA_ALMUERZO')}
-            disabled={actionLoading || !asistencia?.horaEntrada || asistencia?.horaSalidaAlmuerzo || asistencia?.horaSalida}
+            disabled={actionLoading || !asistencia?.horaEntrada || asistencia?.horaSalidaAlmuerzo}
             className={`p-6 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all border-2 cursor-pointer 
               ${asistencia?.horaSalidaAlmuerzo 
                 ? 'bg-zinc-800 border-zinc-700 text-zinc-500' 
-                : (!asistencia?.horaEntrada || asistencia?.horaSalida)
+                : (!asistencia?.horaEntrada)
                   ? 'bg-zinc-900 border-zinc-800 text-zinc-700 cursor-not-allowed'
                   : 'bg-orange-500/10 border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-black'}`}
           >
             <Coffee className="w-10 h-10" />
-            <span className="font-bold text-lg uppercase tracking-wide text-center">Salida<br/>Almuerzo</span>
+            <span className="font-bold text-lg uppercase tracking-wide text-center">Salida Mañana</span>
             {asistencia?.horaSalidaAlmuerzo && <span className="text-xs bg-zinc-950 px-3 py-1 rounded-full text-zinc-400">{new Date(asistencia.horaSalidaAlmuerzo).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'America/Lima' })}</span>}
           </button>
- 
+
           <button 
             onClick={() => handleAsistencia('ENTRADA_ALMUERZO')}
-            disabled={actionLoading || !asistencia?.horaSalidaAlmuerzo || asistencia?.horaEntradaAlmuerzo || asistencia?.horaSalida}
+            disabled={actionLoading || asistencia?.horaEntradaAlmuerzo}
             className={`p-6 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all border-2 cursor-pointer 
               ${asistencia?.horaEntradaAlmuerzo 
                 ? 'bg-zinc-800 border-zinc-700 text-zinc-500' 
-                : (!asistencia?.horaSalidaAlmuerzo || asistencia?.horaSalida)
-                  ? 'bg-zinc-900 border-zinc-800 text-zinc-700 cursor-not-allowed'
-                  : 'bg-blue-500/10 border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-black'}`}
+                : 'bg-blue-500/10 border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-black'}`}
           >
             <LogIn className="w-10 h-10" />
-            <span className="font-bold text-lg uppercase tracking-wide text-center">Retorno<br/>Almuerzo</span>
+            <span className="font-bold text-lg uppercase tracking-wide text-center">Entrada Tarde</span>
             {asistencia?.horaEntradaAlmuerzo && <span className="text-xs bg-zinc-950 px-3 py-1 rounded-full text-zinc-400">{new Date(asistencia.horaEntradaAlmuerzo).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'America/Lima' })}</span>}
+          </button>
+
+          <button 
+            onClick={() => handleAsistencia('SALIDA')}
+            disabled={actionLoading || !asistencia?.horaEntradaAlmuerzo || asistencia?.horaSalida}
+            className={`p-6 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all border-2 cursor-pointer 
+              ${asistencia?.horaSalida 
+                ? 'bg-zinc-800 border-zinc-700 text-zinc-500' 
+                : (!asistencia?.horaEntradaAlmuerzo)
+                  ? 'bg-zinc-900 border-zinc-800 text-zinc-700 cursor-not-allowed'
+                  : 'bg-red-500/10 border-red-500 text-red-500 hover:bg-red-500 hover:text-black'}`}
+          >
+            <LogOut className="w-10 h-10" />
+            <span className="font-bold text-lg uppercase tracking-wide text-center">Salida Tarde</span>
+            {asistencia?.horaSalida && <span className="text-xs bg-zinc-950 px-3 py-1 rounded-full text-zinc-400">{new Date(asistencia.horaSalida).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'America/Lima' })}</span>}
           </button>
         </div>
 

@@ -119,6 +119,8 @@ export default function PersonalClient({ initialData }: { initialData: any[] }) 
     codigo: string;
     tipoDocumento: string;
     fotoUrl: string | null;
+    horaEntradaManana: string;
+    horaEntradaTarde: string;
   }>({
     nombres: "",
     apellidos: "",
@@ -131,7 +133,9 @@ export default function PersonalClient({ initialData }: { initialData: any[] }) 
     activo: true,
     codigo: "",
     tipoDocumento: "DNI",
-    fotoUrl: null
+    fotoUrl: null,
+    horaEntradaManana: "",
+    horaEntradaTarde: ""
   });
 
   const handleOpenModal = (p?: any) => {
@@ -149,7 +153,9 @@ export default function PersonalClient({ initialData }: { initialData: any[] }) 
         activo: p.activo,
         codigo: p.codigo,
         tipoDocumento: p.tipoDocumento || "DNI",
-        fotoUrl: p.fotoUrl || null
+        fotoUrl: p.fotoUrl || null,
+        horaEntradaManana: p.horaEntradaManana || "",
+        horaEntradaTarde: p.horaEntradaTarde || ""
       });
     } else {
       setEditingId(null);
@@ -165,7 +171,9 @@ export default function PersonalClient({ initialData }: { initialData: any[] }) 
         activo: true,
         codigo: "",
         tipoDocumento: "DNI",
-        fotoUrl: null
+        fotoUrl: null,
+        horaEntradaManana: "",
+        horaEntradaTarde: ""
       });
     }
     setShowModal(true);
@@ -178,7 +186,9 @@ export default function PersonalClient({ initialData }: { initialData: any[] }) 
     const dataToSubmit = {
       ...formData,
       montoPago: Number(formData.montoPago),
-      horasObjetivo: Number(formData.horasObjetivo)
+      horasObjetivo: Number(formData.horasObjetivo),
+      horaEntradaManana: formData.horaEntradaManana || null,
+      horaEntradaTarde: formData.horaEntradaTarde || null
     };
 
     let res;
@@ -404,6 +414,16 @@ export default function PersonalClient({ initialData }: { initialData: any[] }) 
                   <label className="block text-sm font-medium text-zinc-400 mb-1">Horas Objetivo (al {formData.metodoPago.toLowerCase()})</label>
                   <input required type="number" step="1" value={formData.horasObjetivo} onChange={e => setFormData({...formData, horasObjetivo: parseFloat(e.target.value)})} className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white focus:border-yellow-500 focus:outline-none" inputMode="numeric" />
                   <p className="text-xs text-zinc-500 mt-1">Horas que debe cumplir en su ciclo de pago.</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-400 mb-1">Horario Entrada Mañana</label>
+                  <input type="time" value={formData.horaEntradaManana} onChange={e => setFormData({...formData, horaEntradaManana: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white focus:border-yellow-500 focus:outline-none" />
+                  <p className="text-xs text-zinc-500 mt-1">Opcional. Hora de entrada de la mañana.</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-400 mb-1">Horario Entrada Tarde</label>
+                  <input type="time" value={formData.horaEntradaTarde} onChange={e => setFormData({...formData, horaEntradaTarde: e.target.value})} className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white focus:border-yellow-500 focus:outline-none" />
+                  <p className="text-xs text-zinc-500 mt-1">Opcional. Hora de entrada de la tarde.</p>
                 </div>
 
                 {editingId && (
