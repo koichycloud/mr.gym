@@ -734,17 +734,27 @@ function KioscoPersonalContent() {
  
           <button 
             onClick={() => handleAsistencia('SALIDA_ALMUERZO')}
-            disabled={actionLoading || !asistencia?.horaEntrada || asistencia?.horaSalidaAlmuerzo}
-            className={`p-6 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all border-2 cursor-pointer 
+            disabled={actionLoading || !asistencia?.horaEntrada || asistencia?.horaSalidaAlmuerzo || isAfternoon}
+            className={`p-6 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all border-2 
               ${asistencia?.horaSalidaAlmuerzo 
-                ? 'bg-zinc-800 border-zinc-700 text-zinc-500' 
+                ? 'bg-zinc-800 border-zinc-700 text-zinc-500 cursor-not-allowed' 
                 : (!asistencia?.horaEntrada)
                   ? 'bg-zinc-900 border-zinc-800 text-zinc-700 cursor-not-allowed'
-                  : 'bg-orange-500/10 border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-black'}`}
+                  : isAfternoon
+                    ? 'bg-zinc-900 border-zinc-850/60 text-zinc-600 border-zinc-800/80 cursor-not-allowed'
+                    : 'bg-orange-500/10 border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-black cursor-pointer'}`}
           >
             <Coffee className="w-10 h-10" />
             <span className="font-bold text-lg uppercase tracking-wide text-center">Salida Mañana</span>
-            {asistencia?.horaSalidaAlmuerzo && <span className="text-xs bg-zinc-950 px-3 py-1 rounded-full text-zinc-400">{new Date(asistencia.horaSalidaAlmuerzo).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'America/Lima' })}</span>}
+            {asistencia?.horaSalidaAlmuerzo ? (
+              <span className="text-xs bg-zinc-950 px-3 py-1 rounded-full text-zinc-400">
+                {new Date(asistencia.horaSalidaAlmuerzo).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'America/Lima' })}
+              </span>
+            ) : isAfternoon ? (
+              <span className="text-xs bg-red-950/30 border border-red-900/30 px-3 py-1 rounded-full text-red-500 font-bold uppercase tracking-wider">
+                Bloqueado (2pm+)
+              </span>
+            ) : null}
           </button>
 
           <button 
