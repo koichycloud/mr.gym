@@ -34,16 +34,16 @@ function calculateNetHours(
   let totalMs = 0;
   if (salidaAlmuerzo && entradaAlmuerzo) {
     const firstSegment = salidaAlmuerzo.getTime() - entrada.getTime();
-    const secondSegment = salida.getTime() - entradaAlmuerzo.getTime();
+    const secondSegment = salida ? (salida.getTime() - entradaAlmuerzo.getTime()) : 0;
     totalMs = (firstSegment > 0 ? firstSegment : 0) + (secondSegment > 0 ? secondSegment : 0);
   } else if (salidaAlmuerzo && !entradaAlmuerzo) {
     const firstSegment = salidaAlmuerzo.getTime() - entrada.getTime();
     totalMs = firstSegment > 0 ? firstSegment : 0;
   } else if (!salidaAlmuerzo && entradaAlmuerzo) {
-    const secondSegment = salida.getTime() - entradaAlmuerzo.getTime();
+    const secondSegment = salida ? (salida.getTime() - entradaAlmuerzo.getTime()) : 0;
     totalMs = secondSegment > 0 ? secondSegment : 0;
   } else {
-    const totalSegment = salida.getTime() - entrada.getTime();
+    const totalSegment = salida ? (salida.getTime() - entrada.getTime()) : 0;
     totalMs = totalSegment > 0 ? totalSegment : 0;
   }
 
