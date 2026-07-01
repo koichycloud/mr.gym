@@ -106,7 +106,35 @@ export async function createSocio(data: z.infer<typeof socioSchema>) {
                 }
             }
 
-            if (monto > 0) {
+            // Check if there are mixed payments
+            const { montoEfectivo, montoTransferencia, montoYape, montoPlin } = suscripcion as any
+            const hasMixed = (montoEfectivo && montoEfectivo > 0) || 
+                              (montoTransferencia && montoTransferencia > 0) || 
+                              (montoYape && montoYape > 0) || 
+                              (montoPlin && montoPlin > 0)
+
+            if (hasMixed) {
+                const mixedPayments = [
+                    { metodo: 'EFECTIVO', amount: montoEfectivo },
+                    { metodo: 'TRANSFERENCIA', amount: montoTransferencia },
+                    { metodo: 'YAPE', amount: montoYape },
+                    { metodo: 'PLIN', amount: montoPlin }
+                ]
+                for (const mp of mixedPayments) {
+                    if (mp.amount && mp.amount > 0) {
+                        await prisma.pago.create({
+                            data: {
+                                socioId: socio.id,
+                                suscripcionId: socio.suscripciones[0].id,
+                                monto: mp.amount,
+                                metodoPago: mp.metodo,
+                                concepto: 'SUSCRIPCION',
+                                descripcion: `Suscripción inicial mixta: ${nombrePlan}`
+                            }
+                        })
+                    }
+                }
+            } else if (monto > 0) {
                 await prisma.pago.create({
                     data: {
                         socioId: socio.id,

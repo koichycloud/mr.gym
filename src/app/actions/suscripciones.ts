@@ -88,7 +88,15 @@ export async function getExpiredSubscriptions() {
 
 export async function createSubscription(
     data: z.infer<typeof suscripcionSchema>,
-    pagoInfo?: { monto: number; metodoPago: string; nombrePlan?: string }
+    pagoInfo?: { 
+        monto: number; 
+        metodoPago: string; 
+        nombrePlan?: string;
+        montoEfectivo?: number;
+        montoTransferencia?: number;
+        montoYape?: number;
+        montoPlin?: number;
+    }
 ) {
     try {
         await requireAuth() // 🔒 Protected
@@ -139,20 +147,53 @@ export async function createSubscription(
         })
 
         // Auto-register payment if payment info provided
-        if (pagoInfo && pagoInfo.monto > 0) {
-            try {
-                await prisma.pago.create({
-                    data: {
-                        socioId: validData.socioId,
-                        suscripcionId: subscription.id,
-                        monto: pagoInfo.monto,
-                        metodoPago: pagoInfo.metodoPago || 'EFECTIVO',
-                        concepto: 'SUSCRIPCION',
-                        descripcion: pagoInfo.nombrePlan ? `Venta: ${pagoInfo.nombrePlan} (${validData.meses} mes/es)` : `Suscripción ${validData.meses} mes(es)`
+        if (pagoInfo) {
+            const { montoEfectivo, montoTransferencia, montoYape, montoPlin } = pagoInfo;
+            const hasMixed = (montoEfectivo && montoEfectivo > 0) || 
+                              (montoTransferencia && montoTransferencia > 0) || 
+                              (montoYape && montoYape > 0) || 
+                              (montoPlin && montoPlin > 0);
+
+            if (hasMixed) {
+                const mixedPayments = [
+                    { metodo: 'EFECTIVO', amount: montoEfectivo },
+                    { metodo: 'TRANSFERENCIA', amount: montoTransferencia },
+                    { metodo: 'YAPE', amount: montoYape },
+                    { metodo: 'PLIN', amount: montoPlin }
+                ];
+                for (const mp of mixedPayments) {
+                    if (mp.amount && mp.amount > 0) {
+                        try {
+                            await prisma.pago.create({
+                                data: {
+                                    socioId: validData.socioId,
+                                    suscripcionId: subscription.id,
+                                    monto: mp.amount,
+                                    metodoPago: mp.metodo,
+                                    concepto: 'SUSCRIPCION',
+                                    descripcion: pagoInfo.nombrePlan ? `Venta Mixta: ${pagoInfo.nombrePlan} (${validData.meses} mes/es)` : `Suscripción Mixta ${validData.meses} mes(es)`
+                                }
+                            });
+                        } catch (pagoError) {
+                            console.error('Error registrando pago automático mixto:', pagoError);
+                        }
                     }
-                })
-            } catch (pagoError) {
-                console.error('Error registrando pago automático:', pagoError)
+                }
+            } else if (pagoInfo.monto > 0) {
+                try {
+                    await prisma.pago.create({
+                        data: {
+                            socioId: validData.socioId,
+                            suscripcionId: subscription.id,
+                            monto: pagoInfo.monto,
+                            metodoPago: pagoInfo.metodoPago || 'EFECTIVO',
+                            concepto: 'SUSCRIPCION',
+                            descripcion: pagoInfo.nombrePlan ? `Venta: ${pagoInfo.nombrePlan} (${validData.meses} mes/es)` : `Suscripción ${validData.meses} mes(es)`
+                        }
+                    })
+                } catch (pagoError) {
+                    console.error('Error registrando pago automático:', pagoError)
+                }
             }
         }
 

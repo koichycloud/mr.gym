@@ -70,6 +70,15 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
     const [fechaFin, setFechaFin] = useState('')
     const [planes, setPlanes] = useState<any[]>([])
     const [selectedPlanId, setSelectedPlanId] = useState<string>('custom')
+    
+    // Mixed Payment State
+    const [isMixedPayment, setIsMixedPayment] = useState(false)
+    const [mixedAmounts, setMixedAmounts] = useState({
+        EFECTIVO: '',
+        TRANSFERENCIA: '',
+        YAPE: '',
+        PLIN: ''
+    })
 
     // Load available plans
     useEffect(() => {
@@ -246,7 +255,13 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
                         planId: selectedPlanId === 'custom' ? undefined : selectedPlanId,
                         monto: selectedPlanId === 'custom' ? Number(subscriptionData.monto) : undefined,
                         fechaInicio: new Date(subscriptionData.fechaInicio),
-                        metodoPago: subscriptionData.metodoPago
+                        metodoPago: subscriptionData.metodoPago,
+                        ...(isMixedPayment ? {
+                            montoEfectivo: Number(mixedAmounts.EFECTIVO) || undefined,
+                            montoTransferencia: Number(mixedAmounts.TRANSFERENCIA) || undefined,
+                            montoYape: Number(mixedAmounts.YAPE) || undefined,
+                            montoPlin: Number(mixedAmounts.PLIN) || undefined
+                        } : {})
                     }
                 } : {})
             }
@@ -576,37 +591,109 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 p-4 bg-success/10 rounded-lg border border-success/20">
-                                        <div className="form-control">
-                                            <label className="label">
-                                                <span className="label-text font-bold text-success flex items-center gap-2">
-                                                    <Wallet size={16} /> Método de Pago
-                                                </span>
-                                            </label>
-                                            <select
-                                                name="metodoPago"
-                                                value={subscriptionData.metodoPago}
-                                                onChange={handleMetodoChange}
-                                                className="select select-bordered select-primary w-full select-sm font-bold transition-transform active:scale-[0.98]"
-                                            >
-                                                <option value="EFECTIVO">Efectivo</option>
-                                                <option value="TRANSFERENCIA">Transferencia / Tarjeta</option>
-                                                <option value="YAPE">Yape</option>
-                                                <option value="PLIN">Plin</option>
-                                            </select>
-                                        </div>
-                                        <div className="form-control">
-                                            <label className="label">
-                                                <span className="label-text font-bold text-success">Monto a Registrar en Caja</span>
-                                            </label>
-                                            <div className="text-2xl font-black text-success">
-                                                S/ {selectedPlanId === 'custom' ? Number(subscriptionData.monto).toFixed(2) : selectedPlan?.precio.toFixed(2)}
-                                            </div>
-                                            {selectedPlanId === 'custom' && (
-                                                <span className="text-[10px] opacity-60 italic text-success">Nota: Este monto se ingresará automáticamente a la caja al guardar.</span>
-                                            )}
-                                        </div>
+                                    <div className="flex gap-4 items-center mt-6">
+                                        <label className="label cursor-pointer flex gap-2">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={!isMixedPayment} 
+                                                onChange={() => setIsMixedPayment(false)} 
+                                                className="radio radio-primary radio-sm"
+                                            />
+                                            <span className="label-text font-semibold">Pago Único</span>
+                                        </label>
+                                        <label className="label cursor-pointer flex gap-2">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={isMixedPayment} 
+                                                onChange={() => setIsMixedPayment(true)} 
+                                                className="radio radio-primary radio-sm"
+                                            />
+                                            <span className="label-text font-semibold">Pago Mixto (Dividido)</span>
+                                        </label>
                                     </div>
+
+                                    {isMixedPayment ? (
+                                        <div className="mt-4 p-4 bg-zinc-950/40 rounded-xl border border-zinc-800 grid grid-cols-2 md:grid-cols-4 gap-3">
+                                            <div className="form-control">
+                                                <label className="label py-1"><span className="label-text text-[11px] font-bold text-zinc-400">Efectivo (S/)</span></label>
+                                                <input 
+                                                    type="number" 
+                                                    value={mixedAmounts.EFECTIVO}
+                                                    onChange={e => setMixedAmounts({...mixedAmounts, EFECTIVO: e.target.value})}
+                                                    placeholder="0.00"
+                                                    className="input input-bordered input-sm bg-zinc-900 border-zinc-800 text-white font-mono"
+                                                />
+                                            </div>
+                                            <div className="form-control">
+                                                <label className="label py-1"><span className="label-text text-[11px] font-bold text-zinc-400">Transferencia (S/)</span></label>
+                                                <input 
+                                                    type="number" 
+                                                    value={mixedAmounts.TRANSFERENCIA}
+                                                    onChange={e => setMixedAmounts({...mixedAmounts, TRANSFERENCIA: e.target.value})}
+                                                    placeholder="0.00"
+                                                    className="input input-bordered input-sm bg-zinc-900 border-zinc-800 text-white font-mono"
+                                                />
+                                            </div>
+                                            <div className="form-control">
+                                                <label className="label py-1"><span className="label-text text-[11px] font-bold text-zinc-400">Yape (S/)</span></label>
+                                                <input 
+                                                    type="number" 
+                                                    value={mixedAmounts.YAPE}
+                                                    onChange={e => setMixedAmounts({...mixedAmounts, YAPE: e.target.value})}
+                                                    placeholder="0.00"
+                                                    className="input input-bordered input-sm bg-zinc-900 border-zinc-800 text-white font-mono"
+                                                />
+                                            </div>
+                                            <div className="form-control">
+                                                <label className="label py-1"><span className="label-text text-[11px] font-bold text-zinc-400">Plin (S/)</span></label>
+                                                <input 
+                                                    type="number" 
+                                                    value={mixedAmounts.PLIN}
+                                                    onChange={e => setMixedAmounts({...mixedAmounts, PLIN: e.target.value})}
+                                                    placeholder="0.00"
+                                                    className="input input-bordered input-sm bg-zinc-900 border-zinc-800 text-white font-mono"
+                                                />
+                                            </div>
+                                            <div className="col-span-2 md:col-span-4 mt-2 border-t border-zinc-800/40 pt-2 flex justify-between items-center text-xs">
+                                                <span className="text-zinc-400 font-semibold">Total Ingresado:</span>
+                                                <span className={`font-black text-sm ${Math.abs(((Number(mixedAmounts.EFECTIVO) || 0) + (Number(mixedAmounts.TRANSFERENCIA) || 0) + (Number(mixedAmounts.YAPE) || 0) + (Number(mixedAmounts.PLIN) || 0)) - (selectedPlanId === 'custom' ? Number(subscriptionData.monto) : (selectedPlan?.precio || 0))) > 0.01 ? "text-orange-500" : "text-green-500"}`}>
+                                                    S/ {((Number(mixedAmounts.EFECTIVO) || 0) + (Number(mixedAmounts.TRANSFERENCIA) || 0) + (Number(mixedAmounts.YAPE) || 0) + (Number(mixedAmounts.PLIN) || 0)).toFixed(2)} / S/ {(selectedPlanId === 'custom' ? Number(subscriptionData.monto) : (selectedPlan?.precio || 0)).toFixed(2)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 p-4 bg-success/10 rounded-lg border border-success/20">
+                                            <div className="form-control">
+                                                <label className="label">
+                                                    <span className="label-text font-bold text-success flex items-center gap-2">
+                                                        <Wallet size={16} /> Método de Pago
+                                                    </span>
+                                                </label>
+                                                <select
+                                                    name="metodoPago"
+                                                    value={subscriptionData.metodoPago}
+                                                    onChange={handleMetodoChange}
+                                                    className="select select-bordered select-primary w-full select-sm font-bold transition-transform active:scale-[0.98]"
+                                                >
+                                                    <option value="EFECTIVO">Efectivo</option>
+                                                    <option value="TRANSFERENCIA">Transferencia / Tarjeta</option>
+                                                    <option value="YAPE">Yape</option>
+                                                    <option value="PLIN">Plin</option>
+                                                </select>
+                                            </div>
+                                            <div className="form-control">
+                                                <label className="label">
+                                                    <span className="label-text font-bold text-success">Monto a Registrar en Caja</span>
+                                                </label>
+                                                <div className="text-2xl font-black text-success">
+                                                    S/ {selectedPlanId === 'custom' ? Number(subscriptionData.monto).toFixed(2) : selectedPlan?.precio.toFixed(2)}
+                                                </div>
+                                                {selectedPlanId === 'custom' && (
+                                                    <span className="text-[10px] opacity-60 italic text-success">Nota: Este monto se ingresará automáticamente a la caja al guardar.</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {selectedPlan?.descripcion && (
                                         <div className="text-xs opacity-70 mt-2 p-2 bg-base-300/50 rounded">

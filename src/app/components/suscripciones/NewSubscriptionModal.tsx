@@ -27,6 +27,15 @@ export default function NewSubscriptionModal({ socioId, socioNombre, socioCodigo
     const [customMeses, setCustomMeses] = useState(1)
     const [customMonto, setCustomMonto] = useState(0)
 
+    // Mixed Payment State
+    const [isMixedPayment, setIsMixedPayment] = useState(false)
+    const [mixedAmounts, setMixedAmounts] = useState({
+        EFECTIVO: '',
+        TRANSFERENCIA: '',
+        YAPE: '',
+        PLIN: ''
+    })
+
     const [formData, setFormData] = useState<{
         fechaInicio: string
         nuevoCodigo: string
@@ -92,7 +101,13 @@ export default function NewSubscriptionModal({ socioId, socioNombre, socioCodigo
                 pagoInfo = {
                     monto: selectedPlan ? selectedPlan.precio : customMonto,
                     metodoPago: metodoPago,
-                    nombrePlan: selectedPlan ? selectedPlan.nombre : 'Personalizado'
+                    nombrePlan: selectedPlan ? selectedPlan.nombre : 'Personalizado',
+                    ...(isMixedPayment ? {
+                        montoEfectivo: Number(mixedAmounts.EFECTIVO) || undefined,
+                        montoTransferencia: Number(mixedAmounts.TRANSFERENCIA) || undefined,
+                        montoYape: Number(mixedAmounts.YAPE) || undefined,
+                        montoPlin: Number(mixedAmounts.PLIN) || undefined
+                    } : {})
                 }
             }
 
@@ -239,19 +254,91 @@ export default function NewSubscriptionModal({ socioId, socioNombre, socioCodigo
                         </div>
                     </div>
 
-                    <div className="form-control">
-                        <label className="label"><span className="label-text font-bold opacity-80">Método de Pago</span></label>
-                        <select 
-                            className="select select-bordered select-primary w-full transition-transform active:scale-[0.98]"
-                            value={metodoPago}
-                            onChange={e => setMetodoPago(e.target.value)}
-                        >
-                            <option value="EFECTIVO">Efectivo</option>
-                            <option value="TRANSFERENCIA">Transferencia / Tarjeta</option>
-                            <option value="YAPE">Yape</option>
-                            <option value="PLIN">Plin</option>
-                        </select>
+                    <div className="flex gap-4 items-center mt-3">
+                        <label className="label cursor-pointer flex gap-2">
+                            <input 
+                                type="checkbox" 
+                                checked={!isMixedPayment} 
+                                onChange={() => setIsMixedPayment(false)} 
+                                className="radio radio-primary radio-sm"
+                            />
+                            <span className="label-text font-semibold">Pago Único</span>
+                        </label>
+                        <label className="label cursor-pointer flex gap-2">
+                            <input 
+                                type="checkbox" 
+                                checked={isMixedPayment} 
+                                onChange={() => setIsMixedPayment(true)} 
+                                className="radio radio-primary radio-sm"
+                            />
+                            <span className="label-text font-semibold">Pago Mixto</span>
+                        </label>
                     </div>
+
+                    {isMixedPayment ? (
+                        <div className="mt-2 p-3 bg-base-300/40 rounded-xl border border-zinc-800 grid grid-cols-2 gap-2 text-xs">
+                            <div className="form-control">
+                                <label className="label py-1"><span className="label-text text-[11px] font-bold text-zinc-400">Efectivo (S/)</span></label>
+                                <input 
+                                    type="number" 
+                                    value={mixedAmounts.EFECTIVO}
+                                    onChange={e => setMixedAmounts({...mixedAmounts, EFECTIVO: e.target.value})}
+                                    placeholder="0.00"
+                                    className="input input-bordered input-sm bg-zinc-950 font-mono text-white border-zinc-800"
+                                />
+                            </div>
+                            <div className="form-control">
+                                <label className="label py-1"><span className="label-text text-[11px] font-bold text-zinc-400">Transferencia (S/)</span></label>
+                                <input 
+                                    type="number" 
+                                    value={mixedAmounts.TRANSFERENCIA}
+                                    onChange={e => setMixedAmounts({...mixedAmounts, TRANSFERENCIA: e.target.value})}
+                                    placeholder="0.00"
+                                    className="input input-bordered input-sm bg-zinc-950 font-mono text-white border-zinc-800"
+                                />
+                            </div>
+                            <div className="form-control">
+                                <label className="label py-1"><span className="label-text text-[11px] font-bold text-zinc-400">Yape (S/)</span></label>
+                                <input 
+                                    type="number" 
+                                    value={mixedAmounts.YAPE}
+                                    onChange={e => setMixedAmounts({...mixedAmounts, YAPE: e.target.value})}
+                                    placeholder="0.00"
+                                    className="input input-bordered input-sm bg-zinc-950 font-mono text-white border-zinc-800"
+                                />
+                            </div>
+                            <div className="form-control">
+                                <label className="label py-1"><span className="label-text text-[11px] font-bold text-zinc-400">Plin (S/)</span></label>
+                                <input 
+                                    type="number" 
+                                    value={mixedAmounts.PLIN}
+                                    onChange={e => setMixedAmounts({...mixedAmounts, PLIN: e.target.value})}
+                                    placeholder="0.00"
+                                    className="input input-bordered input-sm bg-zinc-950 font-mono text-white border-zinc-800"
+                                />
+                            </div>
+                            <div className="col-span-2 mt-1 border-t border-zinc-800 pt-1 flex justify-between items-center">
+                                <span className="text-zinc-400">Total Ingresado:</span>
+                                <span className={`font-black ${(Math.abs(((Number(mixedAmounts.EFECTIVO) || 0) + (Number(mixedAmounts.TRANSFERENCIA) || 0) + (Number(mixedAmounts.YAPE) || 0) + (Number(mixedAmounts.PLIN) || 0)) - (selectedPlan ? selectedPlan.precio : customMonto)) > 0.01) ? "text-orange-500" : "text-green-500"}`}>
+                                    S/ {((Number(mixedAmounts.EFECTIVO) || 0) + (Number(mixedAmounts.TRANSFERENCIA) || 0) + (Number(mixedAmounts.YAPE) || 0) + (Number(mixedAmounts.PLIN) || 0)).toFixed(2)} / S/ {(selectedPlan ? selectedPlan.precio : customMonto).toFixed(2)}
+                                </span>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="form-control">
+                            <label className="label"><span className="label-text font-bold opacity-80">Método de Pago</span></label>
+                            <select 
+                                className="select select-bordered select-primary w-full transition-transform active:scale-[0.98]"
+                                value={metodoPago}
+                                onChange={e => setMetodoPago(e.target.value)}
+                            >
+                                <option value="EFECTIVO">Efectivo</option>
+                                <option value="TRANSFERENCIA">Transferencia / Tarjeta</option>
+                                <option value="YAPE">Yape</option>
+                                <option value="PLIN">Plin</option>
+                            </select>
+                        </div>
+                    )}
 
                     <div className="modal-action">
                         <button type="button" className="btn btn-ghost" onClick={onClose} disabled={loading}>

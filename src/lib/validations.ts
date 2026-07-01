@@ -15,7 +15,11 @@ export const socioSchema = z.object({
         planId: z.string().uuid().optional(),
         monto: z.number().optional(),
         fechaInicio: z.coerce.date().default(() => new Date()),
-        metodoPago: z.enum(["EFECTIVO", "TRANSFERENCIA", "YAPE", "PLIN"]).default("EFECTIVO")
+        metodoPago: z.enum(["EFECTIVO", "TRANSFERENCIA", "YAPE", "PLIN"]).default("EFECTIVO"),
+        montoEfectivo: z.number().optional(),
+        montoTransferencia: z.number().optional(),
+        montoYape: z.number().optional(),
+        montoPlin: z.number().optional()
     }).optional()
 })
 
