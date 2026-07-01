@@ -442,6 +442,14 @@ function KioscoPersonalContent() {
 
   // --- DASHBOARD VIEW ---
   const faltan = personal.horasObjetivo ? Math.max(0, personal.horasObjetivo - resumenHoras).toFixed(1) : 0;
+
+  const getLimaHour = () => {
+    const now = new Date();
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const limaDate = new Date(utc + (3600000 * -5));
+    return limaDate.getHours();
+  };
+  const isAfternoon = getLimaHour() >= 14; // >= 2:00 PM (14:00)
   
   return (
     <div className="w-full max-w-4xl bg-zinc-900/90 backdrop-blur-xl rounded-3xl border border-zinc-800 shadow-2xl overflow-hidden flex flex-col md:flex-row relative select-none">
@@ -703,15 +711,25 @@ function KioscoPersonalContent() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
           <button 
             onClick={() => handleAsistencia('ENTRADA')}
-            disabled={actionLoading || asistencia?.horaEntrada}
-            className={`p-6 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all border-2 cursor-pointer 
+            disabled={actionLoading || asistencia?.horaEntrada || isAfternoon}
+            className={`p-6 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all border-2 
               ${asistencia?.horaEntrada 
-                ? 'bg-zinc-800 border-zinc-700 text-zinc-500' 
-                : 'bg-green-500/10 border-green-500 text-green-500 hover:bg-green-500 hover:text-black'}`}
+                ? 'bg-zinc-800 border-zinc-700 text-zinc-500 cursor-not-allowed' 
+                : isAfternoon
+                  ? 'bg-zinc-900 border-zinc-850/60 text-zinc-600 border-zinc-800/80 cursor-not-allowed'
+                  : 'bg-green-500/10 border-green-500 text-green-500 hover:bg-green-500 hover:text-black cursor-pointer'}`}
           >
             <LogIn className="w-10 h-10" />
             <span className="font-bold text-lg uppercase tracking-wide">Entrada Mañana</span>
-            {asistencia?.horaEntrada && <span className="text-xs bg-zinc-950 px-3 py-1 rounded-full text-zinc-400">{new Date(asistencia.horaEntrada).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'America/Lima' })}</span>}
+            {asistencia?.horaEntrada ? (
+              <span className="text-xs bg-zinc-950 px-3 py-1 rounded-full text-zinc-400">
+                {new Date(asistencia.horaEntrada).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'America/Lima' })}
+              </span>
+            ) : isAfternoon ? (
+              <span className="text-xs bg-red-950/30 border border-red-900/30 px-3 py-1 rounded-full text-red-500 font-bold uppercase tracking-wider">
+                Bloqueado (2pm+)
+              </span>
+            ) : null}
           </button>
  
           <button 
