@@ -371,7 +371,7 @@ function KioscoClientContent() {
                         ¡BUEN ENTRENAMIENTO!
                     </h1>
                     <h2 className="text-[4rem] leading-tight font-bold text-white mb-4">
-                        {result.socio.nombres}
+                        {result.socio.nombres}<br />{result.socio.apellidos}
                     </h2>
                     <div className="mt-8 bg-zinc-900/80 px-12 py-6 rounded-full border-2 border-blue-500/50 flex items-center gap-6">
                         <DoorOpen size={64} className="text-blue-400" />
@@ -391,7 +391,7 @@ function KioscoClientContent() {
                         ¡ESPERA!
                     </h1>
                     <h2 className="text-[3rem] font-bold text-white mb-2 leading-tight">
-                        {result.socio.nombres}
+                        {result.socio.nombres}<br />{result.socio.apellidos}
                     </h2>
                     <div className="bg-black/60 px-8 py-6 rounded-[2rem] border-4 border-yellow-500/30 flex flex-col items-center mt-4">
                         <Clock size={60} className="text-yellow-400 mb-2" />
