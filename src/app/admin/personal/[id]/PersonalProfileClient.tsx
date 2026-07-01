@@ -431,8 +431,11 @@ export default function PersonalProfileClient({
     : 0;
 
   // Tardiness Calculations helper
-  const parseTimeToMinutes = (timeStr: string): number => {
-    const [h, m] = timeStr.split(":").map(Number);
+  const parseTimeToMinutes = (timeStr: string, isTarde = false): number => {
+    let [h, m] = timeStr.split(":").map(Number);
+    if (isTarde && h < 12) {
+      h += 12;
+    }
     return h * 60 + m;
   };
 
@@ -457,7 +460,7 @@ export default function PersonalProfileClient({
 
     if (a.horaEntradaAlmuerzo && personal.horaEntradaTarde) {
       const entryMin = getPeruTimeMinutes(a.horaEntradaAlmuerzo);
-      const schedMin = parseTimeToMinutes(personal.horaEntradaTarde);
+      const schedMin = parseTimeToMinutes(personal.horaEntradaTarde, true);
       if (entryMin > schedMin) {
         tarde = entryMin - schedMin;
       }
