@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { registrarPago, getPagosPorRango } from '../actions/pagos'
+import { registrarPago, getPagosPorRango, getResumenMensual } from '../actions/pagos'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { DollarSign, CreditCard, TrendingUp, Plus, Search, Banknote, Smartphone } from 'lucide-react'
@@ -60,6 +60,26 @@ export default function CajaClient({ pagosIniciales, totalDiaInicial, desgloseIn
     const [showModal, setShowModal] = useState(false)
     const [loading, setLoading] = useState(false)
     const [buscando, setBuscando] = useState(false)
+
+    // Monthly summary state
+    const getCurrentYearMonth = () => format(new Date(), 'yyyy-MM')
+    const [selectedMonthCaja, setSelectedMonthCaja] = useState(getCurrentYearMonth)
+    const [resumen, setResumen] = useState(resumenMensual)
+    const [loadingResumen, setLoadingResumen] = useState(false)
+
+    const handleChangeMonthResumen = async (yearMonth: string) => {
+        setSelectedMonthCaja(yearMonth)
+        const [y, m] = yearMonth.split('-').map(Number)
+        setLoadingResumen(true)
+        try {
+            const data = await getResumenMensual(y, m)
+            setResumen(data)
+        } catch {
+            // keep previous
+        } finally {
+            setLoadingResumen(false)
+        }
+    }
 
     // Form states
     const [monto, setMonto] = useState('')
@@ -202,20 +222,33 @@ export default function CajaClient({ pagosIniciales, totalDiaInicial, desgloseIn
             {/* Monthly Summary */}
             <div className="card bg-gradient-to-r from-primary to-secondary text-primary-content shadow-xl">
                 <div className="card-body">
-                    <h2 className="card-title flex items-center gap-2">
-                        <TrendingUp size={24} />
-                        Resumen del Mes
-                    </h2>
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                        <h2 className="card-title flex items-center gap-2">
+                            <TrendingUp size={24} />
+                            Resumen del Mes
+                        </h2>
+                        {/* Month selector */}
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="month"
+                                value={selectedMonthCaja}
+                                onChange={e => handleChangeMonthResumen(e.target.value)}
+                                disabled={loadingResumen}
+                                className="bg-white/20 border border-white/40 text-white text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:border-white cursor-pointer disabled:opacity-60"
+                            />
+                            {loadingResumen && <span className="loading loading-spinner loading-sm" />}
+                        </div>
+                    </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
                         <div>
                             <p className="text-sm opacity-70">Total del Mes</p>
-                            <p className="text-2xl font-black">S/ {resumenMensual.totalMes.toFixed(2)}</p>
+                            <p className="text-2xl font-black">S/ {resumen.totalMes.toFixed(2)}</p>
                         </div>
                         <div>
                             <p className="text-sm opacity-70">Transacciones</p>
-                            <p className="text-2xl font-black">{resumenMensual.totalTransacciones}</p>
+                            <p className="text-2xl font-black">{resumen.totalTransacciones}</p>
                         </div>
-                        {Object.entries(resumenMensual.desglose).map(([metodo, total]) => (
+                        {Object.entries(resumen.desglose).map(([metodo, total]) => (
                             <div key={metodo}>
                                 <p className="text-sm opacity-70">{metodo}</p>
                                 <p className="text-xl font-bold">S/ {(total as number).toFixed(2)}</p>

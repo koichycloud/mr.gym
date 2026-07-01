@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { createProductoPersonal, updateProductoPersonal, deleteProductoPersonal } from "@/app/actions/productos-personal";
-import { Plus, Edit2, Trash2, X, Loader2, Image as ImageIcon, Upload } from "lucide-react";
+import { Plus, Edit2, Trash2, X, Loader2, Image as ImageIcon, Upload, Camera } from "lucide-react";
 import { toast } from "sonner";
 
 export default function ProductosPersonalClient({ initialData }: { initialData: any[] }) {
@@ -10,6 +10,12 @@ export default function ProductosPersonalClient({ initialData }: { initialData: 
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
   
+  // Camera state
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
   // Form state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -45,6 +51,52 @@ export default function ProductosPersonalClient({ initialData }: { initialData: 
       reader.readAsDataURL(file);
     }
   };
+
+  const openCamera = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
+      setCameraStream(stream);
+      setIsCameraOpen(true);
+      // Assign stream to video element after state update
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play();
+        }
+      }, 100);
+    } catch (err) {
+      toast.error('No se pudo acceder a la cámara. Verifica los permisos.');
+    }
+  }, []);
+
+  const closeCamera = useCallback(() => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(t => t.stop());
+    }
+    setCameraStream(null);
+    setIsCameraOpen(false);
+  }, [cameraStream]);
+
+  const capturePhoto = useCallback(() => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+
+    const MAX_WIDTH = 500;
+    const scale = Math.min(1, MAX_WIDTH / video.videoWidth);
+    canvas.width = video.videoWidth * scale;
+    canvas.height = video.videoHeight * scale;
+
+    const ctx = canvas.getContext('2d');
+    ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+    setFormData(prev => ({ ...prev, fotoUrl: dataUrl }));
+    closeCamera();
+    toast.success('Foto capturada correctamente');
+  }, [closeCamera]);
 
   const handleOpenModal = (p?: any) => {
     if (p) {
@@ -179,20 +231,28 @@ export default function ProductosPersonalClient({ initialData }: { initialData: 
               </div>
 
                <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-1">Foto del Producto (URL o Subir Archivo)</label>
+                <label className="block text-sm font-medium text-zinc-400 mb-1">Foto del Producto</label>
                 <div className="flex flex-col gap-3">
                   <div className="flex gap-2">
                     <input 
                       type="url" 
                       value={formData.fotoUrl} 
                       onChange={e => setFormData({...formData, fotoUrl: e.target.value})} 
-                      placeholder="https://ejemplo.com/foto.jpg o sube un archivo" 
+                      placeholder="https://ejemplo.com/foto.jpg" 
                       className="flex-1 bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white focus:border-yellow-500 focus:outline-none text-sm" 
                     />
-                    <label className="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shrink-0 transition-colors">
+                    <label className="bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shrink-0 transition-colors" title="Subir desde galería">
                       <Upload className="w-4 h-4" /> Subir
                       <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} />
                     </label>
+                    <button
+                      type="button"
+                      onClick={openCamera}
+                      className="bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 shrink-0 transition-colors"
+                      title="Tomar foto con cámara"
+                    >
+                      <Camera className="w-4 h-4" /> Cámara
+                    </button>
                   </div>
                   {formData.fotoUrl && (
                     <div className="relative mt-1 h-36 rounded-xl bg-zinc-950 border border-zinc-800 overflow-hidden flex items-center justify-center group">
@@ -229,6 +289,55 @@ export default function ProductosPersonalClient({ initialData }: { initialData: 
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Hidden canvas for camera capture */}
+      <canvas ref={canvasRef} className="hidden" />
+
+      {/* Camera Modal */}
+      {isCameraOpen && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[60] flex flex-col items-center justify-center p-4 gap-4">
+          <div className="w-full max-w-lg">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-white font-bold text-lg flex items-center gap-2">
+                <Camera className="w-5 h-5 text-yellow-500" /> Tomar Foto del Producto
+              </h3>
+              <button onClick={closeCamera} className="text-zinc-400 hover:text-white transition-colors">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Video preview */}
+            <div className="relative w-full rounded-2xl overflow-hidden bg-black border border-zinc-700 aspect-video">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+              />
+              {/* Crosshair overlay */}
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                <div className="w-24 h-24 border-2 border-yellow-500/60 rounded-lg" />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={closeCamera}
+                className="flex-1 py-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-bold transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={capturePhoto}
+                className="flex-1 py-3 rounded-xl bg-yellow-500 hover:bg-yellow-400 text-black font-bold flex items-center justify-center gap-2 transition-colors"
+              >
+                <Camera className="w-5 h-5" /> Capturar
+              </button>
+            </div>
           </div>
         </div>
       )}

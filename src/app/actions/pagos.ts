@@ -124,12 +124,23 @@ export async function getPagosPorRango(desde: Date, hasta: Date) {
     }
 }
 
-export async function getResumenMensual() {
+export async function getResumenMensual(year?: number, month?: number) {
     try {
         await requireAuth()
 
-        const inicioMes = getLimaStartOfMonth()
-        const finMes = getLimaEndOfMonth()
+        let inicioMes: Date
+        let finMes: Date
+
+        if (year !== undefined && month !== undefined) {
+            // Build Lima-midnight boundaries for the requested month
+            const PERU_OFFSET_MS = 5 * 60 * 60 * 1000
+            // month is 1-indexed
+            inicioMes = new Date(Date.UTC(year, month - 1, 1) + PERU_OFFSET_MS)
+            finMes    = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999) + PERU_OFFSET_MS)
+        } else {
+            inicioMes = getLimaStartOfMonth()
+            finMes    = getLimaEndOfMonth()
+        }
 
         const pagos = await prisma.pago.findMany({
             where: {
@@ -163,6 +174,7 @@ export async function getResumenMensual() {
         return { totalMes: 0, totalTransacciones: 0, desglose: {}, porConcepto: {} }
     }
 }
+
 
 export async function getTotalIngresosHoy() {
     try {

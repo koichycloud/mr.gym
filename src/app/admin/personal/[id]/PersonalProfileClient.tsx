@@ -179,6 +179,16 @@ export default function PersonalProfileClient({
   const router = useRouter();
   const [asistencias, setAsistencias] = useState<Asistencia[]>(initialAsistencias);
   const [filterMode, setFilterMode] = useState<"ALL" | "CYCLE">("CYCLE");
+
+  // Month selector – default to current Peru month (UTC-5)
+  const getPeruYearMonth = () => {
+    const now = new Date();
+    const peru = new Date(now.getTime() - 5 * 60 * 60 * 1000);
+    const y = peru.getUTCFullYear();
+    const m = String(peru.getUTCMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
+  };
+  const [selectedMonth, setSelectedMonth] = useState<string>(getPeruYearMonth);
   const [activeTab, setActiveTab] = useState<"asistencias" | "carnet" | "consumos">("asistencias");
   const [filterConsumos, setFilterConsumos] = useState<"PENDIENTE" | "ALL">("PENDIENTE");
   const [qrUrl, setQrUrl] = useState("");
@@ -369,18 +379,32 @@ export default function PersonalProfileClient({
 
   const cycle = getCycleDates(personal.metodoPago);
 
-  // Filter attendance logs in the current cycle
-  const cycleAsistencias = asistencias.filter(a => {
+  // ─── Month filter boundaries (Peru UTC-5) ────────────────────────────────
+  const [selYear, selMon] = selectedMonth.split('-').map(Number);
+  const PERU_OFFSET_MS = 5 * 60 * 60 * 1000;
+  // Start of selected month in UTC (= midnight Peru)
+  const monthStartUTC = new Date(Date.UTC(selYear, selMon - 1, 1) + PERU_OFFSET_MS);
+  // End of selected month in UTC (= 23:59:59.999 Peru last day)
+  const monthEndUTC   = new Date(Date.UTC(selYear, selMon, 0, 23, 59, 59, 999) + PERU_OFFSET_MS);
+
+  // Filter attendance to the selected month
+  const monthAsistencias = asistencias.filter(a => {
+    const f = new Date(a.fecha).getTime();
+    return f >= monthStartUTC.getTime() && f <= monthEndUTC.getTime();
+  });
+
+  // Filter to current cycle AND selected month
+  const cycleAsistencias = monthAsistencias.filter(a => {
     const f = new Date(a.fecha);
     return f.getTime() >= cycle.start.getTime() && f.getTime() <= cycle.end.getTime();
   });
 
   // Calculate worked hours
-  const totalHoursAll = asistencias.reduce((sum, a) => sum + getRecordHours(a, nowDate), 0);
+  const totalHoursAll   = monthAsistencias.reduce((sum, a) => sum + getRecordHours(a, nowDate), 0);
   const totalHoursCycle = cycleAsistencias.reduce((sum, a) => sum + getRecordHours(a, nowDate), 0);
 
-  const displayedAsistencias = filterMode === "CYCLE" ? cycleAsistencias : asistencias;
-  const currentHours = filterMode === "CYCLE" ? totalHoursCycle : totalHoursAll;
+  const displayedAsistencias = filterMode === "CYCLE" ? cycleAsistencias : monthAsistencias;
+  const currentHours         = filterMode === "CYCLE" ? totalHoursCycle : totalHoursAll;
 
   // Consumos pendientes e historial completo
   const todosConsumos = personal.consumos || [];
@@ -469,11 +493,10 @@ export default function PersonalProfileClient({
     return { manana, tarde, total: manana + tarde };
   };
 
-  // Group lateness by periods
+  // Group lateness by periods — all scoped to the selectedMonth
   let latenessToday = 0;
   let latenessWeek = 0;
-  let latenessMonth = 0;
-  let latenessTotal = 0;
+  let latenessMonth = 0; // entire selected month
 
   const todayMidnight = new Date();
   todayMidnight.setHours(0, 0, 0, 0);
@@ -482,23 +505,17 @@ export default function PersonalProfileClient({
   oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
   oneWeekAgo.setHours(0, 0, 0, 0);
 
-  const oneMonthAgo = new Date();
-  oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
-  oneMonthAgo.setHours(0, 0, 0, 0);
-
-  asistencias.forEach(a => {
+  // Use monthAsistencias so all counters respect the selected month
+  monthAsistencias.forEach(a => {
     const late = getLateness(a);
     const asistDate = new Date(a.fecha);
-    
-    latenessTotal += late.total;
+
+    latenessMonth += late.total;
     if (asistDate >= todayMidnight) {
       latenessToday += late.total;
     }
     if (asistDate >= oneWeekAgo) {
       latenessWeek += late.total;
-    }
-    if (asistDate >= oneMonthAgo) {
-      latenessMonth += late.total;
     }
   });
 
@@ -740,17 +757,22 @@ export default function PersonalProfileClient({
 
           {/* Card: Tardiness summary (Llegadas Tarde) */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-            <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-red-500" />
-              Control de Tardanzas (Minutos de Retraso)
-            </h3>
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-red-500" />
+                Control de Tardanzas (Minutos de Retraso)
+              </h3>
+              <span className="text-xs text-zinc-500 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5">
+                Mes: <span className="text-yellow-400 font-semibold">{selectedMonth}</span>
+              </span>
+            </div>
             
             {(!personal.horaEntradaManana && !personal.horaEntradaTarde) ? (
               <p className="text-zinc-500 text-sm italic">
                 Para calcular tardanzas, configura los horarios de entrada del personal.
               </p>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-800 text-center">
                   <p className="text-zinc-400 text-xs uppercase font-bold tracking-wide">Hoy</p>
                   <p className={`text-2xl font-black mt-2 ${latenessToday > 0 ? "text-red-500" : "text-green-500"}`}>
@@ -764,15 +786,9 @@ export default function PersonalProfileClient({
                   </p>
                 </div>
                 <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-800 text-center">
-                  <p className="text-zinc-400 text-xs uppercase font-bold tracking-wide">Este Mes</p>
+                  <p className="text-zinc-400 text-xs uppercase font-bold tracking-wide">Total del Mes</p>
                   <p className={`text-2xl font-black mt-2 ${latenessMonth > 0 ? "text-red-500" : "text-green-500"}`}>
                     {latenessMonth} min
-                  </p>
-                </div>
-                <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-800 text-center">
-                  <p className="text-zinc-400 text-xs uppercase font-bold tracking-wide">Historial Total</p>
-                  <p className={`text-2xl font-black mt-2 ${latenessTotal > 0 ? "text-red-500" : "text-green-500"}`}>
-                    {latenessTotal} min
                   </p>
                 </div>
               </div>
@@ -784,10 +800,23 @@ export default function PersonalProfileClient({
             <div className="p-6 border-b border-zinc-800 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 bg-zinc-950">
               <div>
                 <h3 className="text-lg font-bold text-white">Registro de Asistencia</h3>
-                <p className="text-xs text-zinc-500 mt-0.5">Mostrando los registros de la base de datos (Máx. 100)</p>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Mostrando registros del mes seleccionado
+                </p>
               </div>
               
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Month Selector */}
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-zinc-400 shrink-0" />
+                  <input
+                    type="month"
+                    value={selectedMonth}
+                    onChange={e => setSelectedMonth(e.target.value)}
+                    className="bg-zinc-800 border border-zinc-700 text-white text-xs rounded-lg px-3 py-1.5 focus:border-yellow-500 focus:outline-none cursor-pointer"
+                  />
+                </div>
+
                 {/* Filter Tabs */}
                 <div className="bg-zinc-900 p-1 border border-zinc-800 rounded-xl flex">
                   <button 
@@ -798,7 +827,7 @@ export default function PersonalProfileClient({
                         : "text-zinc-400 hover:text-white"
                     }`}
                   >
-                    Ciclo Actual
+                    Ciclo
                   </button>
                   <button 
                     onClick={() => setFilterMode("ALL")} 
@@ -808,7 +837,7 @@ export default function PersonalProfileClient({
                         : "text-zinc-400 hover:text-white"
                     }`}
                   >
-                    Todos
+                    Todo el Mes
                   </button>
                 </div>
 
