@@ -71,35 +71,6 @@ export default function MedidasChart({ data }: MedidasChartProps) {
         }
     }
 
-    const handleMouseMove = (state: any) => {
-        if (!state || !state.activePayload || state.activePayload.length === 0) {
-            setHoveredLine(null)
-            return
-        }
-
-        const chartY = state.chartY
-        let closestKey: string | null = null
-        let minDiff = Infinity
-
-        state.activePayload.forEach((item: any) => {
-            const itemY = item.coordinate !== undefined ? item.coordinate : item.cy
-            if (itemY !== undefined && itemY !== null) {
-                const diff = Math.abs(chartY - itemY)
-                if (diff < minDiff) {
-                    minDiff = diff
-                    closestKey = item.dataKey
-                }
-            }
-        })
-
-        // If the closest line is within 60px vertically, focus on it
-        if (minDiff < 60) {
-            setHoveredLine(closestKey)
-        } else {
-            setHoveredLine(null)
-        }
-    }
-
     return (
         <div className="w-full flex flex-col gap-4">
             {/* Interactive Selector Chips */}
@@ -129,7 +100,6 @@ export default function MedidasChart({ data }: MedidasChartProps) {
                     <LineChart 
                         data={chartData} 
                         margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
-                        onMouseMove={handleMouseMove}
                         onMouseLeave={() => setHoveredLine(null)}
                     >
                         <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
@@ -152,8 +122,16 @@ export default function MedidasChart({ data }: MedidasChartProps) {
                                     name={m.label}
                                     strokeWidth={isHovered ? 3.5 : 1.5}
                                     opacity={isAnyLineHovered ? (isHovered ? 1 : 0.15) : 0.85}
-                                    dot={{ r: isHovered ? 4 : 2 }}
-                                    activeDot={{ r: 6 }}
+                                    dot={{ 
+                                        r: isHovered ? 5 : 2.5, 
+                                        fill: m.color,
+                                        onMouseEnter: () => setHoveredLine(m.key),
+                                        onMouseLeave: () => setHoveredLine(null),
+                                        className: "cursor-pointer"
+                                    }}
+                                    activeDot={false}
+                                    onMouseEnter={() => setHoveredLine(m.key)}
+                                    onMouseLeave={() => setHoveredLine(null)}
                                     className="transition-all duration-200 cursor-pointer"
                                 />
                             )
