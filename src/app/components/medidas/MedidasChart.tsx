@@ -77,7 +77,7 @@ export default function MedidasChart({ data }: MedidasChartProps) {
                         <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                         <XAxis dataKey="fechaFormatted" tick={{ fontSize: 10 }} />
                         <YAxis tick={{ fontSize: 10 }} />
-                        <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8 }} />
+                        <Tooltip shared={false} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
                         <Legend wrapperStyle={{ fontSize: 10 }} />
                         {METRICS.filter(m => activeMetrics.includes(m.key)).map(m => (
                             <Line

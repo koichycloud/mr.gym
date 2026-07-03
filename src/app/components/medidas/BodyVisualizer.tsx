@@ -58,7 +58,33 @@ export default function BodyVisualizer({ data, sexo }: BodyVisualizerProps) {
     const primaryColor = isFemale ? '#ec4899' : '#3b82f6'
 
     // Fallback for potentially missing silhouette config in migration
-    const silCfg = positions.silhouette || { scaleX: 1, scaleY: 1, x: 0, y: 0 }
+    const silCfg = positions.silhouette || { scaleX: 1.16, scaleY: 1.15, x: 4, y: 24 }
+
+    const getDynamicScale = () => {
+        if (!data) return { scaleX: silCfg.scaleX, scaleY: silCfg.scaleY }
+        const baseFat = isFemale ? 22 : 18
+        const baseMuscle = isFemale ? 30 : 36
+        const baseWeight = isFemale ? 60 : 75
+
+        const fat = data.porcentajeGrasa || baseFat
+        const muscle = data.porcentajeMusculo || baseMuscle
+        const weight = data.peso || baseWeight
+
+        // Adjust scaleX based on fat (expands body width)
+        const fatFactor = 1 + ((fat - baseFat) / 100) * 0.4
+        // Adjust scaleX based on muscle (adds bulk)
+        const muscleFactor = 1 + ((muscle - baseMuscle) / 100) * 0.15
+        // Adjust scaleX and scaleY based on weight deviations
+        const weightXFactor = 1 + ((weight - baseWeight) / baseWeight) * 0.15
+        const weightYFactor = 1 + ((weight - baseWeight) / baseWeight) * 0.1
+
+        const finalScaleX = Math.min(Math.max(silCfg.scaleX * fatFactor * muscleFactor * weightXFactor, 0.8), 1.5)
+        const finalScaleY = Math.min(Math.max(silCfg.scaleY * weightYFactor, 0.8), 1.4)
+
+        return { scaleX: finalScaleX, scaleY: finalScaleY }
+    }
+
+    const dynamicScale = getDynamicScale()
 
     return (
         <div className="flex flex-col items-center justify-center p-4 bg-white rounded-xl shadow-sm relative overflow-hidden min-h-[600px]">
@@ -69,9 +95,9 @@ export default function BodyVisualizer({ data, sexo }: BodyVisualizerProps) {
                     src={imageSrc}
                     crossOrigin="anonymous"
                     alt="Silueta"
-                    className="absolute w-full h-full object-contain opacity-90 mix-blend-multiply pointer-events-none z-0 transition-transform duration-200"
+                    className="absolute w-full h-full object-contain opacity-90 mix-blend-multiply pointer-events-none z-0 transition-all duration-500 ease-in-out"
                     style={{
-                        transform: `translate(${silCfg.x}px, ${silCfg.y}px) scale(${silCfg.scaleX}, ${silCfg.scaleY})`
+                        transform: `translate(${silCfg.x}px, ${silCfg.y}px) scale(${dynamicScale.scaleX}, ${dynamicScale.scaleY})`
                     }}
                 />
 
@@ -173,7 +199,33 @@ export function BodyVisualizerPdf({ data, sexo }: BodyVisualizerProps) {
 
     // Explicit HEX colors
     const primaryColor = isFemale ? '#ec4899' : '#3b82f6'
-    const silCfg = positions.silhouette || { scaleX: 1, scaleY: 1, x: 0, y: 0 }
+    const silCfg = positions.silhouette || { scaleX: 1.16, scaleY: 1.15, x: 4, y: 24 }
+
+    const getDynamicScale = () => {
+        if (!data) return { scaleX: silCfg.scaleX, scaleY: silCfg.scaleY }
+        const baseFat = isFemale ? 22 : 18
+        const baseMuscle = isFemale ? 30 : 36
+        const baseWeight = isFemale ? 60 : 75
+
+        const fat = data.porcentajeGrasa || baseFat
+        const muscle = data.porcentajeMusculo || baseMuscle
+        const weight = data.peso || baseWeight
+
+        // Adjust scaleX based on fat (expands body width)
+        const fatFactor = 1 + ((fat - baseFat) / 100) * 0.4
+        // Adjust scaleX based on muscle (adds bulk)
+        const muscleFactor = 1 + ((muscle - baseMuscle) / 100) * 0.15
+        // Adjust scaleX and scaleY based on weight deviations
+        const weightXFactor = 1 + ((weight - baseWeight) / baseWeight) * 0.15
+        const weightYFactor = 1 + ((weight - baseWeight) / baseWeight) * 0.1
+
+        const finalScaleX = Math.min(Math.max(silCfg.scaleX * fatFactor * muscleFactor * weightXFactor, 0.8), 1.5)
+        const finalScaleY = Math.min(Math.max(silCfg.scaleY * weightYFactor, 0.8), 1.4)
+
+        return { scaleX: finalScaleX, scaleY: finalScaleY }
+    }
+
+    const dynamicScale = getDynamicScale()
 
     // Inline Styles Constants
     const containerStyle: React.CSSProperties = {
@@ -232,7 +284,7 @@ export function BodyVisualizerPdf({ data, sexo }: BodyVisualizerProps) {
                         mixBlendMode: 'multiply',
                         pointerEvents: 'none',
                         zIndex: 0,
-                        transform: `translate(${silCfg.x}px, ${silCfg.y}px) scale(${silCfg.scaleX}, ${silCfg.scaleY})`
+                        transform: `translate(${silCfg.x}px, ${silCfg.y}px) scale(${dynamicScale.scaleX}, ${dynamicScale.scaleY})`
                     }}
                 />
 
