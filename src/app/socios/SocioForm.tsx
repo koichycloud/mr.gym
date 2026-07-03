@@ -70,6 +70,7 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
     const [fechaFin, setFechaFin] = useState('')
     const [planes, setPlanes] = useState<any[]>([])
     const [selectedPlanId, setSelectedPlanId] = useState<string>('custom')
+    const selectedPlan = planes.find(p => p.id === selectedPlanId)
     
     // Mixed Payment State
     const [isMixedPayment, setIsMixedPayment] = useState(false)
@@ -79,6 +80,18 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
         YAPE: '',
         PLIN: ''
     })
+
+    const [montoAPagar, setMontoAPagar] = useState<string>('')
+
+    useEffect(() => {
+        if (includeSubscription) {
+            if (selectedPlanId === 'custom') {
+                setMontoAPagar(String(subscriptionData.monto))
+            } else if (selectedPlan) {
+                setMontoAPagar(String(selectedPlan.precio))
+            }
+        }
+    }, [selectedPlanId, selectedPlan, subscriptionData.monto, includeSubscription])
 
     // Load available plans
     useEffect(() => {
@@ -93,8 +106,6 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
             setIsCorrection(false)
         }
     }, [formData.codigo, initialData])
-
-    const selectedPlan = planes.find(p => p.id === selectedPlanId)
 
     // Calculate End Date whenever start date or months change
     useEffect(() => {
@@ -253,7 +264,9 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
                     suscripcion: {
                         meses: selectedPlanId === 'custom' ? Number(subscriptionData.meses) : selectedPlan!.meses,
                         planId: selectedPlanId === 'custom' ? undefined : selectedPlanId,
-                        monto: selectedPlanId === 'custom' ? Number(subscriptionData.monto) : undefined,
+                        monto: isMixedPayment
+                            ? ((Number(mixedAmounts.EFECTIVO) || 0) + (Number(mixedAmounts.TRANSFERENCIA) || 0) + (Number(mixedAmounts.YAPE) || 0) + (Number(mixedAmounts.PLIN) || 0))
+                            : (Number(montoAPagar) || 0),
                         fechaInicio: new Date(subscriptionData.fechaInicio),
                         metodoPago: subscriptionData.metodoPago,
                         ...(isMixedPayment ? {
@@ -654,11 +667,18 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
                                                     className="input input-bordered input-sm bg-zinc-900 border-zinc-800 text-white font-mono"
                                                 />
                                             </div>
-                                            <div className="col-span-2 md:col-span-4 mt-2 border-t border-zinc-800/40 pt-2 flex justify-between items-center text-xs">
-                                                <span className="text-zinc-400 font-semibold">Total Ingresado:</span>
-                                                <span className={`font-black text-sm ${Math.abs(((Number(mixedAmounts.EFECTIVO) || 0) + (Number(mixedAmounts.TRANSFERENCIA) || 0) + (Number(mixedAmounts.YAPE) || 0) + (Number(mixedAmounts.PLIN) || 0)) - (selectedPlanId === 'custom' ? Number(subscriptionData.monto) : (selectedPlan?.precio || 0))) > 0.01 ? "text-orange-500" : "text-green-500"}`}>
-                                                    S/ {((Number(mixedAmounts.EFECTIVO) || 0) + (Number(mixedAmounts.TRANSFERENCIA) || 0) + (Number(mixedAmounts.YAPE) || 0) + (Number(mixedAmounts.PLIN) || 0)).toFixed(2)} / S/ {(selectedPlanId === 'custom' ? Number(subscriptionData.monto) : (selectedPlan?.precio || 0)).toFixed(2)}
-                                                </span>
+                                            <div className="col-span-2 md:col-span-4 mt-2 border-t border-zinc-800/40 pt-2 flex flex-col gap-1 text-xs">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-zinc-400 font-semibold">Total Ingresado:</span>
+                                                    <span className={`font-black text-sm ${Math.abs(((Number(mixedAmounts.EFECTIVO) || 0) + (Number(mixedAmounts.TRANSFERENCIA) || 0) + (Number(mixedAmounts.YAPE) || 0) + (Number(mixedAmounts.PLIN) || 0)) - (selectedPlanId === 'custom' ? Number(subscriptionData.monto) : (selectedPlan?.precio || 0))) > 0.01 ? "text-orange-500" : "text-green-500"}`}>
+                                                        S/ {((Number(mixedAmounts.EFECTIVO) || 0) + (Number(mixedAmounts.TRANSFERENCIA) || 0) + (Number(mixedAmounts.YAPE) || 0) + (Number(mixedAmounts.PLIN) || 0)).toFixed(2)} / S/ {(selectedPlanId === 'custom' ? Number(subscriptionData.monto) : (selectedPlan?.precio || 0)).toFixed(2)}
+                                                    </span>
+                                                </div>
+                                                {((Number(mixedAmounts.EFECTIVO) || 0) + (Number(mixedAmounts.TRANSFERENCIA) || 0) + (Number(mixedAmounts.YAPE) || 0) + (Number(mixedAmounts.PLIN) || 0)) < (selectedPlanId === 'custom' ? Number(subscriptionData.monto) : (selectedPlan?.precio || 0)) && (
+                                                    <span className="text-[10px] text-warning font-semibold">
+                                                        ⚠️ Registro parcial: Guardará un saldo pendiente de S/. {(selectedPlanId === 'custom' ? Number(subscriptionData.monto) : (selectedPlan?.precio || 0) - ((Number(mixedAmounts.EFECTIVO) || 0) + (Number(mixedAmounts.TRANSFERENCIA) || 0) + (Number(mixedAmounts.YAPE) || 0) + (Number(mixedAmounts.PLIN) || 0))).toFixed(2)}
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                     ) : (
@@ -683,13 +703,23 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
                                             </div>
                                             <div className="form-control">
                                                 <label className="label">
-                                                    <span className="label-text font-bold text-success">Monto a Registrar en Caja</span>
+                                                    <span className="label-text font-bold text-success flex justify-between w-full">
+                                                        <span>Monto a Registrar Hoy (S/.)</span>
+                                                        <span className="text-xs opacity-70">Total: S/. {(selectedPlanId === 'custom' ? Number(subscriptionData.monto) : (selectedPlan?.precio || 0)).toFixed(2)}</span>
+                                                    </span>
                                                 </label>
-                                                <div className="text-2xl font-black text-success">
-                                                    S/ {selectedPlanId === 'custom' ? Number(subscriptionData.monto).toFixed(2) : selectedPlan?.precio.toFixed(2)}
-                                                </div>
-                                                {selectedPlanId === 'custom' && (
-                                                    <span className="text-[10px] opacity-60 italic text-success">Nota: Este monto se ingresará automáticamente a la caja al guardar.</span>
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    value={montoAPagar}
+                                                    onChange={(e) => setMontoAPagar(e.target.value)}
+                                                    className="input input-bordered input-primary w-full select-sm font-bold text-success"
+                                                    required
+                                                />
+                                                {Number(montoAPagar) < (selectedPlanId === 'custom' ? Number(subscriptionData.monto) : (selectedPlan?.precio || 0)) && (
+                                                    <span className="text-[10px] text-warning font-semibold mt-1">
+                                                        ⚠️ Registro parcial: Guardará un saldo pendiente de S/. {((selectedPlanId === 'custom' ? Number(subscriptionData.monto) : (selectedPlan?.precio || 0)) - (Number(montoAPagar) || 0)).toFixed(2)}
+                                                    </span>
                                                 )}
                                             </div>
                                         </div>

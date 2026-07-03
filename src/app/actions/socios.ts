@@ -102,8 +102,12 @@ export async function createSocio(data: z.infer<typeof socioSchema>) {
                     where: { id: suscripcion.planId }
                 })
                 if (plan) {
-                    monto = plan.precio
                     nombrePlan = plan.nombre
+                    if (suscripcion.monto !== undefined) {
+                        monto = suscripcion.monto
+                    } else {
+                        monto = plan.precio
+                    }
                 }
             }
 
