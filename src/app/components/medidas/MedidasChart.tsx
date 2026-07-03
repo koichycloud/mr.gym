@@ -24,8 +24,32 @@ const METRICS = [
     { key: 'pantorrillas', label: 'Pantorrillas (cm)', color: '#6c5ce7' },
 ]
 
+const CustomTooltip = ({ active, payload, label, hoveredLine }: any) => {
+    if (active && payload && payload.length) {
+        // Find the hovered line in the active payload
+        const activeItem = hoveredLine 
+            ? payload.find((p: any) => p.dataKey === hoveredLine)
+            : null
+
+        if (!activeItem) return null
+
+        return (
+            <div className="bg-white/95 backdrop-blur-md p-3 rounded-xl border border-slate-200 shadow-xl font-sans text-xs flex flex-col gap-1">
+                <p className="font-bold text-slate-400 mb-0.5">{label}</p>
+                <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: activeItem.color }}></span>
+                    <span className="font-semibold text-slate-700">{activeItem.name}:</span>
+                    <span className="font-mono font-bold text-slate-900">{activeItem.value}</span>
+                </div>
+            </div>
+        )
+    }
+    return null
+}
+
 export default function MedidasChart({ data }: MedidasChartProps) {
     const [activeMetrics, setActiveMetrics] = useState<string[]>(['peso', 'porcentajeGrasa', 'porcentajeMusculo'])
+    const [hoveredLine, setHoveredLine] = useState<string | null>(null)
 
     if (!data || data.length === 0) {
         return <div className="text-center p-10 opacity-50">No hay suficientes datos para la gráfica</div>
@@ -73,24 +97,39 @@ export default function MedidasChart({ data }: MedidasChartProps) {
             {/* Line Chart */}
             <div className="w-full h-[320px]">
                 <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                    <LineChart 
+                        data={chartData} 
+                        margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+                        onMouseLeave={() => setHoveredLine(null)}
+                    >
                         <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                         <XAxis dataKey="fechaFormatted" tick={{ fontSize: 10 }} />
                         <YAxis tick={{ fontSize: 10 }} />
-                        <Tooltip shared={false} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
+                        <Tooltip 
+                            content={<CustomTooltip hoveredLine={hoveredLine} />} 
+                            trigger="hover" 
+                        />
                         <Legend wrapperStyle={{ fontSize: 10 }} />
-                        {METRICS.filter(m => activeMetrics.includes(m.key)).map(m => (
-                            <Line
-                                key={m.key}
-                                type="monotone"
-                                dataKey={m.key}
-                                stroke={m.color}
-                                name={m.label}
-                                strokeWidth={2}
-                                dot={{ r: 3 }}
-                                activeDot={{ r: 6 }}
-                            />
-                        ))}
+                        {METRICS.filter(m => activeMetrics.includes(m.key)).map(m => {
+                            const isHovered = hoveredLine === m.key
+                            const isAnyLineHovered = hoveredLine !== null
+                            return (
+                                <Line
+                                    key={m.key}
+                                    type="monotone"
+                                    dataKey={m.key}
+                                    stroke={m.color}
+                                    name={m.label}
+                                    strokeWidth={isHovered ? 3.5 : 1.5}
+                                    opacity={isAnyLineHovered ? (isHovered ? 1 : 0.15) : 0.85}
+                                    dot={{ r: isHovered ? 4 : 2 }}
+                                    activeDot={{ r: 6 }}
+                                    onMouseEnter={() => setHoveredLine(m.key)}
+                                    onMouseLeave={() => setHoveredLine(null)}
+                                    className="transition-all duration-200 cursor-pointer"
+                                />
+                            )
+                        })}
                     </LineChart>
                 </ResponsiveContainer>
             </div>
