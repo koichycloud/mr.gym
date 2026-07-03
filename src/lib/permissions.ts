@@ -12,6 +12,7 @@ export const SYSTEM_PERMISSIONS = [
     { id: 'NOMINA_EDITAR', label: 'Gestionar Nómina', description: 'Permite registrar pagos, adelantos y procesar nóminas.' },
     { id: 'BITACORA_VER', label: 'Ver Bitácora', description: 'Permite visualizar la bitácora de auditoría del sistema.' },
     { id: 'PRODUCTOS_PERSONAL', label: 'Gestionar Productos Personal', description: 'Permite gestionar productos del personal y sus consumos.' },
+    { id: 'SUSCRIPCIONES_ELIMINAR', label: 'Eliminar Renovaciones', description: 'Permite eliminar suscripciones o renovaciones de los socios.' },
 ] as const;
 
 export type SystemPermission = typeof SYSTEM_PERMISSIONS[number]['id'];

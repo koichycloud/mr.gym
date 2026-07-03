@@ -231,44 +231,68 @@ export default function ProductosPersonalClient({ initialData }: { initialData: 
               </div>
 
                <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-1">Foto del Producto</label>
+                <label className="block text-sm font-medium text-zinc-400 mb-2">Foto del Producto</label>
                 <div className="flex flex-col gap-3">
-                  <div className="flex gap-2">
-                    <input 
-                      type="url" 
-                      value={formData.fotoUrl} 
-                      onChange={e => setFormData({...formData, fotoUrl: e.target.value})} 
-                      placeholder="https://ejemplo.com/foto.jpg" 
-                      className="flex-1 bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white focus:border-yellow-500 focus:outline-none text-sm" 
-                    />
-                    <label className="bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shrink-0 transition-colors" title="Subir desde galería">
-                      <Upload className="w-4 h-4" /> Subir
-                      <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} />
-                    </label>
-                    <button
-                      type="button"
-                      onClick={openCamera}
-                      className="bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-3 rounded-lg font-bold text-xs flex items-center justify-center gap-1.5 shrink-0 transition-colors"
-                      title="Tomar foto con cámara"
-                    >
-                      <Camera className="w-4 h-4" /> Cámara
-                    </button>
-                  </div>
-                  {formData.fotoUrl && (
-                    <div className="relative mt-1 h-36 rounded-xl bg-zinc-950 border border-zinc-800 overflow-hidden flex items-center justify-center group">
-                      <img src={formData.fotoUrl} alt="Preview" className="h-full object-contain" onError={(e) => { (e.target as any).style.display = 'none'; }} />
+
+                  {/* Preview with tap-to-remove */}
+                  {formData.fotoUrl ? (
+                    <div className="relative w-full h-44 rounded-xl bg-zinc-950 border border-zinc-800 overflow-hidden flex items-center justify-center">
+                      <img
+                        src={formData.fotoUrl}
+                        alt="Preview"
+                        className="w-full h-full object-contain"
+                        onError={(e) => { (e.target as any).style.display = 'none'; }}
+                      />
                       <button
                         type="button"
                         onClick={() => setFormData({...formData, fotoUrl: ""})}
-                        className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 shadow-lg transition-transform hover:scale-105"
+                        className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-lg transition-colors"
                         title="Eliminar imagen"
                       >
                         <X className="w-4 h-4" />
                       </button>
                     </div>
+                  ) : (
+                    <div className="w-full h-32 rounded-xl bg-zinc-950 border-2 border-dashed border-zinc-700 flex items-center justify-center">
+                      <ImageIcon className="w-10 h-10 text-zinc-700" />
+                    </div>
                   )}
+
+                  {/* Primary action buttons — full width, mobile-first */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="flex flex-col items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 text-white py-4 rounded-xl font-bold text-sm cursor-pointer transition-colors border border-zinc-700">
+                      <Upload className="w-6 h-6" />
+                      Galería
+                      <input type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={openCamera}
+                      className="flex flex-col items-center justify-center gap-2 bg-yellow-500/10 hover:bg-yellow-500/20 active:bg-yellow-500/30 text-yellow-400 border border-yellow-500/30 py-4 rounded-xl font-bold text-sm transition-colors"
+                    >
+                      <Camera className="w-6 h-6" />
+                      Cámara
+                    </button>
+                  </div>
+
+                  {/* URL input — collapsed by default, useful for desktop */}
+                  <details className="group">
+                    <summary className="text-xs text-zinc-500 cursor-pointer select-none list-none flex items-center gap-1 hover:text-zinc-400 transition-colors">
+                      <span className="group-open:rotate-90 transition-transform inline-block">▶</span>
+                      Pegar URL de imagen
+                    </summary>
+                    <input
+                      type="url"
+                      value={formData.fotoUrl}
+                      onChange={e => setFormData({...formData, fotoUrl: e.target.value})}
+                      placeholder="https://ejemplo.com/foto.jpg"
+                      className="mt-2 w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white focus:border-yellow-500 focus:outline-none text-sm"
+                    />
+                  </details>
+
                 </div>
               </div>
+
 
               <div>
                 <label className="block text-sm font-medium text-zinc-400 mb-1">Descripción (Opcional)</label>

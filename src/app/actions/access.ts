@@ -74,6 +74,19 @@ export async function validateAccess(codigo: string): Promise<AccessResult> {
             }
         }
 
+        if (socio.estado === 'ANULADO') {
+            return {
+                success: false,
+                message: 'Socio ANULADO - Acceso denegado',
+                socio: {
+                    nombres: socio.nombres || '',
+                    apellidos: socio.apellidos || '',
+                    fotoUrl: socio.fotoUrl,
+                    estado: 'INACTIVO'
+                }
+            }
+        }
+
         const suscripcion = socio.suscripciones[0]
 
         // Logic for access status

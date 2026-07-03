@@ -122,6 +122,7 @@ export async function importSocios(data: any[], mapping: Record<string, string>)
                     const fechaFin = new Date(fechaInicio)
                     if (!isNaN(fechaFin.getTime())) {
                         fechaFin.setMonth(fechaFin.getMonth() + meses)
+                        fechaFin.setDate(fechaFin.getDate() - 1)
                         await tx.suscripcion.create({
                             data: {
                                 socioId: socio.id,

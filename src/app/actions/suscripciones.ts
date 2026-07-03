@@ -3,7 +3,7 @@
 import prisma from '@/lib/prisma'
 import { addDays, addMonths } from 'date-fns'
 import { revalidatePath } from 'next/cache'
-import { requireAuth } from '@/lib/auth-utils'
+import { requireAuth, requirePermission } from '@/lib/auth-utils'
 import { suscripcionSchema } from '@/lib/validations'
 import { z } from 'zod'
 import { logAction } from '@/lib/audit'
@@ -354,4 +354,65 @@ export async function getExpiringSubscriptionsDetailed() {
     subscriptions.sort((a: any, b: any) => new Date(a.fechaFin).getTime() - new Date(b.fechaFin).getTime())
 
     return subscriptions
+}
+
+export async function deleteSubscription(id: string) {
+    try {
+        await requirePermission('SUSCRIPCIONES_ELIMINAR')
+
+        const subscription = await prisma.suscripcion.findUnique({
+            where: { id },
+            include: { socio: true }
+        })
+
+        if (!subscription) {
+            return { success: false, error: 'Suscripción no encontrada.' }
+        }
+
+        const socioId = subscription.socioId
+        const socio = subscription.socio
+        if (!socio) {
+            return { success: false, error: 'Socio no encontrado.' }
+        }
+
+        // Find matching history record by comparing date times
+        const historyEntries = await prisma.codigoHistorial.findMany({
+            where: { socioId: socioId }
+        })
+        const matchingHist = historyEntries.find(h => h.fechaCambio.getTime() === subscription.fechaInicio.getTime())
+
+        await prisma.$transaction(async (tx) => {
+            if (matchingHist) {
+                await tx.socio.update({
+                    where: { id: socioId },
+                    data: { codigo: matchingHist.codigo }
+                })
+                await tx.codigoHistorial.delete({
+                    where: { id: matchingHist.id }
+                })
+            }
+
+            await tx.pago.deleteMany({
+                where: { suscripcionId: id }
+            })
+
+            await tx.suscripcion.delete({
+                where: { id }
+            })
+        })
+
+        revalidatePath('/')
+        revalidatePath('/socios')
+        revalidatePath(`/socios/${socioId}`)
+        revalidatePath('/caja')
+
+        const fmtDate = (d: Date) => d.toLocaleDateString('es-PE')
+        const codeRevertedDesc = matchingHist ? ` | Código revertido: ${socio.codigo} → ${matchingHist.codigo}` : ''
+        await logAction('ELIMINAR_SUSCRIPCION', `Socio ${socio.codigo} - ${socio.nombres} ${socio.apellidos}: Eliminó suscripción de ${subscription.meses} mes(es) (Inicio: ${fmtDate(subscription.fechaInicio)}, Fin: ${fmtDate(subscription.fechaFin)})${codeRevertedDesc}`)
+
+        return { success: true }
+    } catch (error: any) {
+        console.error('Error deleting subscription:', error)
+        return { success: false, error: error.message || 'Error al eliminar suscripción.' }
+    }
 }

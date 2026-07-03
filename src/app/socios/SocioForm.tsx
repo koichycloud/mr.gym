@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Save, X, Calendar } from 'lucide-react'
-import { format, addMonths } from 'date-fns'
+import { format, addMonths, addDays } from 'date-fns'
 import { checkSocioExists } from '@/app/actions/socios'
 import { getPlanesActivos } from '@/app/actions/planes'
 import PhotoCapture from '@/app/components/PhotoCapture'
@@ -109,7 +109,7 @@ export default function SocioForm({ initialData, onSubmit, title, includeSubscri
                 meses = selectedPlan.meses
             }
 
-            const end = addMonths(start, meses)
+            const end = addDays(addMonths(start, meses), -1)
             if (isNaN(end.getTime())) return
 
             setFechaFin(format(end, 'dd/MM/yyyy'))

@@ -36,6 +36,8 @@ model Socio {
   asistencias      Asistencia[]
   pagos            Pago[]
   fotoUrl          String? // URL de la foto del socio (Base64)
+  estado           String        @default("ACTIVO") // ACTIVO o ANULADO
+  motivoAnulacion  String? // Motivo por el cual se anula el registro
 
   @@index([nombres, apellidos]) // Optimize name search
   @@map("Socio")

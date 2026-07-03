@@ -114,6 +114,9 @@ export default function SociosListClient({
     }
 
     const getRemainingTime = (socio: any) => {
+        if (socio.estado === 'ANULADO') {
+            return <span className="badge badge-error text-white font-bold">ANULADO</span>
+        }
         const activeSub = socio.suscripciones?.[0]
         if (!activeSub) return <span className="badge badge-ghost">Sin suscripción</span>
         const today = new Date()

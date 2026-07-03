@@ -2,16 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { getSocioById, logQRSent } from '@/app/actions/socios'
-import { createSubscription, updateSubscription } from '@/app/actions/suscripciones'
+import { getSocioById, logQRSent, annulSocio } from '@/app/actions/socios'
+import { createSubscription, updateSubscription, deleteSubscription } from '@/app/actions/suscripciones'
 import { getAsistenciasPorSocio } from '@/app/actions/asistencia-socio'
-import { ArrowLeft, Edit, Plus, Calendar, Phone, CreditCard, User, MapPin, CalendarDays, TrendingUp, Clock, Download, MessageCircle, Share2, CheckCircle, XCircle } from 'lucide-react'
+import { ArrowLeft, Edit, Plus, Calendar, Phone, CreditCard, User, MapPin, CalendarDays, TrendingUp, Clock, Download, MessageCircle, Share2, CheckCircle, XCircle, Trash2, AlertTriangle } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import NewSubscriptionModal from '@/app/components/suscripciones/NewSubscriptionModal'
 import EditSubscriptionModal from '@/app/components/suscripciones/EditSubscriptionModal'
 import MedidasTab from '@/app/components/medidas/MedidasTab'
 import { QRCodeSVG } from 'qrcode.react'
+import { useRouter } from 'next/navigation'
 
 /** Draws the full branded carnet onto a canvas and returns a Blob.
  *  Uses Blob URL (not btoa) to avoid charset encoding issues with accented names.
@@ -110,7 +111,8 @@ const safeFormatDate = (dateVal: string | Date) => {
     return format(d, 'dd/MM/yyyy');
 }
 
-export default function SocioDetailClient({ socio }: { socio: any }) {
+export default function SocioDetailClient({ socio, permissions = [], isAdmin = false }: { socio: any, permissions?: string[], isAdmin?: boolean }) {
+    const router = useRouter()
     const [showModal, setShowModal] = useState(false)
     const [editingSub, setEditingSub] = useState<any>(null)
     const [activeTab, setActiveTab] = useState<'general' | 'medidas' | 'carnet' | 'asistencias'>('general')
@@ -119,6 +121,14 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
     const [viewingPhoto, setViewingPhoto] = useState<string | null>(null)
     const [asistenciasLimit, setAsistenciasLimit] = useState<number>(50)
     const [generatingAttendancePdf, setGeneratingAttendancePdf] = useState(false)
+
+    // Delete subscription state
+    const [deletingSubId, setDeletingSubId] = useState<string | null>(null)
+
+    // Annulment states
+    const [showAnnulModal, setShowAnnulModal] = useState(false)
+    const [annulReason, setAnnulReason] = useState('')
+    const [annulling, setAnnulling] = useState(false)
 
     if (!socio) return <div>Cargando...</div>
 
@@ -132,6 +142,44 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
 
     const handleEditSubscription = async (id: string, newDate: Date, meses: number) => {
         return await updateSubscription(id, newDate, meses)
+    }
+
+    const handleDeleteSub = async (subId: string) => {
+        if (!confirm('¿Estás seguro de que deseas eliminar esta renovación? Se borrará permanentemente el pago asociado y el código snapshot erróneo del historial.')) return
+        setDeletingSubId(subId)
+        try {
+            const res = await deleteSubscription(subId)
+            if (res.success) {
+                alert('Renovación eliminada exitosamente.')
+                router.refresh()
+            } else {
+                alert(res.error || 'Error al eliminar la renovación.')
+            }
+        } catch (err: any) {
+            alert(err.message || 'Ocurrió un error inesperado.')
+        } finally {
+            setDeletingSubId(null)
+        }
+    }
+
+    const handleAnnulSocio = async () => {
+        if (!annulReason.trim()) return
+        setAnnulling(true)
+        try {
+            const res = await annulSocio(socio.id, annulReason)
+            if (res.success) {
+                alert('Registro anulado exitosamente.')
+                setShowAnnulModal(false)
+                setAnnulReason('')
+                router.refresh()
+            } else {
+                alert(res.error || 'Error al anular el registro.')
+            }
+        } catch (err: any) {
+            alert(err.message || 'Ocurrió un error inesperado.')
+        } finally {
+            setAnnulling(false)
+        }
     }
 
     const handleExportAttendancePDF = async () => {
@@ -208,14 +256,30 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                         )}
 
                         <div className="min-w-0 flex-1">
-                            <h1 className="text-lg md:text-3xl font-bold leading-tight truncate whitespace-normal break-words">{socio.nombres} {socio.apellidos}</h1>
+                            <h1 className="text-lg md:text-3xl font-bold leading-tight truncate whitespace-normal break-words flex items-center gap-2">
+                                {socio.nombres} {socio.apellidos}
+                                {socio.estado === 'ANULADO' && (
+                                    <span className="badge badge-error text-white font-bold animate-pulse text-xs md:text-sm p-3">ANULADO</span>
+                                )}
+                            </h1>
                             <p className="opacity-60 font-mono text-xs md:text-sm">{socio.codigo}</p>
                         </div>
                     </div>
-                    <Link href={`/socios/${socio.id}/editar`} className="btn btn-outline btn-sm md:btn-md w-full md:w-auto shrink-0 mt-2 md:mt-0">
-                        <Edit size={16} className="mr-2" />
-                        Editar Perfil
-                    </Link>
+                    <div className="flex flex-col sm:flex-row gap-2 mt-2 md:mt-0 w-full md:w-auto">
+                        <Link href={`/socios/${socio.id}/editar`} className="btn btn-outline btn-sm md:btn-md shrink-0">
+                            <Edit size={16} className="mr-2" />
+                            Editar Perfil
+                        </Link>
+                        {socio.estado !== 'ANULADO' && (isAdmin || permissions.includes('SOCIOS_EDITAR')) && (
+                            <button
+                                className="btn btn-error btn-outline btn-sm md:btn-md shrink-0"
+                                onClick={() => setShowAnnulModal(true)}
+                            >
+                                <XCircle size={16} className="mr-2" />
+                                Anular Registro
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Tabs */}
@@ -291,15 +355,34 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
 
                                 {/* Clean QR — nothing behind or on top */}
                                 <div style={{ background: '#fff', padding: '16px', display: 'flex', justifyContent: 'center' }}>
-                                    <QRCodeSVG
-                                        value={socio.codigo}
-                                        size={252}
-                                        level="H"
-                                        includeMargin={false}
-                                        bgColor="#FFFFFF"
-                                        fgColor="#000000"
-                                        id="socio-qr-svg"
-                                    />
+                                    {socio.estado === 'ANULADO' ? (
+                                        <div style={{
+                                            width: '252px',
+                                            height: '252px',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            background: '#fef2f2',
+                                            border: '2px dashed #f87171',
+                                            borderRadius: '8px',
+                                            color: '#dc2626'
+                                        }}>
+                                            <XCircle size={48} className="mb-2 text-error animate-pulse" />
+                                            <span className="font-extrabold text-sm uppercase tracking-wider">CÓDIGO QR ANULADO</span>
+                                            <span className="text-[10px] opacity-75 mt-1 font-semibold">Socio Desactivado</span>
+                                        </div>
+                                    ) : (
+                                        <QRCodeSVG
+                                            value={socio.codigo}
+                                            size={252}
+                                            level="H"
+                                            includeMargin={false}
+                                            bgColor="#FFFFFF"
+                                            fgColor="#000000"
+                                            id="socio-qr-svg"
+                                        />
+                                    )}
                                 </div>
 
                                 {/* Footer with code + name */}
@@ -321,14 +404,14 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
 
                             <div className="flex flex-col gap-4 mt-8 w-full max-w-sm mx-auto">
                                 {/* Estado de Acceso Card */}
-                                <div className={`p-4 rounded-2xl border-2 flex items-center gap-4 shadow-sm transition-all ${latestSub?.estado === 'ACTIVA' ? 'bg-success/10 border-success/30 text-success' : 'bg-error/10 border-error/30 text-error'}`}>
-                                    <div className={`p-3 rounded-full ${latestSub?.estado === 'ACTIVA' ? 'bg-success/20 text-success' : 'bg-error/20 text-error'}`}>
-                                        {latestSub?.estado === 'ACTIVA' ? <CheckCircle size={32} /> : <XCircle size={32} />}
+                                <div className={`p-4 rounded-2xl border-2 flex items-center gap-4 shadow-sm transition-all ${socio.estado === 'ANULADO' ? 'bg-error/15 border-error text-error animate-pulse' : (latestSub?.estado === 'ACTIVA' ? 'bg-success/10 border-success/30 text-success' : 'bg-error/10 border-error/30 text-error')}`}>
+                                    <div className={`p-3 rounded-full ${socio.estado === 'ANULADO' ? 'bg-error/20 text-error' : (latestSub?.estado === 'ACTIVA' ? 'bg-success/20 text-success' : 'bg-error/20 text-error')}`}>
+                                        {socio.estado === 'ANULADO' ? <XCircle size={32} /> : (latestSub?.estado === 'ACTIVA' ? <CheckCircle size={32} /> : <XCircle size={32} />)}
                                     </div>
                                     <div className="flex-1 text-left">
                                         <h3 className="font-bold text-xs opacity-70 uppercase tracking-widest mb-0.5">Estado de Acceso</h3>
                                         <div className="text-2xl font-black tracking-tight leading-none">
-                                            {latestSub?.estado === 'ACTIVA' ? 'HABILITADO' : 'DENEGADO'}
+                                            {socio.estado === 'ANULADO' ? 'ANULADO' : (latestSub?.estado === 'ACTIVA' ? 'HABILITADO' : 'DENEGADO')}
                                         </div>
                                     </div>
                                 </div>
@@ -337,71 +420,78 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
 
                                 {/* Botones */}
                                 <div className="grid grid-cols-1 gap-3">
-                                    <button className="btn btn-primary w-full shadow-md font-bold" onClick={async () => {
-                                        const blob = await generateCarnetBlob('socio-qr-svg', socio.codigo, `${socio.nombres} ${socio.apellidos}`)
-                                        if (!blob) { alert('Error al generar la imagen. Intenta de nuevo.'); return }
-                                        const link = document.createElement('a')
-                                        link.download = `QR-${socio.nombres}-${socio.codigo}.png`
-                                        link.href = URL.createObjectURL(blob)
-                                        link.click()
-                                        setTimeout(() => URL.revokeObjectURL(link.href), 5000)
-                                    }}>
+                                    <button 
+                                        className="btn btn-primary w-full shadow-md font-bold" 
+                                        disabled={socio.estado === 'ANULADO'}
+                                        onClick={async () => {
+                                            const blob = await generateCarnetBlob('socio-qr-svg', socio.codigo, `${socio.nombres} ${socio.apellidos}`)
+                                            if (!blob) { alert('Error al generar la imagen. Intenta de nuevo.'); return }
+                                            const link = document.createElement('a')
+                                            link.download = `QR-${socio.nombres}-${socio.codigo}.png`
+                                            link.href = URL.createObjectURL(blob)
+                                            link.click()
+                                            setTimeout(() => URL.revokeObjectURL(link.href), 5000)
+                                        }}
+                                    >
                                         <Download size={20} className="mr-1" />
                                         Descargar Imagen
                                     </button>
 
                                     <div className="grid grid-cols-2 gap-3">
-                                        <button className="btn btn-outline btn-success shadow-sm font-bold bg-success/5" onClick={async () => {
-                                            if (!socio.telefono) {
-                                                alert('El socio no tiene un número de teléfono registrado.')
-                                                return
-                                            }
-                                            const phone = socio.telefono.replace(/\D/g, '')
-                                            // Si el número tiene 9 dígitos (formato peruano sin código de país),
-                                            // le agregamos automáticamente el código de Perú: 51
-                                            const phoneWithCountry = phone.length === 9 ? `51${phone}` : phone
-                                            const text = `Hola ${socio.nombres}, aquí tienes tu código de acceso para Mr. Gym: ${socio.codigo}`
-                                            const targetUrl = `https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(text)}`
-
-                                            // ⚠️ DEBE ir ANTES de cualquier await — el navegador bloquea
-                                            // window.open si se llama después de una operación asíncrona
-                                            window.open(targetUrl, '_blank')
-                                            logQRSent(socio.nombres, socio.codigo, 'WhatsApp')
-
-                                            // Ahora sí, generar y copiar la imagen al portapapeles
-                                            const blob = await generateCarnetBlob('socio-qr-svg', socio.codigo, `${socio.nombres} ${socio.apellidos}`)
-                                            if (blob) {
-                                                try {
-                                                    const item = new ClipboardItem({ 'image/png': blob })
-                                                    await navigator.clipboard.write([item])
-                                                    alert('✅ Imagen QR copiada al portapapeles.\n\nEn WhatsApp: mantén presionado en el chat y selecciona PEGAR para enviar el código como imagen.')
-                                                } catch (e) {
-                                                    console.error('No se pudo copiar al portapapeles', e)
+                                        <button 
+                                            className="btn btn-outline btn-success shadow-sm font-bold bg-success/5" 
+                                            disabled={socio.estado === 'ANULADO'}
+                                            onClick={async () => {
+                                                if (!socio.telefono) {
+                                                    alert('El socio no tiene un número de teléfono registrado.')
+                                                    return
                                                 }
-                                            }
-                                        }}>
+                                                const phone = socio.telefono.replace(/\D/g, '')
+                                                const phoneWithCountry = phone.length === 9 ? `51${phone}` : phone
+                                                const text = `Hola ${socio.nombres}, aquí tienes tu código de acceso para Mr. Gym: ${socio.codigo}`
+                                                const targetUrl = `https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(text)}`
+
+                                                window.open(targetUrl, '_blank')
+                                                logQRSent(socio.nombres, socio.codigo, 'WhatsApp')
+
+                                                const blob = await generateCarnetBlob('socio-qr-svg', socio.codigo, `${socio.nombres} ${socio.apellidos}`)
+                                                if (blob) {
+                                                    try {
+                                                        const item = new ClipboardItem({ 'image/png': blob })
+                                                        await navigator.clipboard.write([item])
+                                                        alert('✅ Imagen QR copiada al portapapeles.\n\nEn WhatsApp: mantén presionado en el chat y selecciona PEGAR para enviar el código como imagen.')
+                                                    } catch (e) {
+                                                        console.error('No se pudo copiar al portapapeles', e)
+                                                    }
+                                                }
+                                            }}
+                                        >
                                             <MessageCircle size={18} className="mr-1" />
                                             WhatsApp
                                         </button>
 
 
-                                        <button className="btn btn-outline shadow-sm font-bold bg-base-200/50" onClick={async () => {
-                                            const text = `Hola ${socio.nombres}, aquí tienes tu código de acceso para Mr. Gym: ${socio.codigo}`
-                                            const blob = await generateCarnetBlob('socio-qr-svg', socio.codigo, `${socio.nombres} ${socio.apellidos}`)
-                                            if (!blob) { alert('Error al generar la imagen.'); return }
-                                            const file = new File([blob], `QR-${socio.nombres}-${socio.codigo}.png`, { type: 'image/png' })
-                                            const shareData = { title: 'Código QR de Acceso', text, files: [file] }
-                                            if (navigator.canShare && navigator.canShare(shareData)) {
-                                                try {
-                                                    await navigator.share(shareData)
-                                                    logQRSent(socio.nombres, socio.codigo, 'Nativo (Compartir)')
-                                                } catch (err: any) {
-                                                    console.log('Compartir cancelado o falló', err.message)
+                                        <button 
+                                            className="btn btn-outline shadow-sm font-bold bg-base-200/50" 
+                                            disabled={socio.estado === 'ANULADO'}
+                                            onClick={async () => {
+                                                const text = `Hola ${socio.nombres}, aquí tienes tu código de acceso para Mr. Gym: ${socio.codigo}`
+                                                const blob = await generateCarnetBlob('socio-qr-svg', socio.codigo, `${socio.nombres} ${socio.apellidos}`)
+                                                if (!blob) { alert('Error al generar la imagen.'); return }
+                                                const file = new File([blob], `QR-${socio.nombres}-${socio.codigo}.png`, { type: 'image/png' })
+                                                const shareData = { title: 'Código QR de Acceso', text, files: [file] }
+                                                if (navigator.canShare && navigator.canShare(shareData)) {
+                                                    try {
+                                                        await navigator.share(shareData)
+                                                        logQRSent(socio.nombres, socio.codigo, 'Nativo (Compartir)')
+                                                    } catch (err: any) {
+                                                        console.log('Compartir cancelado o falló', err.message)
+                                                    }
+                                                } else {
+                                                    alert("Tu dispositivo no soporta compartir nativamente. Usa el botón 'WhatsApp'.")
                                                 }
-                                            } else {
-                                                alert("Tu dispositivo no soporta compartir nativamente. Usa el botón 'WhatsApp'.")
-                                            }
-                                        }}>
+                                            }}
+                                        >
                                             <Share2 size={18} className="mr-1" />
                                             Compartir
                                         </button>
@@ -558,6 +648,22 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
 
                 {activeTab === 'general' && (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        {socio.estado === 'ANULADO' && (
+                            <div className="lg:col-span-3 alert alert-error shadow-lg rounded-2xl flex flex-col md:flex-row items-start gap-4">
+                                <AlertTriangle className="w-8 h-8 shrink-0 text-white animate-bounce" />
+                                <div>
+                                    <h3 className="font-black text-white text-lg">REGISTRO DE SOCIO ANULADO</h3>
+                                    <p className="text-white text-sm opacity-90">
+                                        Este socio ha sido retirado del sistema. Su acceso está bloqueado y su código QR está desactivado.
+                                    </p>
+                                    {socio.motivoAnulacion && (
+                                        <p className="text-white text-sm mt-2">
+                                            <span className="font-bold">Motivo de Anulación:</span> {socio.motivoAnulacion}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                         {/* Left Column: Personal Info & Renewal History */}
                         <div className="space-y-6">
                             {/* Info Card */}
@@ -706,7 +812,7 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                                                     {sub.estado}
                                                                 </div>
                                                             </td>
-                                                            <td>
+                                                            <td className="flex items-center gap-1">
                                                                 <button
                                                                     className="btn btn-ghost btn-xs"
                                                                     onClick={() => setEditingSub(sub)}
@@ -714,6 +820,20 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                                                 >
                                                                     <Edit size={14} />
                                                                 </button>
+                                                                {(isAdmin || permissions.includes('SUSCRIPCIONES_ELIMINAR')) && (
+                                                                    <button
+                                                                        className="btn btn-ghost btn-xs text-error"
+                                                                        onClick={() => handleDeleteSub(sub.id)}
+                                                                        disabled={deletingSubId === sub.id}
+                                                                        title="Eliminar renovación"
+                                                                    >
+                                                                        {deletingSubId === sub.id ? (
+                                                                            <span className="loading loading-spinner loading-xs"></span>
+                                                                        ) : (
+                                                                            <Trash2 size={14} />
+                                                                        )}
+                                                                    </button>
+                                                                )}
                                                             </td>
                                                         </tr>
                                                     )
@@ -739,12 +859,28 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                                                         <div className={`badge badge-sm ${sub.estado === 'ACTIVA' ? 'badge-success' : 'badge-ghost'}`}>
                                                             {sub.estado}
                                                         </div>
-                                                        <button
-                                                            className="btn btn-ghost btn-xs text-primary"
-                                                            onClick={() => setEditingSub(sub)}
-                                                        >
-                                                            <Edit size={14} className="mr-1" /> Editar
-                                                        </button>
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                className="btn btn-ghost btn-xs text-primary"
+                                                                onClick={() => setEditingSub(sub)}
+                                                            >
+                                                                <Edit size={14} className="mr-1" /> Editar
+                                                            </button>
+                                                            {(isAdmin || permissions.includes('SUSCRIPCIONES_ELIMINAR')) && (
+                                                                <button
+                                                                    className="btn btn-ghost btn-xs text-error"
+                                                                    onClick={() => handleDeleteSub(sub.id)}
+                                                                    disabled={deletingSubId === sub.id}
+                                                                >
+                                                                    {deletingSubId === sub.id ? (
+                                                                        <span className="loading loading-spinner loading-xs mr-1"></span>
+                                                                    ) : (
+                                                                        <Trash2 size={14} className="mr-1" />
+                                                                    )}
+                                                                    Eliminar
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                     <div className="grid grid-cols-2 gap-2 text-xs">
                                                         <div>
@@ -826,6 +962,60 @@ export default function SocioDetailClient({ socio }: { socio: any }) {
                         />
                         <div className="text-center mt-4 text-white font-bold text-lg drop-shadow-lg">
                             {socio.nombres} {socio.apellidos}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Anular Socio Modal */}
+            {showAnnulModal && (
+                <div className="modal modal-open z-[9999]">
+                    <div className="modal-box relative border border-error/20 bg-base-100 shadow-2xl rounded-2xl max-w-md">
+                        <h3 className="font-black text-xl text-error mb-2">Anular Registro de Socio</h3>
+                        <p className="text-sm opacity-75 mb-6">
+                            Esta acción anulará el registro del socio, desactivando su código QR y bloqueando su acceso al gimnasio.
+                        </p>
+                        
+                        <div className="space-y-4">
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text font-semibold">Motivo de Anulación</span>
+                                </label>
+                                <textarea
+                                    className="textarea textarea-bordered h-24 w-full focus:textarea-error"
+                                    placeholder="Ingrese el motivo de la anulación (por ejemplo: Retiro por viaje, problemas de salud, etc.)"
+                                    value={annulReason}
+                                    onChange={(e) => setAnnulReason(e.target.value)}
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <div className="modal-action mt-6 gap-2">
+                            <button 
+                                className="btn btn-ghost" 
+                                onClick={() => {
+                                    setShowAnnulModal(false);
+                                    setAnnulReason('');
+                                }}
+                                disabled={annulling}
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                className="btn btn-error font-bold" 
+                                onClick={handleAnnulSocio}
+                                disabled={annulling || !annulReason.trim()}
+                            >
+                                {annulling ? (
+                                    <>
+                                        <span className="loading loading-spinner loading-xs mr-1"></span>
+                                        Anulando...
+                                    </>
+                                ) : (
+                                    'Confirmar Anulación'
+                                )}
+                            </button>
                         </div>
                     </div>
                 </div>

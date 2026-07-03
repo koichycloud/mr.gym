@@ -2,7 +2,7 @@
 
 import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
-import { requireAuth } from '@/lib/auth-utils'
+import { requireAuth, requirePermission } from '@/lib/auth-utils'
 import { socioSchema } from '@/lib/validations'
 import { z } from 'zod'
 import { logAction } from '@/lib/audit'
@@ -55,6 +55,7 @@ export async function createSocio(data: z.infer<typeof socioSchema>) {
         if (suscripcion && suscripcion.meses > 0) {
             const fechaFin = new Date(suscripcion.fechaInicio)
             fechaFin.setMonth(fechaFin.getMonth() + suscripcion.meses)
+            fechaFin.setDate(fechaFin.getDate() - 1)
 
             // Dynamic status based on date
             const estado = fechaFin < new Date() ? 'VENCIDA' : 'ACTIVA'
@@ -383,6 +384,7 @@ export async function updateSocio(id: string, data: z.infer<typeof socioSchema>)
         if (suscripcion && suscripcion.meses > 0) {
             const fechaFin = new Date(suscripcion.fechaInicio)
             fechaFin.setMonth(fechaFin.getMonth() + suscripcion.meses)
+            fechaFin.setDate(fechaFin.getDate() - 1)
 
             // Dynamic status based on date
             const estado = fechaFin < new Date() ? 'VENCIDA' : 'ACTIVA'
@@ -512,5 +514,35 @@ export async function logQRSent(socioName: string, socioCodigo: string, method: 
     } catch (error) {
         console.error("Error logging QR sent:", error)
         return { success: false }
+    }
+}
+
+export async function annulSocio(id: string, motivo: string) {
+    try {
+        await requirePermission('SOCIOS_EDITAR')
+
+        const socio = await prisma.socio.findUnique({ where: { id } })
+        if (!socio) {
+            return { success: false, error: 'Socio no encontrado.' }
+        }
+
+        await prisma.socio.update({
+            where: { id },
+            data: {
+                estado: 'ANULADO',
+                motivoAnulacion: motivo
+            }
+        })
+
+        await logAction('ANULAR_SOCIO', `Anuló al socio ${socio.codigo} - ${socio.nombres} ${socio.apellidos}. Motivo: ${motivo}`)
+
+        revalidatePath('/socios')
+        revalidatePath(`/socios/${id}`)
+        revalidatePath('/')
+
+        return { success: true }
+    } catch (error: any) {
+        console.error('Error annulling socio:', error)
+        return { success: false, error: error.message || 'Error al anular socio.' }
     }
 }
