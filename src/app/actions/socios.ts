@@ -349,6 +349,9 @@ export async function getSocioById(id: string) {
             },
             historialCodigos: {
                 orderBy: { fechaCambio: 'desc' } 
+            },
+            pagos: {
+                orderBy: { fecha: 'desc' }
             }
         }
     })

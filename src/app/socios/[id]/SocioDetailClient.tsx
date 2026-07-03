@@ -13,6 +13,7 @@ import EditSubscriptionModal from '@/app/components/suscripciones/EditSubscripti
 import MedidasTab from '@/app/components/medidas/MedidasTab'
 import { QRCodeSVG } from 'qrcode.react'
 import { useRouter } from 'next/navigation'
+import { registrarPago } from '@/app/actions/pagos'
 
 /** Draws the full branded carnet onto a canvas and returns a Blob.
  *  Uses Blob URL (not btoa) to avoid charset encoding issues with accented names.
@@ -198,6 +199,56 @@ export default function SocioDetailClient({ socio, permissions = [], isAdmin = f
             alert(err.message || 'Ocurrió un error inesperado.')
         } finally {
             setReactivating(false)
+        }
+    }
+
+    const [showAbonoModal, setShowAbonoModal] = useState(false)
+    const [abonoSub, setAbonoSub] = useState<any | null>(null)
+    const [abonoMonto, setAbonoMonto] = useState('')
+    const [abonoMetodo, setAbonoMetodo] = useState<'EFECTIVO' | 'TRANSFERENCIA' | 'YAPE' | 'PLIN'>('EFECTIVO')
+    const [abonoDescripcion, setAbonoDescripcion] = useState('')
+    const [savingAbono, setSavingAbono] = useState(false)
+
+    const handleOpenAbono = (sub: any, pending: number) => {
+        setAbonoSub(sub)
+        setAbonoMonto(pending.toFixed(2))
+        setAbonoMetodo('EFECTIVO')
+        setAbonoDescripcion(`Abono a membresía plan: ${sub.plan?.nombre || 'General'}`)
+        setShowAbonoModal(true)
+    }
+
+    const handleSaveAbono = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!abonoSub) return
+        const val = parseFloat(abonoMonto)
+        if (isNaN(val) || val <= 0) {
+            alert('Por favor ingrese un monto válido mayor a 0.')
+            return
+        }
+
+        setSavingAbono(true)
+        try {
+            const res = await registrarPago({
+                socioId: socio.id,
+                suscripcionId: abonoSub.id,
+                monto: val,
+                metodoPago: abonoMetodo,
+                concepto: 'SUSCRIPCION',
+                descripcion: abonoDescripcion
+            })
+
+            if (res.success) {
+                alert('Abono registrado exitosamente.')
+                setShowAbonoModal(false)
+                setAbonoSub(null)
+                router.refresh()
+            } else {
+                alert(res.error || 'Error al registrar abono.')
+            }
+        } catch (err: any) {
+            alert(err.message || 'Ocurrió un error inesperado.')
+        } finally {
+            setSavingAbono(false)
         }
     }
 
@@ -832,6 +883,7 @@ export default function SocioDetailClient({ socio, permissions = [], isAdmin = f
                                                     <th>Meses</th>
                                                     <th>Vencimiento</th>
                                                     <th>Código/Recibo</th>
+                                                    <th>Costo / Saldo</th>
                                                     <th>Estado</th>
                                                     <th>Acciones</th>
                                                 </tr>
@@ -840,6 +892,11 @@ export default function SocioDetailClient({ socio, permissions = [], isAdmin = f
                                                 {socio.suscripciones?.map((sub: any, index: number) => {
                                                     const historicalCodes = socio.historialCodigos || []
                                                     const displayCode = sub.codigo || (index === 0 ? socio.codigo : (historicalCodes[index - 1]?.codigo || socio.codigo))
+
+                                                    const subPagos = socio.pagos?.filter((p: any) => p.suscripcionId === sub.id) || []
+                                                    const totalPagado = subPagos.reduce((sum: number, p: any) => sum + p.monto, 0)
+                                                    const precioPlan = sub.plan?.precio || 0
+                                                    const saldoPendiente = precioPlan - totalPagado
 
                                                     return (
                                                         <tr key={sub.id}>
@@ -857,11 +914,31 @@ export default function SocioDetailClient({ socio, permissions = [], isAdmin = f
                                                             <td>{safeFormatDate(sub.fechaFin)}</td>
                                                             <td className="font-mono text-xs text-primary">{displayCode}</td>
                                                             <td>
+                                                                <div>
+                                                                    <div className="font-bold text-xs">Costo: S/. {precioPlan.toFixed(2)}</div>
+                                                                    <div className="text-[10px] opacity-70">Abonado: S/. {totalPagado.toFixed(2)}</div>
+                                                                    {saldoPendiente > 0 && (
+                                                                        <div className="text-[10px] text-warning font-black animate-pulse mt-0.5">
+                                                                            Debe: S/. {saldoPendiente.toFixed(2)}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                            <td>
                                                                 <div className={`badge ${sub.estado === 'ACTIVA' ? 'badge-success' : 'badge-ghost'}`}>
                                                                     {sub.estado}
                                                                 </div>
                                                             </td>
                                                             <td className="flex items-center gap-1">
+                                                                {saldoPendiente > 0 && (
+                                                                    <button
+                                                                        className="btn btn-warning btn-outline btn-xs font-bold text-xs"
+                                                                        onClick={() => handleOpenAbono(sub, saldoPendiente)}
+                                                                        title="Registrar Abono"
+                                                                    >
+                                                                        Abonar
+                                                                    </button>
+                                                                )}
                                                                 <button
                                                                     className="btn btn-ghost btn-xs"
                                                                     onClick={() => setEditingSub(sub)}
@@ -901,6 +978,11 @@ export default function SocioDetailClient({ socio, permissions = [], isAdmin = f
                                         {socio.suscripciones?.map((sub: any, index: number) => {
                                             const historicalCodes = socio.historialCodigos || []
                                             const displayCode = sub.codigo || (index === 0 ? socio.codigo : (historicalCodes[index - 1]?.codigo || socio.codigo))
+
+                                            const subPagos = socio.pagos?.filter((p: any) => p.suscripcionId === sub.id) || []
+                                            const totalPagado = subPagos.reduce((sum: number, p: any) => sum + p.monto, 0)
+                                            const precioPlan = sub.plan?.precio || 0
+                                            const saldoPendiente = precioPlan - totalPagado
 
                                             return (
                                                 <div key={sub.id} className="bg-base-200 border border-base-300 rounded-lg p-3">
@@ -947,6 +1029,27 @@ export default function SocioDetailClient({ socio, permissions = [], isAdmin = f
                                                         <div>
                                                             <span className="opacity-50 block">Código</span>
                                                             <span className="font-mono text-primary font-bold">{displayCode}</span>
+                                                        </div>
+                                                        <div className="col-span-2 border-t pt-2 mt-2 flex justify-between items-center">
+                                                            <div>
+                                                                <span className="opacity-50 block">Costo / Abonado</span>
+                                                                <span className="font-semibold">
+                                                                    S/. {precioPlan.toFixed(2)} / S/. {totalPagado.toFixed(2)}
+                                                                </span>
+                                                                {saldoPendiente > 0 && (
+                                                                    <span className="text-[10px] text-warning font-black block mt-0.5 animate-pulse">
+                                                                        Debe: S/. {saldoPendiente.toFixed(2)}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            {saldoPendiente > 0 && (
+                                                                <button
+                                                                    className="btn btn-warning btn-sm font-bold text-xs"
+                                                                    onClick={() => handleOpenAbono(sub, saldoPendiente)}
+                                                                >
+                                                                    Abonar
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1067,6 +1170,96 @@ export default function SocioDetailClient({ socio, permissions = [], isAdmin = f
                             </button>
                         </div>
                     </div>
+                </div>
+            )}
+            {/* Registrar Abono Modal */}
+            {showAbonoModal && abonoSub && (
+                <div className="modal modal-open z-[9999]">
+                    <form onSubmit={handleSaveAbono} className="modal-box relative border border-warning/20 bg-base-100 shadow-2xl rounded-2xl max-w-md">
+                        <h3 className="font-black text-xl text-warning flex items-center gap-2 mb-2">
+                            <CreditCard className="w-6 h-6" />
+                            Registrar Abono / Pago
+                        </h3>
+                        <p className="text-sm opacity-75 mb-6">
+                            Permite abonar a la membresía pendiente. Esto registrará un ingreso en la caja.
+                        </p>
+                        
+                        <div className="space-y-4">
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text font-semibold">Monto del Abono (S/.)</span>
+                                </label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    className="input input-bordered w-full focus:input-warning"
+                                    placeholder="0.00"
+                                    value={abonoMonto}
+                                    onChange={(e) => setAbonoMonto(e.target.value)}
+                                    required
+                                />
+                            </div>
+
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text font-semibold">Método de Pago</span>
+                                </label>
+                                <select
+                                    className="select select-bordered w-full focus:select-warning"
+                                    value={abonoMetodo}
+                                    onChange={(e) => setAbonoMetodo(e.target.value as any)}
+                                    required
+                                >
+                                    <option value="EFECTIVO">💵 Efectivo</option>
+                                    <option value="TRANSFERENCIA">🏦 Transferencia Bancaria</option>
+                                    <option value="YAPE">📱 Yape</option>
+                                    <option value="PLIN">📱 Plin</option>
+                                </select>
+                            </div>
+
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text font-semibold">Descripción</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    className="input input-bordered w-full focus:input-warning"
+                                    placeholder="Descripción del pago"
+                                    value={abonoDescripcion}
+                                    onChange={(e) => setAbonoDescripcion(e.target.value)}
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <div className="modal-action mt-6 gap-2">
+                            <button 
+                                type="button"
+                                className="btn btn-ghost" 
+                                onClick={() => {
+                                    setShowAbonoModal(false);
+                                    setAbonoSub(null);
+                                }}
+                                disabled={savingAbono}
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                type="submit"
+                                className="btn btn-warning text-white font-bold" 
+                                disabled={savingAbono || !abonoMonto || parseFloat(abonoMonto) <= 0}
+                            >
+                                {savingAbono ? (
+                                    <>
+                                        <span className="loading loading-spinner loading-xs mr-1"></span>
+                                        Registrando...
+                                    </>
+                                ) : (
+                                    'Registrar Pago'
+                                )}
+                            </button>
+                        </div>
+                    </form>
                 </div>
             )}
         </div >
