@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getMedidasBySocio, createMedida, deleteMedida } from '@/app/actions/medidas'
-import { Plus, Trash, Activity, FileDown } from 'lucide-react'
+import { getMedidasBySocio, createMedida, deleteMedida, updateMedida } from '@/app/actions/medidas'
+import { Plus, Trash, Activity, FileDown, Edit } from 'lucide-react'
 import { format } from 'date-fns'
 import AddMedidaModal from './AddMedidaModal'
 import MedidasChart from './MedidasChart'
@@ -31,10 +31,23 @@ export default function MedidasTab({ socioId, fechaNacimiento, sexo = 'M' }: { s
         fetchMedidas()
     }, [socioId])
 
+    const [editingMedida, setEditingMedida] = useState<any | null>(null)
+
     const handleCreate = async (data: any) => {
         const res = await createMedida({ ...data, socioId })
         if (res.success) {
             fetchMedidas()
+            return { success: true }
+        }
+        return res
+    }
+
+    const handleEdit = async (data: any) => {
+        if (!editingMedida) return { success: false, error: 'No se seleccionó registro para editar' }
+        const res = await updateMedida(editingMedida.id, { ...data, socioId })
+        if (res.success) {
+            fetchMedidas()
+            setEditingMedida(null)
             return { success: true }
         }
         return res
@@ -236,10 +249,18 @@ export default function MedidasTab({ socioId, fechaNacimiento, sexo = 'M' }: { s
                                             <td>{m.gluteos || '-'}</td>
                                             <td>{m.biceps || '-'}</td>
                                             <td>{m.cuadriceps || '-'}</td>
-                                            <td>
+                                            <td className="flex items-center gap-1">
+                                                <button
+                                                    onClick={() => setEditingMedida(m)}
+                                                    className="btn btn-ghost btn-xs text-primary"
+                                                    title="Editar registro"
+                                                >
+                                                    <Edit size={14} />
+                                                </button>
                                                 <button
                                                     onClick={() => handleDelete(m.id)}
                                                     className="btn btn-ghost btn-xs text-error"
+                                                    title="Eliminar registro"
                                                 >
                                                     <Trash size={14} />
                                                 </button>
@@ -259,12 +280,22 @@ export default function MedidasTab({ socioId, fechaNacimiento, sexo = 'M' }: { s
                                             <Activity size={16} />
                                             {format(new Date(m.fecha), 'dd/MM/yyyy')}
                                         </div>
-                                        <button
-                                            onClick={() => handleDelete(m.id)}
-                                            className="btn btn-ghost btn-xs text-error btn-square"
-                                        >
-                                            <Trash size={16} />
-                                        </button>
+                                        <div className="flex gap-1">
+                                            <button
+                                                onClick={() => setEditingMedida(m)}
+                                                className="btn btn-ghost btn-xs text-primary btn-square"
+                                                title="Editar"
+                                            >
+                                                <Edit size={16} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(m.id)}
+                                                className="btn btn-ghost btn-xs text-error btn-square"
+                                                title="Eliminar"
+                                            >
+                                                <Trash size={16} />
+                                            </button>
+                                        </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-sm">
                                         <div className="bg-base-100 p-2 rounded">
@@ -302,6 +333,17 @@ export default function MedidasTab({ socioId, fechaNacimiento, sexo = 'M' }: { s
                         onClose={() => setShowModal(false)}
                         onSubmit={handleCreate}
                         fechaNacimiento={fechaNacimiento}
+                    />
+                )
+            }
+
+            {
+                editingMedida && (
+                    <AddMedidaModal
+                        onClose={() => setEditingMedida(null)}
+                        onSubmit={handleEdit}
+                        fechaNacimiento={fechaNacimiento}
+                        initialData={editingMedida}
                     />
                 )
             }

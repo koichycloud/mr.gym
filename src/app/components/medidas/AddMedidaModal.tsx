@@ -8,29 +8,53 @@ interface AddMedidaModalProps {
     onClose: () => void
     onSubmit: (data: any) => Promise<{ success: boolean; error?: string }>
     fechaNacimiento: Date | string
+    initialData?: any
 }
 
-export default function AddMedidaModal({ onClose, onSubmit, fechaNacimiento }: AddMedidaModalProps) {
+export default function AddMedidaModal({ onClose, onSubmit, fechaNacimiento, initialData }: AddMedidaModalProps) {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    const [formData, setFormData] = useState({
-        fecha: format(new Date(), 'yyyy-MM-dd'),
-        peso: '',
-        altura: '',
-        porcentajeGrasa: '',
-        porcentajeMusculo: '',
-        cuello: '',
-        hombros: '',
-        pecho: '',
-        biceps: '',
-        antebrazos: '',
-        cintura: '',
-        vientreBajo: '',
-        cadera: '',
-        gluteos: '',
-        muslos: '',
-        cuadriceps: '',
-        pantorrillas: ''
+    const [formData, setFormData] = useState(() => {
+        if (initialData) {
+            return {
+                fecha: format(new Date(initialData.fecha), 'yyyy-MM-dd'),
+                peso: initialData.peso !== null && initialData.peso !== undefined ? String(initialData.peso) : '',
+                altura: initialData.altura !== null && initialData.altura !== undefined ? String(initialData.altura) : '',
+                porcentajeGrasa: initialData.porcentajeGrasa !== null && initialData.porcentajeGrasa !== undefined ? String(initialData.porcentajeGrasa) : '',
+                porcentajeMusculo: initialData.porcentajeMusculo !== null && initialData.porcentajeMusculo !== undefined ? String(initialData.porcentajeMusculo) : '',
+                cuello: initialData.cuello !== null && initialData.cuello !== undefined ? String(initialData.cuello) : '',
+                hombros: initialData.hombros !== null && initialData.hombros !== undefined ? String(initialData.hombros) : '',
+                pecho: initialData.pecho !== null && initialData.pecho !== undefined ? String(initialData.pecho) : '',
+                biceps: initialData.biceps !== null && initialData.biceps !== undefined ? String(initialData.biceps) : '',
+                antebrazos: initialData.antebrazos !== null && initialData.antebrazos !== undefined ? String(initialData.antebrazos) : '',
+                cintura: initialData.cintura !== null && initialData.cintura !== undefined ? String(initialData.cintura) : '',
+                vientreBajo: initialData.vientreBajo !== null && initialData.vientreBajo !== undefined ? String(initialData.vientreBajo) : '',
+                cadera: initialData.cadera !== null && initialData.cadera !== undefined ? String(initialData.cadera) : '',
+                gluteos: initialData.gluteos !== null && initialData.gluteos !== undefined ? String(initialData.gluteos) : '',
+                muslos: initialData.muslos !== null && initialData.muslos !== undefined ? String(initialData.muslos) : '',
+                cuadriceps: initialData.cuadriceps !== null && initialData.cuadriceps !== undefined ? String(initialData.cuadriceps) : '',
+                pantorrillas: initialData.pantorrillas !== null && initialData.pantorrillas !== undefined ? String(initialData.pantorrillas) : ''
+            }
+        }
+        return {
+            fecha: format(new Date(), 'yyyy-MM-dd'),
+            peso: '',
+            altura: '',
+            porcentajeGrasa: '',
+            porcentajeMusculo: '',
+            cuello: '',
+            hombros: '',
+            pecho: '',
+            biceps: '',
+            antebrazos: '',
+            cintura: '',
+            vientreBajo: '',
+            cadera: '',
+            gluteos: '',
+            muslos: '',
+            cuadriceps: '',
+            pantorrillas: ''
+        }
     })
 
     const edadCalculada = useMemo(() => {
@@ -107,7 +131,7 @@ export default function AddMedidaModal({ onClose, onSubmit, fechaNacimiento }: A
             <div className="card bg-base-100 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
                 <div className="card-body">
                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="card-title text-xl">Registrar Medidas</h3>
+                        <h3 className="card-title text-xl">{initialData ? 'Editar Medidas' : 'Registrar Medidas'}</h3>
                         <button onClick={onClose} className="btn btn-ghost btn-circle btn-sm">
                             <X size={20} />
                         </button>
