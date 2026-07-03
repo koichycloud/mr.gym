@@ -266,7 +266,12 @@ export default function SociosListClient({
                                                             </div>
                                                         )}
                                                         <div>
-                                                            <div className="font-bold">{socio.nombres} {socio.apellidos}</div>
+                                                            <div className="font-bold flex items-center gap-1.5">
+                                                                {socio.nombres} {socio.apellidos}
+                                                                {socio.estado === 'ANULADO' && (
+                                                                    <span className="badge badge-error badge-xs text-[9px] text-white font-black px-1.5 py-0.5 leading-none shrink-0">ANULADO</span>
+                                                                )}
+                                                            </div>
                                                             <div className="text-xs opacity-50">
                                                                 Edad: {new Date().getFullYear() - new Date(socio.fechaNacimiento).getFullYear()} años
                                                             </div>
@@ -334,7 +339,12 @@ export default function SociosListClient({
                                                     </div>
                                                 )}
                                                 <div>
-                                                    <div className="font-bold text-lg leading-tight">{socio.nombres} {socio.apellidos}</div>
+                                                    <div className="font-bold text-lg leading-tight flex items-center flex-wrap gap-1.5">
+                                                        {socio.nombres} {socio.apellidos}
+                                                        {socio.estado === 'ANULADO' && (
+                                                            <span className="badge badge-error badge-sm text-[10px] text-white font-black px-2 py-0.5 shrink-0">ANULADO</span>
+                                                        )}
+                                                    </div>
                                                     <div className="text-xs opacity-60 mt-1 flex items-center gap-2">
                                                         <span>{socio.tipoDocumento} {socio.numeroDocumento}</span>
                                                         <span>•</span>
