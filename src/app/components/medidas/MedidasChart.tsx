@@ -122,8 +122,18 @@ export default function MedidasChart({ data }: MedidasChartProps) {
                                     name={m.label}
                                     strokeWidth={isHovered ? 3.5 : 1.5}
                                     opacity={isAnyLineHovered ? (isHovered ? 1 : 0.15) : 0.85}
-                                    dot={{ r: isHovered ? 4 : 2 }}
-                                    activeDot={{ r: 6 }}
+                                    dot={{ 
+                                        r: isHovered ? 4 : 2,
+                                        onMouseEnter: () => setHoveredLine(m.key),
+                                        onMouseLeave: () => setHoveredLine(null),
+                                        className: "cursor-pointer"
+                                    }}
+                                    activeDot={{ 
+                                        r: 6,
+                                        onMouseEnter: () => setHoveredLine(m.key),
+                                        onMouseLeave: () => setHoveredLine(null),
+                                        className: "cursor-pointer"
+                                    }}
                                     onMouseEnter={() => setHoveredLine(m.key)}
                                     onMouseLeave={() => setHoveredLine(null)}
                                     className="transition-all duration-200 cursor-pointer"
