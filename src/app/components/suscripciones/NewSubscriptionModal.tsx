@@ -36,6 +36,8 @@ export default function NewSubscriptionModal({ socioId, socioNombre, socioCodigo
         PLIN: ''
     })
 
+    const [montoAPagar, setMontoAPagar] = useState<string>('')
+
     const [formData, setFormData] = useState<{
         fechaInicio: string
         nuevoCodigo: string
@@ -56,6 +58,14 @@ export default function NewSubscriptionModal({ socioId, socioNombre, socioCodigo
             }
         })
     }, [])
+
+    useEffect(() => {
+        if (selectedPlanId === 'custom') {
+            setMontoAPagar(customMonto.toString())
+        } else if (selectedPlan) {
+            setMontoAPagar(selectedPlan.precio.toString())
+        }
+    }, [selectedPlanId, selectedPlan, customMonto])
 
     useEffect(() => {
         if (!formData.fechaInicio) return
@@ -99,7 +109,9 @@ export default function NewSubscriptionModal({ socioId, socioNombre, socioCodigo
             let pagoInfo = undefined
             if (registrarPago) {
                 pagoInfo = {
-                    monto: selectedPlan ? selectedPlan.precio : customMonto,
+                    monto: isMixedPayment 
+                        ? ((Number(mixedAmounts.EFECTIVO) || 0) + (Number(mixedAmounts.TRANSFERENCIA) || 0) + (Number(mixedAmounts.YAPE) || 0) + (Number(mixedAmounts.PLIN) || 0))
+                        : (Number(montoAPagar) || 0),
                     metodoPago: metodoPago,
                     nombrePlan: selectedPlan ? selectedPlan.nombre : 'Personalizado',
                     ...(isMixedPayment ? {
@@ -244,15 +256,42 @@ export default function NewSubscriptionModal({ socioId, socioNombre, socioCodigo
 
                     <div className="divider my-0"></div>
 
-                    <div className="form-control">
-                        <div className="bg-success/10 p-3 rounded-lg flex items-center gap-3 border border-success/20">
-                            <Wallet className="text-success" size={20}/>
-                            <div>
-                                <span className="label-text font-bold block text-success">Ingreso a Caja</span>
-                                <span className="text-xs opacity-70 text-success">Monto: S/ {(selectedPlan ? selectedPlan.precio : customMonto).toFixed(2)}</span>
+                    {!isMixedPayment && (
+                        <div className="form-control bg-base-200 p-3 rounded-lg border border-base-300">
+                            <label className="label py-0">
+                                <span className="label-text font-bold text-success flex items-center gap-1.5">
+                                    <Wallet size={16} /> Monto a Pagar Hoy (S/.)
+                                </span>
+                                <span className="label-text-alt opacity-70">Costo del Plan: S/. {(selectedPlan ? selectedPlan.precio : customMonto).toFixed(2)}</span>
+                            </label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                value={montoAPagar}
+                                onChange={(e) => setMontoAPagar(e.target.value)}
+                                className="input input-bordered w-full font-bold text-success mt-2"
+                                min="0"
+                                required
+                            />
+                            {Number(montoAPagar) < (selectedPlan ? selectedPlan.precio : customMonto) && (
+                                <span className="text-[10px] text-warning font-semibold mt-1 block">
+                                    ⚠️ Registro parcial: Guardará un saldo pendiente de S/. {((selectedPlan ? selectedPlan.precio : customMonto) - (Number(montoAPagar) || 0)).toFixed(2)}
+                                </span>
+                            )}
+                        </div>
+                    )}
+
+                    {isMixedPayment && (
+                        <div className="form-control">
+                            <div className="bg-success/10 p-3 rounded-lg flex items-center gap-3 border border-success/20">
+                                <Wallet className="text-success" size={20}/>
+                                <div>
+                                    <span className="label-text font-bold block text-success">Ingreso a Caja</span>
+                                    <span className="text-xs opacity-70 text-success">Costo del Plan: S/ {(selectedPlan ? selectedPlan.precio : customMonto).toFixed(2)}</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    )}
 
                     <div className="flex gap-4 items-center mt-3">
                         <label className="label cursor-pointer flex gap-2">
@@ -317,11 +356,18 @@ export default function NewSubscriptionModal({ socioId, socioNombre, socioCodigo
                                     className="input input-bordered input-sm bg-zinc-950 font-mono text-white border-zinc-800"
                                 />
                             </div>
-                            <div className="col-span-2 mt-1 border-t border-zinc-800 pt-1 flex justify-between items-center">
-                                <span className="text-zinc-400">Total Ingresado:</span>
-                                <span className={`font-black ${(Math.abs(((Number(mixedAmounts.EFECTIVO) || 0) + (Number(mixedAmounts.TRANSFERENCIA) || 0) + (Number(mixedAmounts.YAPE) || 0) + (Number(mixedAmounts.PLIN) || 0)) - (selectedPlan ? selectedPlan.precio : customMonto)) > 0.01) ? "text-orange-500" : "text-green-500"}`}>
-                                    S/ {((Number(mixedAmounts.EFECTIVO) || 0) + (Number(mixedAmounts.TRANSFERENCIA) || 0) + (Number(mixedAmounts.YAPE) || 0) + (Number(mixedAmounts.PLIN) || 0)).toFixed(2)} / S/ {(selectedPlan ? selectedPlan.precio : customMonto).toFixed(2)}
-                                </span>
+                            <div className="col-span-2 mt-1 border-t border-zinc-800 pt-2 flex flex-col gap-1">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-zinc-400">Total Ingresado:</span>
+                                    <span className={`font-black ${(Math.abs(((Number(mixedAmounts.EFECTIVO) || 0) + (Number(mixedAmounts.TRANSFERENCIA) || 0) + (Number(mixedAmounts.YAPE) || 0) + (Number(mixedAmounts.PLIN) || 0)) - (selectedPlan ? selectedPlan.precio : customMonto)) > 0.01) ? "text-orange-500" : "text-green-500"}`}>
+                                        S/ {((Number(mixedAmounts.EFECTIVO) || 0) + (Number(mixedAmounts.TRANSFERENCIA) || 0) + (Number(mixedAmounts.YAPE) || 0) + (Number(mixedAmounts.PLIN) || 0)).toFixed(2)} / S/ {(selectedPlan ? selectedPlan.precio : customMonto).toFixed(2)}
+                                    </span>
+                                </div>
+                                {((Number(mixedAmounts.EFECTIVO) || 0) + (Number(mixedAmounts.TRANSFERENCIA) || 0) + (Number(mixedAmounts.YAPE) || 0) + (Number(mixedAmounts.PLIN) || 0)) < (selectedPlan ? selectedPlan.precio : customMonto) && (
+                                    <span className="text-[10px] text-warning font-semibold">
+                                        ⚠️ Registro parcial: Guardará un saldo pendiente de S/. {((selectedPlan ? selectedPlan.precio : customMonto) - ((Number(mixedAmounts.EFECTIVO) || 0) + (Number(mixedAmounts.TRANSFERENCIA) || 0) + (Number(mixedAmounts.YAPE) || 0) + (Number(mixedAmounts.PLIN) || 0))).toFixed(2)}
+                                    </span>
+                                )}
                             </div>
                         </div>
                     ) : (
