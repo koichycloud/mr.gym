@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { getSocioById, logQRSent, annulSocio } from '@/app/actions/socios'
+import { getSocioById, logQRSent, annulSocio, reactivateSocio } from '@/app/actions/socios'
 import { createSubscription, updateSubscription, deleteSubscription } from '@/app/actions/suscripciones'
 import { getAsistenciasPorSocio } from '@/app/actions/asistencia-socio'
 import { ArrowLeft, Edit, Plus, Calendar, Phone, CreditCard, User, MapPin, CalendarDays, TrendingUp, Clock, Download, MessageCircle, Share2, CheckCircle, XCircle, Trash2, AlertTriangle } from 'lucide-react'
@@ -182,6 +182,25 @@ export default function SocioDetailClient({ socio, permissions = [], isAdmin = f
         }
     }
 
+    const [reactivating, setReactivating] = useState(false)
+    const handleReactivateSocio = async () => {
+        if (!confirm('¿Estás seguro de que deseas reactivar a este socio? Se quitará la anulación y podrá volver a acceder si su membresía está activa.')) return
+        setReactivating(true)
+        try {
+            const res = await reactivateSocio(socio.id)
+            if (res.success) {
+                alert('Socio reactivado exitosamente.')
+                router.refresh()
+            } else {
+                alert(res.error || 'Error al reactivar al socio.')
+            }
+        } catch (err: any) {
+            alert(err.message || 'Ocurrió un error inesperado.')
+        } finally {
+            setReactivating(false)
+        }
+    }
+
     const handleExportAttendancePDF = async () => {
         setGeneratingAttendancePdf(true)
         try {
@@ -277,6 +296,25 @@ export default function SocioDetailClient({ socio, permissions = [], isAdmin = f
                             >
                                 <XCircle size={16} className="mr-2" />
                                 Anular Registro
+                            </button>
+                        )}
+                        {socio.estado === 'ANULADO' && (isAdmin || permissions.includes('SOCIOS_EDITAR')) && (
+                            <button
+                                className="btn btn-success btn-sm md:btn-md shrink-0 font-bold text-white"
+                                onClick={handleReactivateSocio}
+                                disabled={reactivating}
+                            >
+                                {reactivating ? (
+                                    <>
+                                        <span className="loading loading-spinner loading-xs mr-2"></span>
+                                        Reactivando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircle size={16} className="mr-2" />
+                                        Reactivar Socio
+                                    </>
+                                )}
                             </button>
                         )}
                     </div>
@@ -649,19 +687,30 @@ export default function SocioDetailClient({ socio, permissions = [], isAdmin = f
                 {activeTab === 'general' && (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {socio.estado === 'ANULADO' && (
-                            <div className="lg:col-span-3 alert alert-error shadow-lg rounded-2xl flex flex-col md:flex-row items-start gap-4">
-                                <AlertTriangle className="w-8 h-8 shrink-0 text-white animate-bounce" />
-                                <div>
-                                    <h3 className="font-black text-white text-lg">REGISTRO DE SOCIO ANULADO</h3>
-                                    <p className="text-white text-sm opacity-90">
-                                        Este socio ha sido retirado del sistema. Su acceso está bloqueado y su código QR está desactivado.
-                                    </p>
-                                    {socio.motivoAnulacion && (
-                                        <p className="text-white text-sm mt-2">
-                                            <span className="font-bold">Motivo de Anulación:</span> {socio.motivoAnulacion}
+                            <div className="lg:col-span-3 alert alert-error shadow-lg rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                                <div className="flex items-start gap-4">
+                                    <AlertTriangle className="w-8 h-8 shrink-0 text-white animate-bounce" />
+                                    <div>
+                                        <h3 className="font-black text-white text-lg">REGISTRO DE SOCIO ANULADO</h3>
+                                        <p className="text-white text-sm opacity-90">
+                                            Este socio ha sido retirado del sistema. Su acceso está bloqueado y su código QR está desactivado.
                                         </p>
-                                    )}
+                                        {socio.motivoAnulacion && (
+                                            <p className="text-white text-sm mt-2">
+                                                <span className="font-bold">Motivo de Anulación:</span> {socio.motivoAnulacion}
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
+                                {(isAdmin || permissions.includes('SOCIOS_EDITAR')) && (
+                                    <button
+                                        onClick={handleReactivateSocio}
+                                        disabled={reactivating}
+                                        className="btn bg-white text-error hover:bg-zinc-100 border-none btn-sm md:btn-md shrink-0 w-full md:w-auto font-black shadow-md"
+                                    >
+                                        {reactivating ? 'Reactivando...' : 'Reactivar Socio'}
+                                    </button>
+                                )}
                             </div>
                         )}
                         {/* Left Column: Personal Info & Renewal History */}

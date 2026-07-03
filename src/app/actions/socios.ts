@@ -546,3 +546,33 @@ export async function annulSocio(id: string, motivo: string) {
         return { success: false, error: error.message || 'Error al anular socio.' }
     }
 }
+
+export async function reactivateSocio(id: string) {
+    try {
+        await requirePermission('SOCIOS_EDITAR')
+
+        const socio = await prisma.socio.findUnique({ where: { id } })
+        if (!socio) {
+            return { success: false, error: 'Socio no encontrado.' }
+        }
+
+        await prisma.socio.update({
+            where: { id },
+            data: {
+                estado: 'ACTIVO',
+                motivoAnulacion: null
+            }
+        })
+
+        await logAction('REACTIVAR_SOCIO', `Reactivó al socio ${socio.codigo} - ${socio.nombres} ${socio.apellidos}`)
+
+        revalidatePath('/socios')
+        revalidatePath(`/socios/${id}`)
+        revalidatePath('/')
+
+        return { success: true }
+    } catch (error: any) {
+        console.error('Error reactivating socio:', error)
+        return { success: false, error: error.message || 'Error al reactivar socio.' }
+    }
+}
