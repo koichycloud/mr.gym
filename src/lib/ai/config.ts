@@ -79,16 +79,10 @@ export function validateAIEnvironment(): { valid: boolean; error?: string } {
   const config = getAIConfig();
 
   if (config.provider === "gemini") {
-    if (!config.isLocalDev) {
-      return {
-        valid: false,
-        error: "Violación de Seguridad: El proveedor Gemini real solo está autorizado en entorno de desarrollo local (mr_gym_dev).",
-      };
-    }
     if (!config.isGeminiKeyConfigured) {
       return {
         valid: false,
-        error: "Falta configuración de GEMINI_API_KEY en el entorno local. Configure la clave privada en su archivo .env local para habilitar llamadas reales.",
+        error: "Falta configuración de GEMINI_API_KEY. Configure la clave privada en las variables de entorno para habilitar llamadas reales.",
       };
     }
   }
@@ -122,15 +116,12 @@ export function getAIDiagnostics(): AIDiagnosticReport {
   let readinessMessage = "Motor de IA listo y operando en modo MOCK seguro.";
 
   if (config.provider === "gemini") {
-    if (!config.isLocalDev) {
-      status = "BLOCKED_PRODUCTION";
-      readinessMessage = "Bloqueo de seguridad: Gemini real no permitido fuera de entorno local.";
-    } else if (!config.isGeminiKeyConfigured) {
+    if (!config.isGeminiKeyConfigured) {
       status = "MISSING_KEY";
-      readinessMessage = "Proveedor Gemini configurado pero GEMINI_API_KEY no detectada. Configure su credencial local para activar llamadas reales.";
+      readinessMessage = "Proveedor Gemini configurado pero GEMINI_API_KEY no detectada. Configure su credencial para activar llamadas reales.";
     } else {
       status = "READY_FOR_REAL";
-      readinessMessage = "Motor de IA configurado y listo para ejecución real con Gemini en desarrollo local.";
+      readinessMessage = "Motor de IA configurado y listo para ejecución real con Gemini.";
     }
   }
 
@@ -139,7 +130,7 @@ export function getAIDiagnostics(): AIDiagnosticReport {
     model: config.model,
     timeoutMs: config.timeoutMs,
     isKeyConfigured: config.isGeminiKeyConfigured,
-    environmentAllowed: config.isLocalDev,
+    environmentAllowed: true,
     environmentType: envType,
     status,
     readinessMessage,

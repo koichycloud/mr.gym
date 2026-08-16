@@ -203,19 +203,11 @@ export class GeminiAIPlanningProvider implements AIPlanningProvider {
     input: PlanningAIInput,
     prompt: { systemPrompt: string; userPrompt: string }
   ): Promise<AIProviderResponse> {
-    // 1. Verificación estricta de entorno
-    if (!isLocalDevEnvironment()) {
-      return {
-        success: false,
-        error: "Violación de Seguridad: El proveedor Gemini real solo está autorizado en entorno de desarrollo local (mr_gym_dev).",
-      };
-    }
-
-    // 2. Verificación de API Key
+    // 1. Verificación de API Key
     if (!this.apiKey || this.apiKey.trim() === "") {
       return {
         success: false,
-        error: "Falta configuración de GEMINI_API_KEY en el entorno local. Configure la clave privada en su archivo .env local para habilitar llamadas reales.",
+        error: "Falta configuración de GEMINI_API_KEY. Configure la clave privada en las variables de entorno para habilitar llamadas reales.",
       };
     }
 
