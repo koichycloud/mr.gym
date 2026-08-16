@@ -11,8 +11,9 @@ import { es } from 'date-fns/locale'
 import NewSubscriptionModal from '@/app/components/suscripciones/NewSubscriptionModal'
 import EditSubscriptionModal from '@/app/components/suscripciones/EditSubscriptionModal'
 import MedidasTab from '@/app/components/medidas/MedidasTab'
+import PlanificacionTab from '@/app/components/planificacion/PlanificacionTab'
 import { QRCodeSVG } from 'qrcode.react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { registrarPago } from '@/app/actions/pagos'
 
 /** Draws the full branded carnet onto a canvas and returns a Blob.
@@ -114,9 +115,18 @@ const safeFormatDate = (dateVal: string | Date) => {
 
 export default function SocioDetailClient({ socio, permissions = [], isAdmin = false }: { socio: any, permissions?: string[], isAdmin?: boolean }) {
     const router = useRouter()
+    const searchParams = useSearchParams()
     const [showModal, setShowModal] = useState(false)
     const [editingSub, setEditingSub] = useState<any>(null)
-    const [activeTab, setActiveTab] = useState<'general' | 'medidas' | 'carnet' | 'asistencias'>('general')
+    const [activeTab, setActiveTab] = useState<'general' | 'medidas' | 'carnet' | 'asistencias' | 'planificacion'>('general')
+
+    useEffect(() => {
+        const tabParam = searchParams.get('tab')
+        if (tabParam === 'planificacion' || tabParam === 'medidas' || tabParam === 'carnet' || tabParam === 'asistencias') {
+            setActiveTab(tabParam)
+        }
+    }, [searchParams])
+
     const [asistenciasData, setAsistenciasData] = useState<any>(null)
     const [loadingAsistencias, setLoadingAsistencias] = useState(false)
     const [viewingPhoto, setViewingPhoto] = useState<string | null>(null)
@@ -402,6 +412,15 @@ export default function SocioDetailClient({ socio, permissions = [], isAdmin = f
                         >
                             Asistencias
                         </a>
+                        {(isAdmin || permissions.includes('PLANES_PERSONALIZADOS_GESTIONAR')) && (
+                            <a
+                                role="tab"
+                                className={`tab h-auto py-2.5 text-xs md:text-sm font-medium rounded border border-transparent transition-all ${activeTab === 'planificacion' ? 'tab-active !text-primary !border-primary/40 !bg-primary/10 font-semibold' : 'opacity-70 hover:opacity-100'}`}
+                                onClick={() => setActiveTab('planificacion')}
+                            >
+                                Planificación
+                            </a>
+                        )}
                     </div>
                 </div>
 
@@ -1071,6 +1090,15 @@ export default function SocioDetailClient({ socio, permissions = [], isAdmin = f
                         socioId={socio.id}
                         fechaNacimiento={socio.fechaNacimiento}
                         sexo={socio.sexo}
+                    />
+                )}
+
+                {activeTab === 'planificacion' && (
+                    <PlanificacionTab
+                        socio={socio}
+                        permissions={permissions}
+                        isAdmin={isAdmin}
+                        onSwitchTab={(tab) => setActiveTab(tab as any)}
                     />
                 )}
             </div >

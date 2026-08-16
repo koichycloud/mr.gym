@@ -13,6 +13,7 @@ export const SYSTEM_PERMISSIONS = [
     { id: 'BITACORA_VER', label: 'Ver Bitácora', description: 'Permite visualizar la bitácora de auditoría del sistema.' },
     { id: 'PRODUCTOS_PERSONAL', label: 'Gestionar Productos Personal', description: 'Permite gestionar productos del personal y sus consumos.' },
     { id: 'SUSCRIPCIONES_ELIMINAR', label: 'Eliminar Renovaciones', description: 'Permite eliminar suscripciones o renovaciones de los socios.' },
+    { id: 'PLANES_PERSONALIZADOS_GESTIONAR', label: 'Gestionar Planes Personalizados', description: 'Permite crear, editar, asignar y aprobar rutinas y dietas personalizadas.' },
 ] as const;
 
 export type SystemPermission = typeof SYSTEM_PERMISSIONS[number]['id'];

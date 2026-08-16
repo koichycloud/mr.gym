@@ -29,8 +29,10 @@ export async function registrarPago(data: z.infer<typeof pagoSchema>) {
             }
         })
 
-        revalidatePath('/caja')
-        revalidatePath('/')
+        try {
+            revalidatePath('/caja')
+            revalidatePath('/')
+        } catch {}
 
         return { success: true, pago }
     } catch (error) {

@@ -8,13 +8,20 @@ datasource db {
 }
 
 model User {
-  id          String   @id @default(uuid())
-  username    String   @unique
+  id          String    @id @default(uuid())
+  username    String    @unique
   password    String
-  role        String   @default("ADMIN")
-  permissions Json     @default("[]")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  role        String    @default("ADMIN")
+  permissions Json      @default("[]")
+  personalId  String?   @unique
+  personal    Personal? @relation(fields: [personalId], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  generacionesIASolicitadas      GeneracionIA[]       @relation("GeneracionIASolicitante")
+  generacionesIAAprobadas        GeneracionIA[]       @relation("GeneracionIAAprobador")
+  planesEntrenamientoAprobados   PlanEntrenamiento[]  @relation("PlanEntrenamientoAprobador")
+  planesAlimentacionAprobados    PlanAlimentacion[]   @relation("PlanAlimentacionAprobador")
 }
 
 
@@ -35,6 +42,11 @@ model Socio {
   medidas          MedidaFisica[]
   asistencias      Asistencia[]
   pagos            Pago[]
+  asignacionesEntrenador AsignacionEntrenador[]
+  perfilesPlanificacion  PerfilPlanificacion[]
+  generacionesIA         GeneracionIA[]
+  planesEntrenamiento    PlanEntrenamiento[]
+  planesAlimentacion     PlanAlimentacion[]
   fotoUrl          String? // URL de la foto del socio (Base64)
   estado           String        @default("ACTIVO") // ACTIVO o ANULADO
   motivoAnulacion  String? // Motivo por el cual se anula el registro
@@ -174,10 +186,17 @@ model Personal {
   horaEntradaManana String? // e.g. "08:00"
   horaEntradaTarde  String? // e.g. "14:00"
 
+  user            User?
+
   asistencias     AsistenciaPersonal[]
   consumos        ConsumoPersonal[]
   adelantos       AdelantoPersonal[]
   pagos           PagoPersonal[]
+  asignacionesEntrenador AsignacionEntrenador[]
+  perfilesPlanificacion  PerfilPlanificacion[]
+  generacionesIA         GeneracionIA[]
+  planesEntrenamiento    PlanEntrenamiento[]
+  planesAlimentacion     PlanAlimentacion[]
   
   @@index([nombres, apellidos])
 }
@@ -262,3 +281,218 @@ model PagoPersonal {
   consumos      ConsumoPersonal[]
   adelantos     AdelantoPersonal[]
 }
+
+// --- MÓDULO DE PLANIFICACIÓN PERSONALIZADA ---
+
+model AsignacionEntrenador {
+  id           String    @id @default(uuid())
+  socioId      String
+  entrenadorId String
+  fechaInicio  DateTime  @default(now())
+  fechaFin     DateTime?
+  mesesPlan    Int
+  activo       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  socio      Socio    @relation(fields: [socioId], references: [id], onDelete: Restrict)
+  entrenador Personal @relation(fields: [entrenadorId], references: [id], onDelete: Restrict)
+
+  perfilesPlanificacion PerfilPlanificacion[]
+
+  @@index([socioId])
+  @@index([entrenadorId])
+  @@index([activo])
+}
+
+model PerfilPlanificacion {
+  id                     String                @id @default(uuid())
+  socioId                String
+  entrenadorId           String
+  asignacionId           String?
+  version                Int                   @default(1)
+  activo                 Boolean               @default(true)
+  fechaInicio            DateTime              @default(now())
+  fechaFin               DateTime?
+
+  objetivoPrincipal      String
+  objetivoSecundario     String?
+
+  nivel                  String
+  tiempoEntrenando       String?
+  experienciaPrevia      String?
+  capacidadCardiovascular String?
+  capacidadFuerza         String?
+  equipamientoDisponible  String?
+
+  diasPorSemana          Int                   @default(3)
+  diasPreferidos         Json?
+  duracionMinutos        Int                   @default(60)
+  horarioPreferido       String?
+
+  tipoEntrenamiento      String?
+  ejerciciosEvitados     String?
+
+  lesionesReportadas     String?
+
+  preferenciaAlimenticia String?
+  alergiasDeclaradas     String?
+  alimentosEvitados      String?
+  numeroComidasDia       Int?
+  consumoAguaLitros      Float?
+
+  observaciones          String?
+  motivoVersionado       String?
+
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+
+  socio                  Socio                 @relation(fields: [socioId], references: [id], onDelete: Restrict)
+  entrenador             Personal              @relation(fields: [entrenadorId], references: [id], onDelete: Restrict)
+  asignacion             AsignacionEntrenador? @relation(fields: [asignacionId], references: [id], onDelete: Restrict)
+
+  generacionesIA         GeneracionIA[]
+  planesEntrenamiento    PlanEntrenamiento[]
+  planesAlimentacion     PlanAlimentacion[]
+
+  @@index([socioId])
+  @@index([entrenadorId])
+  @@index([asignacionId])
+  @@index([activo])
+  @@index([fechaInicio])
+}
+
+// --- GENERACIONES IA Y PLANES PERSONALIZADOS ---
+
+model GeneracionIA {
+  id                     String               @id @default(uuid())
+  socioId                String
+  perfilPlanificacionId  String
+  entrenadorId           String?
+  usuarioId              String?
+  numeroGeneracion       Int                  @default(1)
+  modeloUtilizado        String
+  versionSchema          String               @default("2.0")
+  estado                 String               @default("GENERADO") // GENERADO, EN_REVISION, APROBADO, RECHAZADO, ARCHIVADO, ERROR
+  requiresHumanReview    Boolean              @default(false)
+  banderasAdvertencia    Json?
+  promptTokens           Int?
+  completionTokens       Int?
+  tiempoGeneracionMs     Int?
+  inputSnapshot          Json
+  rawOutput              Json?
+  fechaAprobacion        DateTime?
+  aprobadoPorId          String?
+  motivoRechazo          String?
+  motivoRegeneracion     String?
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+
+  socio                  Socio                @relation(fields: [socioId], references: [id], onDelete: Restrict)
+  perfilPlanificacion    PerfilPlanificacion  @relation(fields: [perfilPlanificacionId], references: [id], onDelete: Restrict)
+  entrenador             Personal?            @relation(fields: [entrenadorId], references: [id], onDelete: Restrict)
+  usuario                User?                @relation("GeneracionIASolicitante", fields: [usuarioId], references: [id], onDelete: SetNull)
+  aprobadoPor            User?                @relation("GeneracionIAAprobador", fields: [aprobadoPorId], references: [id], onDelete: SetNull)
+
+  planesEntrenamiento    PlanEntrenamiento[]
+  planesAlimentacion     PlanAlimentacion[]
+
+  @@index([socioId])
+  @@index([perfilPlanificacionId])
+  @@index([entrenadorId])
+  @@index([estado])
+  @@index([createdAt])
+}
+
+model PlanEntrenamiento {
+  id                     String               @id @default(uuid())
+  socioId                String
+  perfilPlanificacionId  String
+  generacionIAId         String?
+  entrenadorId           String?
+  version                Int                  @default(1)
+  activo                 Boolean              @default(true)
+  estado                 String               @default("GENERADO") // GENERADO, EN_REVISION, APROBADO, MODIFICADO, ARCHIVADO
+  titulo                 String
+  descripcion            String?
+  splitSugerido          String?
+  frecuenciaSemanal      Int                  @default(3)
+  nivelActual            Int                  @default(1)
+  fechaInicio            DateTime             @default(now())
+  fechaFin               DateTime?
+  fechaAprobacion        DateTime?
+  aprobadoPorId          String?
+  contenido              Json
+  observaciones          String?
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+
+  socio                  Socio                @relation(fields: [socioId], references: [id], onDelete: Restrict)
+  perfilPlanificacion    PerfilPlanificacion  @relation(fields: [perfilPlanificacionId], references: [id], onDelete: Restrict)
+  generacionIA           GeneracionIA?        @relation(fields: [generacionIAId], references: [id], onDelete: Restrict)
+  entrenador             Personal?            @relation(fields: [entrenadorId], references: [id], onDelete: Restrict)
+  aprobadoPor            User?                @relation("PlanEntrenamientoAprobador", fields: [aprobadoPorId], references: [id], onDelete: SetNull)
+
+  @@index([socioId])
+  @@index([perfilPlanificacionId])
+  @@index([generacionIAId])
+  @@index([activo])
+  @@index([estado])
+}
+
+model PlanAlimentacion {
+  id                       String               @id @default(uuid())
+  socioId                  String
+  perfilPlanificacionId    String
+  generacionIAId           String?
+  entrenadorId             String?
+  version                  Int                  @default(1)
+  activo                   Boolean              @default(true)
+  estado                   String               @default("GENERADO") // GENERADO, EN_REVISION, APROBADO, MODIFICADO, ARCHIVADO
+  titulo                   String
+  descripcion              String?
+  lineamientosGenerales    Json?
+  recomendacionHidratacion String?
+  fechaInicio              DateTime             @default(now())
+  fechaFin                 DateTime?
+  fechaAprobacion          DateTime?
+  aprobadoPorId            String?
+  contenido                Json
+  observaciones            String?
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
+
+  socio                    Socio                @relation(fields: [socioId], references: [id], onDelete: Restrict)
+  perfilPlanificacion      PerfilPlanificacion  @relation(fields: [perfilPlanificacionId], references: [id], onDelete: Restrict)
+  generacionIA             GeneracionIA?        @relation(fields: [generacionIAId], references: [id], onDelete: Restrict)
+  entrenador               Personal?            @relation(fields: [entrenadorId], references: [id], onDelete: Restrict)
+  aprobadoPor              User?                @relation("PlanAlimentacionAprobador", fields: [aprobadoPorId], references: [id], onDelete: SetNull)
+
+  @@index([socioId])
+  @@index([perfilPlanificacionId])
+  @@index([generacionIAId])
+  @@index([activo])
+  @@index([estado])
+}
+
+model Ejercicio {
+  id                      String   @id @default(uuid())
+  nombre                  String   @unique
+  descripcion             String?
+  instrucciones           String?
+  grupoMuscular           String   // PECHO, ESPALDA, PIERNAS, HOMBROS, BRAZOS, CORE, CUERPO_COMPLETO
+  grupoMuscularSecundario String?
+  nivel                   String   @default("PRINCIPIANTE") // PRINCIPIANTE, INTERMEDIO, AVANZADO
+  tipoEjercicio           String   @default("FUERZA") // FUERZA, CARDIO, HIPERTROFIA, MOVILIDAD
+  equipamientoRequerido   String   @default("GIMNASIO_COMPLETO") // GIMNASIO_COMPLETO, MANCUERNAS_BANCOS, PESO_CORPORAL, BANDAS_RESISTENCIA, OTRO
+  restricciones           String?
+  activo                  Boolean  @default(true)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@index([grupoMuscular])
+  @@index([nivel])
+  @@index([equipamientoRequerido])
+  @@index([activo])
+}
+

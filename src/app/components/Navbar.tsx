@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { Home, Users, Upload, CalendarDays, DollarSign, ScanLine, Menu, FileText, UserCog, LogOut, AlertTriangle, Banknote, PackageSearch } from 'lucide-react'
+import { Home, Users, Upload, CalendarDays, DollarSign, ScanLine, Menu, FileText, UserCog, LogOut, AlertTriangle, Banknote, PackageSearch, Dumbbell, Sparkles, BarChart3 } from 'lucide-react'
 import { usePathname } from 'next/navigation'
 
 import { useSession, signOut } from "next-auth/react"
@@ -60,7 +60,8 @@ export default function Navbar() {
         permissions.includes('NOMINA_VER') || 
         permissions.includes('NOMINA_EDITAR') || 
         permissions.includes('BITACORA_VER') || 
-        permissions.includes('PRODUCTOS_PERSONAL');
+        permissions.includes('PRODUCTOS_PERSONAL') ||
+        permissions.includes('PLANES_PERSONALIZADOS_GESTIONAR');
 
     return (
         <>
@@ -81,6 +82,11 @@ export default function Navbar() {
                         <li>
                             <Link href="/socios" className={getActiveClassName('/socios')}>
                                 <Users size={18} /> Socios
+                            </Link>
+                        </li>
+                        <li>
+                            <Link href="/mi-plan" className={getActiveClassName('/mi-plan')}>
+                                <Sparkles size={18} /> Mi Plan
                             </Link>
                         </li>
                         <li>
@@ -138,6 +144,12 @@ export default function Navbar() {
                                         )}
                                         {hasPermission('PRODUCTOS_PERSONAL') && (
                                             <li onClick={() => setAdminMenuOpen(false)}><Link href="/admin/productos-personal"><PackageSearch size={16} /> Prods. Personal</Link></li>
+                                        )}
+                                        {hasPermission('PLANES_PERSONALIZADOS_GESTIONAR') && (
+                                            <li onClick={() => setAdminMenuOpen(false)}><Link href="/admin/asignaciones"><Dumbbell size={16} /> Mis Socios / Asignaciones</Link></li>
+                                        )}
+                                        {hasPermission('PLANES_PERSONALIZADOS_GESTIONAR') && (
+                                            <li onClick={() => setAdminMenuOpen(false)}><Link href="/admin/ia"><Sparkles size={16} /> Monitoreo IA</Link></li>
                                         )}
                                     </ul>
                                 )}
@@ -216,6 +228,10 @@ export default function Navbar() {
                                         {(hasPermission('PERSONAL_VER') || hasPermission('PERSONAL_EDITAR')) && <li><Link href="/admin/personal"><Users size={16} /> Personal</Link></li>}
                                         {(hasPermission('NOMINA_VER') || hasPermission('NOMINA_EDITAR')) && <li><Link href="/admin/nomina"><Banknote size={16} /> Nómina</Link></li>}
                                         {hasPermission('PRODUCTOS_PERSONAL') && <li><Link href="/admin/productos-personal"><PackageSearch size={16} /> Prods. Personal</Link></li>}
+                                        {hasPermission('PLANES_PERSONALIZADOS_GESTIONAR') && <li><Link href="/admin/dashboard"><BarChart3 size={16} /> Dashboard Ejec.</Link></li>}
+                                        {hasPermission('PLANES_PERSONALIZADOS_GESTIONAR') && <li><Link href="/admin/finanzas"><DollarSign size={16} /> Gestión Financiera</Link></li>}
+                                        {hasPermission('PLANES_PERSONALIZADOS_GESTIONAR') && <li><Link href="/admin/asignaciones"><Dumbbell size={16} /> Mis Socios / Asignaciones</Link></li>}
+                                        {hasPermission('PLANES_PERSONALIZADOS_GESTIONAR') && <li><Link href="/admin/ia"><Sparkles size={16} /> Monitoreo IA</Link></li>}
                                     </>
                                 )}
                                 <li><Link href="/perfil"><UserCog size={16} /> Mi Perfil</Link></li>

@@ -54,3 +54,31 @@ public/workbox-*.js.map
 
 # database files
 *.db
+
+# Backups locales con datos PII (datos de socios — NUNCA al repositorio)
+backup_*.json
+backup_subscription_*.json
+backup_conflicts_*.json
+
+# Scripts de debug/inspección de datos (trabajo local)
+inspect-*.js
+find-*.js
+delete-*.js
+cleanup-*.js
+reconcile_*.js
+check_models.js
+test_kiosco_prod.js
+
+# Archivos de exportación/herencia locales
+exportar-paquete*.bat
+exportar-paquete*.ps1
+setup-herencia-antigravity.bat
+
+# Carpetas de trabajo temporal
+scratch/
+prisma/FASE_3_1_3_MIGRATIONS_BACKUP/
+
+# Scripts de administración/auditoría local (no son código de producción)
+scripts/audit_final.js
+scripts/check_db_audit.js
+scripts/restore_perfil_historico.js

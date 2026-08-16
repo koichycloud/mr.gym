@@ -198,3 +198,48 @@ select option {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ============================================================================
+   ESTILOS DE IMPRESIÓN IMPRESCINDIBLES (@media print) - FASE 3.4
+   ============================================================================ */
+@media print {
+  /* Ocultar elementos interactivos de navegación y controles */
+  button,
+  .btn,
+  nav,
+  header,
+  aside,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Resetear colores de fondo para impresión económica */
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11pt !important;
+  }
+
+  /* Optimizar tablas e imágenes */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    page-break-after: auto !important;
+  }
+
+  th, td {
+    border: 1px solid #cbd5e1 !important;
+    padding: 6px 8px !important;
+    color: #000000 !important;
+  }
+
+  /* Saltos de página limpios */
+  .page-break-before {
+    page-break-before: always !important;
+  }
+}
