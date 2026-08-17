@@ -5,7 +5,7 @@ import { z } from "zod";
  */
 export const aiConfigSchema = z.object({
   provider: z.enum(["mock", "gemini"]).default("mock"),
-  model: z.string().min(1).default("gemini-2.5-flash"),
+  model: z.string().min(1).default("gemini-3.6-flash"),
   timeoutMs: z.coerce.number().int().min(1000).max(120000).default(90000),
   cooldownMsPerSocio: z.coerce.number().int().min(0).max(60000).default(3000),
   maxRequestsPerMinutePerSocio: z.coerce.number().int().min(1).max(60).default(10),
@@ -44,7 +44,7 @@ export function getAIConfig(): AIConfig {
 
   const rawConfig = {
     provider,
-    model: process.env.AI_MODEL || "gemini-2.5-flash",
+    model: process.env.AI_MODEL || "gemini-3.6-flash",
     timeoutMs: process.env.AI_REQUEST_TIMEOUT_MS || 90000,
     cooldownMsPerSocio: process.env.AI_COOLDOWN_MS || 3000,
     maxRequestsPerMinutePerSocio: process.env.AI_MAX_RPM || 10,
@@ -55,7 +55,7 @@ export function getAIConfig(): AIConfig {
     ? parsed.data
     : {
         provider: "mock" as const,
-        model: "gemini-3.5-flash",
+        model: "gemini-3.6-flash",
         timeoutMs: 90000,
         cooldownMsPerSocio: 3000,
         maxRequestsPerMinutePerSocio: 10,
