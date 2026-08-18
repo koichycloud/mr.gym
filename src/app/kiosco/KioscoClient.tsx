@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef, Component, ErrorInfo, 
 import { validateKioskAccess, AccessResult } from '../actions/kiosco'
 import { CheckCircle, XCircle, AlertTriangle, ScanLine, Dumbbell, DoorOpen, Clock, Keyboard } from 'lucide-react'
 
-type KioskState = 'IDLE' | 'LOADING' | 'SUCCESS' | 'SUCCESS_EXIT' | 'ERROR_NOT_FOUND' | 'ERROR_EXPIRED' | 'ERROR_PASSBACK' | 'SCREENSAVER'
+type KioskState = 'IDLE' | 'LOADING' | 'SUCCESS' | 'SUCCESS_EXIT' | 'ERROR_NOT_FOUND' | 'ERROR_EXPIRED' | 'ERROR_PASSBACK' | 'ERROR_CONNECTION' | 'SCREENSAVER'
 
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutos
 const DISPLAY_SECONDS = 5 // Segundos en pantalla antes de regresar a IDLE
@@ -28,22 +28,22 @@ class KioscoErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Uncaught error in Kiosco:", error, errorInfo);
-    // Recargar con cache-buster para recuperar el sistema
+    console.error("Uncaught error in Kiosco (recovering internally):", error, errorInfo);
+    // Recuperación interna de la SPA sin recarga destructiva de página
     setTimeout(() => {
-      window.location.href = window.location.pathname + '?t=' + Date.now();
-    }, 3000);
+      this.setState({ hasError: false });
+    }, 4000);
   }
 
   public render() {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-black flex flex-col items-center justify-center text-center p-8 select-none">
-          <div className="animate-pulse text-red-500 mb-8">
+          <div className="animate-pulse text-amber-500 mb-8">
             <Dumbbell size={120} className="mx-auto animate-spin" style={{ animationDuration: '3s' }} />
           </div>
-          <h1 className="text-4xl font-black text-white mb-4 uppercase tracking-tighter">Actualizando Sistema</h1>
-          <p className="text-zinc-500 text-lg">Se ha detectado un error en la aplicación. Recargando...</p>
+          <h1 className="text-4xl font-black text-white mb-4 uppercase tracking-tighter">Recuperando Kiosco</h1>
+          <p className="text-zinc-500 text-lg">Restableciendo pantalla de acceso de forma segura...</p>
         </div>
       );
     }
@@ -172,14 +172,10 @@ function KioscoClientContent() {
             startCountdown()
 
         } catch (error) {
-            console.error("No se pudo conectar servidor", error)
-            setResult({ success: false, message: 'Error de Conexión. Actualizando sistema...', reason: 'NOT_FOUND' })
-            setState('ERROR_NOT_FOUND')
+            console.error("[KIOSCO] Error de comunicación con servidor (SPA preservada):", error)
+            setResult({ success: false, message: 'Problema de conexión con el servidor. Reintentando...', reason: 'NOT_FOUND' })
+            setState('ERROR_CONNECTION')
             startCountdown()
-            // Recarga con cache-buster para saltar la caché de Vercel/navegador
-            setTimeout(() => {
-                window.location.href = window.location.pathname + '?t=' + Date.now();
-            }, 3000)
         } finally {
             isProcessingRef.current = false
         }
@@ -205,32 +201,16 @@ function KioscoClientContent() {
         }
     }, [resetIdleTimer])
 
-    // --- ESCUCHA DE ERRORES DE RED Y DESPLIEGUE EN TIEMPO REAL ---
+    // --- ESCUCHA DE ERRORES DE RED Y PROTECCIÓN DE LA SPA ---
     useEffect(() => {
         const handleGlobalError = (event: ErrorEvent) => {
-            console.error("Global error detected in Kiosco:", event.error);
-            const errorMsg = event.message || "";
-            if (
-                errorMsg.includes("chunk") || 
-                errorMsg.includes("LoadException") || 
-                errorMsg.includes("Failed to fetch") ||
-                errorMsg.includes("Server Action") ||
-                errorMsg.includes("NEXT_REDIRECT")
-            ) {
-                window.location.href = window.location.pathname + '?t=' + Date.now();
-            }
+            console.error("[KIOSCO] Error global capturado (SPA preservada):", event.error || event.message);
+            isProcessingRef.current = false;
         };
 
         const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-            console.error("Unhandled promise rejection in Kiosco:", event.reason);
-            const reasonMsg = String(event.reason || "");
-            if (
-                reasonMsg.includes("chunk") || 
-                reasonMsg.includes("Failed to fetch") ||
-                reasonMsg.includes("Server Action")
-            ) {
-                window.location.href = window.location.pathname + '?t=' + Date.now();
-            }
+            console.error("[KIOSCO] Promesa no capturada (SPA preservada):", event.reason);
+            isProcessingRef.current = false;
         };
 
         window.addEventListener('error', handleGlobalError)
@@ -261,8 +241,8 @@ function KioscoClientContent() {
     }, [focusInput])
 
     const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        // Despertar de protector de pantalla ante cualquier tecla
-        setState(prev => prev === 'SCREENSAVER' ? 'IDLE' : prev)
+        // Despertar de protector de pantalla o error de conexión ante cualquier tecla
+        setState(prev => (prev === 'SCREENSAVER' || prev === 'ERROR_CONNECTION') ? 'IDLE' : prev)
         resetIdleTimer()
 
         // Feedback de tecla recibida
@@ -444,6 +424,25 @@ function KioscoClientContent() {
             )
         }
 
+        if (state === 'ERROR_CONNECTION') {
+            return (
+                <div className="flex flex-col items-center justify-center text-amber-500 text-center animate-in fade-in slide-in-from-top-10 px-8">
+                    <AlertTriangle size={160} className="mb-8 text-amber-400 drop-shadow-lg animate-pulse" />
+                    <h1 className="text-[5.5rem] leading-none font-black text-amber-400 mb-6 drop-shadow-md">
+                        RECONECTANDO
+                    </h1>
+                    <div className="bg-zinc-900/90 px-12 py-8 rounded-3xl border-2 border-amber-500/40 flex flex-col items-center max-w-4xl">
+                        <p className="text-4xl text-amber-200 font-semibold tracking-wide mb-4">
+                            Problema de conexión con el servidor
+                        </p>
+                        <p className="text-2xl text-white/60 font-medium">
+                            El kiosco permanece activo. Por favor escanea tu código nuevamente.
+                        </p>
+                    </div>
+                </div>
+            )
+        }
+
         return (
             <div className="flex flex-col items-center justify-center text-center opacity-90 transition-opacity hover:opacity-100 w-full max-w-6xl mx-auto px-8 animate-in fade-in duration-500">
                 <h1 className="text-5xl font-semibold text-white/50 tracking-widest uppercase mb-12">
@@ -482,6 +481,7 @@ function KioscoClientContent() {
         if (state === 'ERROR_EXPIRED') return 'bg-gradient-to-b from-red-950 via-red-900 to-black'
         if (state === 'ERROR_NOT_FOUND') return 'bg-gradient-to-b from-orange-950 via-orange-900 to-black'
         if (state === 'ERROR_PASSBACK') return 'bg-gradient-to-b from-yellow-950 via-yellow-900 to-black'
+        if (state === 'ERROR_CONNECTION') return 'bg-gradient-to-b from-amber-950 via-amber-900 to-black'
         if (state === 'SCREENSAVER') return 'bg-black'
         return 'bg-gradient-to-br from-[#4a2e15] via-[#241306] to-[#0a0502]'
     }
