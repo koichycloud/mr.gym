@@ -44,7 +44,7 @@ export function getAIConfig(): AIConfig {
 
   const rawConfig = {
     provider,
-    model: process.env.AI_MODEL || "gemini-3.6-flash",
+    model: (process.env.AI_MODEL || "gemini-3.6-flash").trim(),
     timeoutMs: process.env.AI_REQUEST_TIMEOUT_MS || 90000,
     cooldownMsPerSocio: process.env.AI_COOLDOWN_MS || 3000,
     maxRequestsPerMinutePerSocio: process.env.AI_MAX_RPM || 10,
