@@ -105,7 +105,26 @@ export async function solicitarGeneracionPlanIA(
         return { success: false, error: "El socio no existe." };
       }
 
-      // 4. Validar existencia de PerfilPlanificacion activo
+      // 4. Validación exhaustiva de requisitos mínimos antes de invocar a Gemini
+      const { validarDatosParaGeneracionIA } = await import("@/app/actions/validacion-ia");
+      const validacion = await validarDatosParaGeneracionIA(socioId);
+
+      if (!validacion.success || !validacion.data?.puedeGenerar) {
+        const faltantesRaw = [
+          ...(validacion.data?.camposFaltantesEntrenamiento || []),
+          ...(validacion.data?.camposFaltantesAlimentacion || []),
+        ];
+        const faltantes = Array.from(new Set(faltantesRaw));
+        const errorMsg = faltantes.length > 0
+          ? `❌ No se puede generar el plan.\n\nDatos faltantes obligatorios:\n• ${faltantes.join("\n• ")}`
+          : validacion.error || "No se cumplen los requisitos mínimos para la generación del plan.";
+
+        return {
+          success: false,
+          error: errorMsg,
+        };
+      }
+
       const perfilActivo = await prisma.perfilPlanificacion.findFirst({
         where: { socioId, activo: true },
         select: { id: true, version: true, entrenadorId: true },

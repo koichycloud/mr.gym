@@ -80,6 +80,7 @@ export function sanitizePlanningAIInput(raw: RawPlanningData): PlanningAIInput {
         hombros: raw.medidaActual.hombros ? Number(raw.medidaActual.hombros.toFixed(1)) : null,
         biceps: raw.medidaActual.biceps ? Number(raw.medidaActual.biceps.toFixed(1)) : null,
         antebrazos: raw.medidaActual.antebrazos ? Number(raw.medidaActual.antebrazos.toFixed(1)) : null,
+        muslos: raw.medidaActual.muslos ? Number(raw.medidaActual.muslos.toFixed(1)) : null,
         cuadriceps: raw.medidaActual.cuadriceps ? Number(raw.medidaActual.cuadriceps.toFixed(1)) : null,
         pantorrillas: raw.medidaActual.pantorrillas ? Number(raw.medidaActual.pantorrillas.toFixed(1)) : null,
       },

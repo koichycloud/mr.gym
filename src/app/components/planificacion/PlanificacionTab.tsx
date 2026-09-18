@@ -5,13 +5,10 @@ import { format, differenceInYears } from "date-fns";
 import { toast } from "sonner";
 import {
   Dumbbell,
-  UserCheck,
-  Calendar,
   Clock,
-  AlertTriangle,
-  Info,
-  History,
-  Activity,
+  Apple,
+  ArrowLeft,
+  ArrowRight,
   Plus,
   Edit,
   ArrowRightLeft,
@@ -20,10 +17,10 @@ import {
   Loader2,
   X,
   Eye,
-  ShieldAlert,
-  Apple,
   FileText,
-  TrendingUp,
+  Sparkles,
+  History,
+  ClipboardList,
 } from "lucide-react";
 import {
   getActivePlanningProfile,
@@ -38,12 +35,26 @@ import {
   getAvailableTrainers,
 } from "@/app/actions/asignacion-entrenador";
 import { getMedidasBySocio } from "@/app/actions/medidas";
-import PlanIASection from "./PlanIASection";
-import EvolucionSocioSection from "./EvolucionSocioSection";
+import {
+  solicitarGeneracionPlanIA,
+  obtenerGeneracionesSocio,
+  obtenerGeneracionPorId,
+  aprobarGeneracionIA,
+  rechazarGeneracionIA,
+  archivarGeneracionIA,
+} from "@/app/actions/planes-ia";
+import {
+  getDetallePlanEntrenamientoActivo,
+  getDetallePlanAlimentacionActivo,
+} from "@/app/actions/operaciones-planes";
+
 import RutinasDetalleSection from "./RutinasDetalleSection";
 import RecetasDetalleSection from "./RecetasDetalleSection";
-import AdherenciaSection from "./AdherenciaSection";
-import AdaptacionInteligenteSection from "./AdaptacionInteligenteSection";
+import HorarioSocioSection from "./HorarioSocioSection";
+import EvaluacionPerfilSection from "./EvaluacionPerfilSection";
+import ProposalViewerModal from "./ProposalViewerModal";
+import ApprovalModal from "./ApprovalModal";
+import RejectModal from "./RejectModal";
 
 interface Props {
   socio: {
@@ -106,6 +117,9 @@ export default function PlanificacionTab({
     permissions.includes("SUPERADMIN") ||
     permissions.length === 0;
 
+  // Estado de navegación: "hub" | "entrenamiento" | "nutricion" | "horario"
+  const [viewMode, setViewMode] = useState<"hub" | "entrenamiento" | "nutricion" | "horario">("hub");
+
   // Estados de datos
   const [loading, setLoading] = useState(true);
   const [activeProfile, setActiveProfile] = useState<any>(null);
@@ -113,13 +127,23 @@ export default function PlanificacionTab({
   const [assignment, setAssignment] = useState<any>(null);
   const [trainers, setTrainers] = useState<any[]>([]);
   const [latestMeasure, setLatestMeasure] = useState<any>(null);
+  const [planEntrenamientoActivo, setPlanEntrenamientoActivo] = useState<any>(null);
+  const [planAlimentacionActivo, setPlanAlimentacionActivo] = useState<any>(null);
 
-  // Modales
+  // Estados de IA & Propuestas
+  const [generaciones, setGeneraciones] = useState<any[]>([]);
+  const [generatingIA, setGeneratingIA] = useState(false);
+  const [selectedGeneracion, setSelectedGeneracion] = useState<any | null>(null);
+  const [generacionToApprove, setGeneracionToApprove] = useState<any | null>(null);
+  const [generacionToReject, setGeneracionToReject] = useState<any | null>(null);
+  const [showProposalsModal, setShowProposalsModal] = useState(false);
+  const [showEvaluacionModal, setShowEvaluacionModal] = useState(false);
+
+  // Modales de Perfil
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showVersionModal, setShowVersionModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
-  const [viewDetailModal, setViewDetailModal] = useState<any>(null);
 
   // Formulario inicial de perfil
   const defaultFormData = {
@@ -154,17 +178,21 @@ export default function PlanificacionTab({
   const [formData, setFormData] = useState(defaultFormData);
   const [closeDate, setCloseDate] = useState(new Date().toISOString().split("T")[0]);
 
-  // Cargar datos
+  // Cargar datos principales
   const loadData = async () => {
     setLoading(true);
     try {
-      const [profRes, histRes, assignRes, trainRes, medRes] = await Promise.all([
-        getActivePlanningProfile(socio.id),
-        getPlanningProfileHistory(socio.id),
-        getCurrentTrainerAssignment(socio.id),
-        getAvailableTrainers(),
-        getMedidasBySocio(socio.id),
-      ]);
+      const [profRes, histRes, assignRes, trainRes, medRes, genRes, planEntRes, planAliRes] =
+        await Promise.all([
+          getActivePlanningProfile(socio.id),
+          getPlanningProfileHistory(socio.id),
+          getCurrentTrainerAssignment(socio.id),
+          getAvailableTrainers(),
+          getMedidasBySocio(socio.id),
+          obtenerGeneracionesSocio(socio.id),
+          getDetallePlanEntrenamientoActivo(socio.id),
+          getDetallePlanAlimentacionActivo(socio.id),
+        ]);
 
       if (profRes.success) setActiveProfile(profRes.perfil);
       else setActiveProfile(null);
@@ -180,6 +208,22 @@ export default function PlanificacionTab({
         setLatestMeasure(sorted[0]);
       } else {
         setLatestMeasure(null);
+      }
+
+      if (genRes.success && genRes.data) {
+        setGeneraciones(genRes.data);
+      }
+
+      if (planEntRes.success && planEntRes.plan) {
+        setPlanEntrenamientoActivo(planEntRes.plan);
+      } else {
+        setPlanEntrenamientoActivo(null);
+      }
+
+      if (planAliRes.success && planAliRes.plan) {
+        setPlanAlimentacionActivo(planAliRes.plan);
+      } else {
+        setPlanAlimentacionActivo(null);
       }
     } catch (err) {
       console.error("Error loading planning profile data:", err);
@@ -221,7 +265,7 @@ export default function PlanificacionTab({
     }
   };
 
-  // Handlers
+  // Handlers de Modales de Perfil
   const handleOpenCreate = () => {
     const defaultTrainerId = assignment?.entrenadorId || (trainers[0]?.id || "");
     const defaultAssignId = assignment?.id || "";
@@ -411,19 +455,106 @@ export default function PlanificacionTab({
     });
   };
 
+  // Handlers de Generación y Aprobación IA
+  const handleGenerateIA = async () => {
+    if (!activeProfile) {
+      toast.error("Debe completar la Evaluación del Socio antes de generar propuestas con IA.");
+      return;
+    }
+    setGeneratingIA(true);
+    try {
+      const res = await solicitarGeneracionPlanIA(socio.id);
+      if (res.success && res.generacionId) {
+        toast.success("¡Propuesta IA generada exitosamente!");
+        const detailRes = await obtenerGeneracionPorId(res.generacionId);
+        if (detailRes.success && detailRes.data) {
+          setSelectedGeneracion(detailRes.data);
+        }
+        await loadData();
+      } else {
+        toast.error(res.error || "Ocurrió un error al generar la propuesta IA.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Error al solicitar generación IA.");
+    } finally {
+      setGeneratingIA(false);
+    }
+  };
+
+  const handleConfirmApprove = async (data: {
+    confirmacionRevisionHumana: boolean;
+    observacionesEntrenador: string;
+  }) => {
+    if (!generacionToApprove) return;
+    try {
+      const res = await aprobarGeneracionIA({
+        generacionId: generacionToApprove.id,
+        confirmacionRevisionHumana: data.confirmacionRevisionHumana,
+        observacionesEntrenador: data.observacionesEntrenador,
+      });
+      if (res.success) {
+        toast.success("¡Propuesta aprobada y activada como Plan Oficial!");
+        setGeneracionToApprove(null);
+        setSelectedGeneracion(null);
+        await loadData();
+      } else {
+        toast.error(res.error || "Error al aprobar la propuesta.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Fallo al aprobar.");
+    }
+  };
+
+  const handleConfirmReject = async (motivo: string) => {
+    if (!generacionToReject) return;
+    try {
+      const res = await rechazarGeneracionIA({
+        generacionId: generacionToReject.id,
+        motivoRechazo: motivo,
+      });
+      if (res.success) {
+        toast.info("Propuesta rechazada.");
+        setGeneracionToReject(null);
+        setSelectedGeneracion(null);
+        await loadData();
+      } else {
+        toast.error(res.error || "Error al rechazar la propuesta.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Fallo al rechazar.");
+    }
+  };
+
+  const handleArchive = async (generacionId: string) => {
+    try {
+      const res = await archivarGeneracionIA({ generacionId });
+      if (res.success) {
+        toast.success("Generación archivada.");
+        if (selectedGeneracion?.id === generacionId) {
+          setSelectedGeneracion(null);
+        }
+        await loadData();
+      } else {
+        toast.error(res.error || "Error al archivar generación.");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Fallo al archivar.");
+    }
+  };
+
   if (loading) {
     return (
       <div className="card bg-base-100 shadow-xl p-12 text-center flex flex-col items-center justify-center gap-3">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <p className="text-sm opacity-70">Cargando perfil de planificación...</p>
+        <p className="text-sm opacity-70">Cargando planificación del socio...</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* 1. CABECERA: RESUMEN DE ASIGNACIÓN & SOCIO */}
-      <div className="card bg-base-100 shadow-xl border border-base-200">
+      {/* CABECERA PRINCIPAL */}
+      <div className="card bg-base-100 shadow-sm border border-base-200">
         <div className="card-body p-5 md:p-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div className="flex items-center gap-3.5">
@@ -431,400 +562,392 @@ export default function PlanificacionTab({
                 <Dumbbell className="w-6 h-6" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-bold">Planificación Personalizada</h2>
-                  {activeProfile && (
-                    <span className="badge badge-primary badge-sm font-semibold">
-                      Versión v{activeProfile.version}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-xl font-bold">Planificación</h2>
+                  {activeProfile ? (
+                    <span className="badge badge-primary badge-sm font-bold">
+                      Perfil v{activeProfile.version} ACTIVO
+                    </span>
+                  ) : (
+                    <span className="badge badge-warning badge-sm font-bold">
+                      Sin Evaluación Activa
                     </span>
                   )}
                 </div>
-                <p className="text-xs opacity-70 mt-0.5">
-                  Socio: <strong className="text-base-content">{socio.nombres} {socio.apellidos}</strong> ({socio.codigo}) • {socio.tipoDocumento}: {socio.numeroDocumento} • {edadCalculada} años • Sexo: {socio.sexo === "M" ? "Masculino" : "Femenino"}
+                <p className="text-xs text-base-content/70 mt-0.5">
+                  Socio: <strong className="text-base-content">{socio.nombres} {socio.apellidos}</strong> ({socio.codigo}) • {socio.tipoDocumento}: {socio.numeroDocumento} • {edadCalculada} años
                 </p>
               </div>
             </div>
 
-            {/* Acciones principales de cabecera */}
+            {/* Acciones de Cabecera */}
             {canManage && (
               <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
                 {!activeProfile ? (
                   <button
                     onClick={handleOpenCreate}
-                    className="btn btn-primary btn-sm flex-1 md:flex-initial gap-1.5"
+                    className="btn btn-primary btn-sm flex-1 md:flex-initial gap-1.5 font-bold"
                   >
-                    <Plus className="w-4 h-4" /> Crear Perfil
+                    <Plus className="w-4 h-4" /> Comenzar Evaluación
                   </button>
                 ) : (
                   <>
                     <button
-                      onClick={handleOpenEdit}
+                      onClick={handleGenerateIA}
+                      disabled={generatingIA}
+                      className="btn btn-primary btn-sm flex-1 md:flex-initial gap-1.5 font-bold shadow-sm"
+                      title="Generar propuesta de entrenamiento y nutrición con IA"
+                    >
+                      {generatingIA ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-4 h-4" />
+                      )}
+                      Generar Propuesta IA
+                    </button>
+                    {generaciones.length > 0 && (
+                      <button
+                        onClick={() => setShowProposalsModal(true)}
+                        className="btn btn-outline btn-sm flex-1 md:flex-initial gap-1.5"
+                        title="Ver propuestas generadas"
+                      >
+                        <History className="w-4 h-4 text-primary" />
+                        Propuestas ({generaciones.length})
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setShowEvaluacionModal(true)}
                       className="btn btn-outline btn-sm flex-1 md:flex-initial gap-1.5"
+                      title="Ver o gestionar ficha técnica de evaluación"
                     >
-                      <Edit className="w-4 h-4" /> Editar
-                    </button>
-                    <button
-                      onClick={handleOpenVersion}
-                      className="btn btn-primary btn-sm flex-1 md:flex-initial gap-1.5"
-                    >
-                      <ArrowRightLeft className="w-4 h-4" /> Nueva Versión
-                    </button>
-                    <button
-                      onClick={() => {
-                        setCloseDate(new Date().toISOString().split("T")[0]);
-                        setShowCloseModal(true);
-                      }}
-                      className="btn btn-ghost btn-sm text-error flex-1 md:flex-initial gap-1.5"
-                    >
-                      <XCircle className="w-4 h-4" /> Finalizar
+                      <ClipboardList className="w-4 h-4 text-primary" />
+                      Evaluación Técnica
                     </button>
                   </>
                 )}
               </div>
             )}
           </div>
-
-          {/* Tarjeta de Entrenador Asignado */}
-          <div className="mt-4 p-3.5 bg-base-200/60 rounded-xl border border-base-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-xs">
-            <div className="flex items-center gap-2.5">
-              <UserCheck className="w-4 h-4 text-primary" />
-              <span>
-                Entrenador Asignado:{" "}
-                <strong className="text-base-content text-sm">
-                  {assignment
-                    ? `${assignment.entrenador.nombres} ${assignment.entrenador.apellidos} (${assignment.entrenador.rol})`
-                    : "Sin entrenador formalmente asignado"}
-                </strong>
-              </span>
-            </div>
-            {assignment && (
-              <div className="flex items-center gap-4 opacity-80">
-                <span>Inicio: <strong>{safeFormatDate(assignment.fechaInicio)}</strong></span>
-                <span>Plan: <strong>{assignment.mesesPlan} mes(es)</strong></span>
-                <span className="badge badge-success badge-sm text-white font-bold">Activo</span>
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
-      {/* 2. RESUMEN FÍSICO ACTUAL (MedidaFisica) */}
-      <div className="card bg-base-100 shadow-xl border border-base-200">
-        <div className="card-body p-5 md:p-6 space-y-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <Activity className="w-5 h-5 text-primary" />
-              <h3 className="font-bold text-base">Medidas Físicas y Antropométricas Actuales</h3>
-            </div>
-            {onSwitchTab && (
+      {/* ========================================================================= */}
+      {/* VISTA PRINCIPAL: HUB DE EXACTAMENTE TRES TARJETAS                         */}
+      {/* ========================================================================= */}
+      {viewMode === "hub" && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* TARJETA 1: ENTRENAMIENTO */}
+          <div
+            onClick={() => setViewMode("entrenamiento")}
+            className="card bg-base-100 shadow-sm hover:shadow-md transition-all duration-200 border border-base-200 cursor-pointer overflow-hidden group hover:border-primary/50"
+          >
+            <div className="card-body p-6 flex flex-col justify-between h-full space-y-4">
+              <div className="space-y-3">
+                <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-105 transition-transform">
+                  <Dumbbell className="w-7 h-7" />
+                </div>
+                <div>
+                  <span className="text-[11px] font-black uppercase tracking-wider text-primary">
+                    ENTRENAMIENTO
+                  </span>
+                  <h3 className="text-lg font-black text-base-content mt-0.5">
+                    Plan de Entrenamiento
+                  </h3>
+                  <p className="text-xs text-base-content/70 mt-1">
+                    {planEntrenamientoActivo
+                      ? `${planEntrenamientoActivo.titulo || "Personalizado"} • Nivel ${planEntrenamientoActivo.nivelActual || 1} • v${planEntrenamientoActivo.version}`
+                      : "Rutinas progresivas, sesiones, ejercicios, series y repeticiones."}
+                  </p>
+                </div>
+              </div>
               <button
-                onClick={() => onSwitchTab("medidas")}
-                className="btn btn-ghost btn-xs text-primary gap-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setViewMode("entrenamiento");
+                }}
+                className="btn btn-primary btn-sm w-full gap-2 font-bold shadow-sm"
               >
-                <TrendingUp className="w-3.5 h-3.5" /> Ver Evolución y Modelo 3D
-              </button>
-            )}
-          </div>
-
-          {latestMeasure ? (
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2.5 text-center text-xs">
-                <div className="bg-base-200/80 p-2.5 rounded-xl">
-                  <span className="opacity-70 block text-[11px]">Peso</span>
-                  <strong className="text-sm text-primary font-bold">{latestMeasure.peso || "—"} kg</strong>
-                </div>
-                <div className="bg-base-200/80 p-2.5 rounded-xl">
-                  <span className="opacity-70 block text-[11px]">Talla</span>
-                  <strong className="text-sm font-bold">{latestMeasure.altura || "—"} cm</strong>
-                </div>
-                <div className="bg-base-200/80 p-2.5 rounded-xl">
-                  <span className="opacity-70 block text-[11px]">% Grasa</span>
-                  <strong className="text-sm font-bold">{latestMeasure.porcentajeGrasa ? `${latestMeasure.porcentajeGrasa}%` : "—"}</strong>
-                </div>
-                <div className="bg-base-200/80 p-2.5 rounded-xl">
-                  <span className="opacity-70 block text-[11px]">% Músculo</span>
-                  <strong className="text-sm font-bold">{latestMeasure.porcentajeMusculo ? `${latestMeasure.porcentajeMusculo}%` : "—"}</strong>
-                </div>
-                <div className="bg-base-200/80 p-2.5 rounded-xl">
-                  <span className="opacity-70 block text-[11px]">Pecho</span>
-                  <strong className="text-sm font-bold">{latestMeasure.pecho ? `${latestMeasure.pecho} cm` : "—"}</strong>
-                </div>
-                <div className="bg-base-200/80 p-2.5 rounded-xl">
-                  <span className="opacity-70 block text-[11px]">Cintura</span>
-                  <strong className="text-sm font-bold">{latestMeasure.cintura ? `${latestMeasure.cintura} cm` : "—"}</strong>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center text-[11px] opacity-80 pt-1">
-                <div>Cuello: <strong>{latestMeasure.cuello || "—"} cm</strong></div>
-                <div>Hombros: <strong>{latestMeasure.hombros || "—"} cm</strong></div>
-                <div>Bíceps: <strong>{latestMeasure.biceps || "—"} cm</strong></div>
-                <div>Glúteos: <strong>{latestMeasure.gluteos || "—"} cm</strong></div>
-                <div>Cuádriceps: <strong>{latestMeasure.cuadriceps || "—"} cm</strong></div>
-                <div>Pantorrillas: <strong>{latestMeasure.pantorrillas || "—"} cm</strong></div>
-              </div>
-              <p className="text-[11px] text-right opacity-60">
-                Última medición registrada: {safeFormatDate(latestMeasure.fecha)}
-              </p>
-            </div>
-          ) : (
-            <div className="p-6 bg-base-200/40 rounded-xl text-center text-xs opacity-70">
-              No hay medidas físicas registradas para este socio.
-              {onSwitchTab && (
-                <div className="mt-2">
-                  <button onClick={() => onSwitchTab("medidas")} className="btn btn-outline btn-xs">
-                    Registrar Primera Medida
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Sección de Adaptación Inteligente y Recomendación de Revisión del Plan */}
-      <AdaptacionInteligenteSection socioId={socio.id} />
-
-      {/* Sección de Evolución y Seguimiento del Plan */}
-      <EvolucionSocioSection socioId={socio.id} />
-
-      {/* Sección de Adherencia y Cumplimiento */}
-      <AdherenciaSection socioId={socio.id} />
-
-      {/* Sección de Gestión Operativa de Rutinas (6 Niveles) */}
-      <RutinasDetalleSection socioId={socio.id} />
-
-      {/* Sección de Gestión Operativa de Plan de Alimentación y Recetas */}
-      <RecetasDetalleSection socioId={socio.id} />
-
-      {/* 3. PERFIL DE PLANIFICACIÓN VIGENTE / ESTADO VACÍO */}
-      {activeProfile ? (
-        <div className="card bg-base-100 shadow-xl border border-base-200">
-          <div className="card-body p-5 md:p-6 space-y-6">
-            <div className="flex justify-between items-center border-b border-base-200 pb-3">
-              <div>
-                <h3 className="font-bold text-lg text-primary flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-success" />
-                  Perfil de Planificación Actual (v{activeProfile.version})
-                </h3>
-                <p className="text-xs opacity-70">
-                  En vigor desde {safeFormatDate(activeProfile.fechaInicio)} • Creado por: {activeProfile.entrenador?.nombres} {activeProfile.entrenador?.apellidos}
-                </p>
-              </div>
-              <span className="badge badge-success text-white font-bold">Activo</span>
-            </div>
-
-            {/* SECCIÓN A: OBJETIVO Y NIVEL */}
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-primary">1. Objetivos y Nivel</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="bg-base-200/70 p-3 rounded-xl">
-                  <span className="text-xs opacity-70 block">Objetivo Principal</span>
-                  <span className="font-bold text-sm text-base-content">
-                    {OBJETIVOS.find((o) => o.value === activeProfile.objetivoPrincipal)?.label || activeProfile.objetivoPrincipal}
-                  </span>
-                </div>
-                <div className="bg-base-200/70 p-3 rounded-xl">
-                  <span className="text-xs opacity-70 block">Nivel Atlético</span>
-                  <span className="font-bold text-sm text-base-content">
-                    {NIVELES.find((n) => n.value === activeProfile.nivel)?.label || activeProfile.nivel}
-                  </span>
-                </div>
-                <div className="bg-base-200/70 p-3 rounded-xl">
-                  <span className="text-xs opacity-70 block">Objetivo Específico</span>
-                  <span className="font-medium text-xs text-base-content">
-                    {activeProfile.objetivoSecundario || "Sin objetivo secundario especificado"}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* SECCIÓN B: EXPERIENCIA Y DISPONIBILIDAD */}
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-primary">2. Disponibilidad y Horarios</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                <div className="bg-base-200/70 p-3 rounded-xl">
-                  <span className="opacity-70 block">Frecuencia Semanal</span>
-                  <strong className="text-sm">{activeProfile.diasPorSemana} días por semana</strong>
-                </div>
-                <div className="bg-base-200/70 p-3 rounded-xl">
-                  <span className="opacity-70 block">Duración de Sesión</span>
-                  <strong className="text-sm">{activeProfile.duracionMinutos} minutos</strong>
-                </div>
-                <div className="bg-base-200/70 p-3 rounded-xl">
-                  <span className="opacity-70 block">Turno Habitual</span>
-                  <strong className="text-sm">{activeProfile.horarioPreferido || "Flexible"}</strong>
-                </div>
-                <div className="bg-base-200/70 p-3 rounded-xl">
-                  <span className="opacity-70 block">Tiempo Entrenando</span>
-                  <strong className="text-sm">{activeProfile.tiempoEntrenando || "No declarado"}</strong>
-                </div>
-              </div>
-
-              {/* Días preferidos */}
-              {Array.isArray(activeProfile.diasPreferidos) && activeProfile.diasPreferidos.length > 0 && (
-                <div className="flex items-center gap-2 pt-1">
-                  <span className="text-xs opacity-70">Días acordados:</span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {activeProfile.diasPreferidos.map((d: string) => (
-                      <span key={d} className="badge badge-sm badge-outline font-semibold">
-                        {d}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* SECCIÓN C: METODOLOGÍA Y RESTRICCIONES DECLARADAS */}
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-primary">3. Adaptaciones y Restricciones Físicas</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                <div className="bg-base-200/70 p-3 rounded-xl">
-                  <span className="opacity-70 block font-semibold">Tipo de Entrenamiento Preferido:</span>
-                  <p className="mt-1">{activeProfile.tipoEntrenamiento || "Pesas tradicionales / Hipertrofia"}</p>
-                </div>
-                <div className="bg-base-200/70 p-3 rounded-xl">
-                  <span className="opacity-70 block font-semibold">Ejercicios Excluidos / Evitados:</span>
-                  <p className="mt-1">{activeProfile.ejerciciosEvitados || "Ninguno reportado"}</p>
-                </div>
-              </div>
-
-              {/* Lesiones reportadas + Advertencia */}
-              <div className="p-3.5 bg-warning/10 border border-warning/30 rounded-xl space-y-2 text-xs">
-                <div className="flex items-start gap-2 text-warning font-semibold">
-                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>Restricciones físicas y molestias reportadas por el socio:</span>
-                </div>
-                <p className="text-base-content font-medium pl-6">
-                  {activeProfile.lesionesReportadas || "Sin lesiones ni limitaciones físicas declaradas."}
-                </p>
-                <div className="text-[11px] opacity-75 italic border-t border-warning/20 pt-1.5 pl-6">
-                  ℹ️ <strong>Advertencia:</strong> Información declarada por el socio o registrada por el entrenador. No constituye diagnóstico médico ni autorización para realizar ejercicio.
-                </div>
-              </div>
-            </div>
-
-            {/* SECCIÓN D: ALIMENTACIÓN DECLARADA */}
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
-                <Apple className="w-4 h-4" /> 4. Pautas y Hábitos Alimentarios Declarados
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                <div className="bg-base-200/70 p-3 rounded-xl">
-                  <span className="opacity-70 block">Preferencia Dietética:</span>
-                  <strong>{activeProfile.preferenciaAlimenticia || "Omnívoro"}</strong>
-                </div>
-                <div className="bg-base-200/70 p-3 rounded-xl">
-                  <span className="opacity-70 block">Alergias / Intolerancias:</span>
-                  <strong>{activeProfile.alergiasDeclaradas || "Ninguna reportada"}</strong>
-                </div>
-                <div className="bg-base-200/70 p-3 rounded-xl">
-                  <span className="opacity-70 block">Comidas / Hidratación:</span>
-                  <strong>{activeProfile.numeroComidasDia || 3} comidas/día • {activeProfile.consumoAguaLitros || 2.5} L agua</strong>
-                </div>
-              </div>
-              <div className="text-[11px] opacity-75 italic p-2 bg-base-200/40 rounded-lg">
-                ℹ️ <strong>Nota:</strong> La información alimentaria registrada es declarativa y no constituye un plan nutricional profesional.
-              </div>
-            </div>
-
-            {/* SECCIÓN E: OBSERVACIONES TÉCNICAS */}
-            {activeProfile.observaciones && (
-              <div className="space-y-1 text-xs bg-base-200/60 p-3 rounded-xl">
-                <span className="opacity-70 font-semibold block">Observaciones y Criterios del Entrenador:</span>
-                <p className="text-base-content">{activeProfile.observaciones}</p>
-              </div>
-            )}
-          </div>
-        </div>
-      ) : (
-        /* ESTADO VACÍO CUANDO NO HAY PERFIL ACTIVO */
-        <div className="card bg-base-100 shadow-xl border border-base-200 p-8 text-center">
-          <div className="w-14 h-14 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-3">
-            <Dumbbell className="w-7 h-7" />
-          </div>
-          <h3 className="text-lg font-bold">Este socio aún no tiene un perfil de planificación activo</h3>
-          <p className="text-xs opacity-70 max-w-md mx-auto mt-1 mb-4">
-            Cree el perfil de planificación para establecer objetivos, nivel, disponibilidad, restricciones y pautas declaradas.
-          </p>
-          {canManage && (
-            <div>
-              <button onClick={handleOpenCreate} className="btn btn-primary btn-sm gap-2">
-                <Plus className="w-4 h-4" /> Crear Perfil de Planificación
+                VER DETALLE <ArrowRight className="w-4 h-4" />
               </button>
             </div>
-          )}
+          </div>
+
+          {/* TARJETA 2: NUTRICIÓN */}
+          <div
+            onClick={() => setViewMode("nutricion")}
+            className="card bg-base-100 shadow-sm hover:shadow-md transition-all duration-200 border border-base-200 cursor-pointer overflow-hidden group hover:border-success/50"
+          >
+            <div className="card-body p-6 flex flex-col justify-between h-full space-y-4">
+              <div className="space-y-3">
+                <div className="w-14 h-14 rounded-2xl bg-success/10 text-success flex items-center justify-center group-hover:scale-105 transition-transform">
+                  <Apple className="w-7 h-7" />
+                </div>
+                <div>
+                  <span className="text-[11px] font-black uppercase tracking-wider text-success">
+                    NUTRICIÓN
+                  </span>
+                  <h3 className="text-lg font-black text-base-content mt-0.5">
+                    Plan de Alimentación
+                  </h3>
+                  <p className="text-xs text-base-content/70 mt-1">
+                    {planAlimentacionActivo
+                      ? `${planAlimentacionActivo.titulo || "Personalizado"} • ${planAlimentacionActivo.contenido?.recetas?.length || 20}+ recetas • v${planAlimentacionActivo.version}`
+                      : "Pautas nutricionales, recetas, momentos de comida e hidratación."}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setViewMode("nutricion");
+                }}
+                className="btn btn-success text-white btn-sm w-full gap-2 font-bold shadow-sm"
+              >
+                VER DETALLE <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* TARJETA 3: COORDINACIÓN / MI HORARIO */}
+          <div
+            onClick={() => setViewMode("horario")}
+            className="card bg-base-100 shadow-sm hover:shadow-md transition-all duration-200 border border-base-200 cursor-pointer overflow-hidden group hover:border-info/50"
+          >
+            <div className="card-body p-6 flex flex-col justify-between h-full space-y-4">
+              <div className="space-y-3">
+                <div className="w-14 h-14 rounded-2xl bg-info/10 text-info flex items-center justify-center group-hover:scale-105 transition-transform">
+                  <Clock className="w-7 h-7" />
+                </div>
+                <div>
+                  <span className="text-[11px] font-black uppercase tracking-wider text-info">
+                    COORDINACIÓN
+                  </span>
+                  <h3 className="text-lg font-black text-base-content mt-0.5">
+                    Mi Horario
+                  </h3>
+                  <p className="text-xs text-base-content/70 mt-1">
+                    {activeProfile
+                      ? `${activeProfile.diasPorSemana} días/semana • Turno ${activeProfile.horarioPreferido || "Flexible"} • ${activeProfile.duracionMinutos} min`
+                      : "Entrenador asignado, días acordados, hora y duración."}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setViewMode("horario");
+                }}
+                className="btn btn-info text-white btn-sm w-full gap-2 font-bold shadow-sm"
+              >
+                VER DETALLE <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* 4. SECCIÓN DE PLANIFICACIÓN IA & PLANES MATERIALIZADOS */}
-      <PlanIASection
-        socio={socio}
-        perfilActivo={activeProfile}
-        canManage={canManage}
-      />
-
-      {/* 5. HISTORIAL DE VERSIONES */}
-      <div className="card bg-base-100 shadow-xl border border-base-200">
-        <div className="card-body p-5 md:p-6 space-y-4">
-          <div className="flex items-center gap-2">
-            <History className="w-5 h-5 text-primary" />
-            <h3 className="font-bold text-base">Historial de Versiones del Perfil</h3>
+      {/* ========================================================================= */}
+      {/* VISTA DETALLE: 1. PLAN DE ENTRENAMIENTO                                  */}
+      {/* ========================================================================= */}
+      {viewMode === "entrenamiento" && (
+        <div className="space-y-4 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setViewMode("hub")}
+              className="btn btn-ghost btn-sm gap-2 font-bold text-xs"
+            >
+              <ArrowLeft className="w-4 h-4" /> Volver a Planificación
+            </button>
           </div>
-
-          {historyProfiles.length === 0 ? (
-            <p className="text-xs opacity-70 text-center py-4">No hay versiones registradas en el historial.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="table table-sm text-xs">
-                <thead>
-                  <tr className="border-b border-base-200 opacity-70">
-                    <th>Versión</th>
-                    <th>Objetivo</th>
-                    <th>Nivel</th>
-                    <th>Entrenador</th>
-                    <th>Vigencia</th>
-                    <th>Motivo de Versión</th>
-                    <th>Estado</th>
-                    <th className="text-right">Acción</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {historyProfiles.map((p) => (
-                    <tr key={p.id} className="hover:bg-base-200/40">
-                      <td className="font-bold font-mono">v{p.version}</td>
-                      <td>{p.objetivoPrincipal}</td>
-                      <td>{p.nivel}</td>
-                      <td>{p.entrenador ? `${p.entrenador.nombres} ${p.entrenador.apellidos}` : "—"}</td>
-                      <td>{safeFormatDate(p.fechaInicio)} → {safeFormatDate(p.fechaFin)}</td>
-                      <td className="max-w-xs truncate">{p.motivoVersionado || "Versión inicial"}</td>
-                      <td>
-                        {p.activo ? (
-                          <span className="badge badge-success badge-sm text-white font-bold">Activo</span>
-                        ) : (
-                          <span className="badge badge-ghost badge-sm opacity-70">Histórico</span>
-                        )}
-                      </td>
-                      <td className="text-right">
-                        <button
-                          onClick={() => setViewDetailModal(p)}
-                          className="btn btn-ghost btn-xs text-primary gap-1"
-                          title="Ver detalle completo"
-                        >
-                          <Eye className="w-3.5 h-3.5" /> Ver
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <RutinasDetalleSection
+            socioId={socio.id}
+            onOpenGenerateIA={handleGenerateIA}
+            generatingIA={generatingIA}
+          />
         </div>
-      </div>
+      )}
 
-      {/* MODAL 1: CREAR PERFIL INICIAL / MODAL 2: NUEVA VERSIÓN / MODAL 3: EDITAR PERFIL */}
+      {/* ========================================================================= */}
+      {/* VISTA DETALLE: 2. PLAN DE ALIMENTACIÓN                                   */}
+      {/* ========================================================================= */}
+      {viewMode === "nutricion" && (
+        <div className="space-y-4 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setViewMode("hub")}
+              className="btn btn-ghost btn-sm gap-2 font-bold text-xs"
+            >
+              <ArrowLeft className="w-4 h-4" /> Volver a Planificación
+            </button>
+          </div>
+          <RecetasDetalleSection
+            socioId={socio.id}
+            onOpenGenerateIA={handleGenerateIA}
+            generatingIA={generatingIA}
+          />
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* VISTA DETALLE: 3. MI HORARIO                                             */}
+      {/* ========================================================================= */}
+      {viewMode === "horario" && (
+        <div className="space-y-4 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setViewMode("hub")}
+              className="btn btn-ghost btn-sm gap-2 font-bold text-xs"
+            >
+              <ArrowLeft className="w-4 h-4" /> Volver a Planificación
+            </button>
+          </div>
+          <HorarioSocioSection
+            socioId={socio.id}
+            socioNombre={`${socio.nombres || ""} ${socio.apellidos || ""}`.trim() || socio.codigo}
+            perfilActivo={activeProfile}
+            assignment={assignment}
+            canManage={canManage}
+            onOpenEditSchedule={handleOpenEdit}
+          />
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: EVALUACIÓN TÉCNICA DEL SOCIO (ACCESO SECUNDARIO DE GESTIÓN)        */}
+      {/* ========================================================================= */}
+      {showEvaluacionModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-base-100 border border-base-200 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="flex justify-between items-center p-5 border-b border-base-200 bg-base-200/50">
+              <h3 className="text-lg font-bold flex items-center gap-2">
+                <ClipboardList className="w-5 h-5 text-primary" />
+                Ficha Técnica de Evaluación
+              </h3>
+              <button onClick={() => setShowEvaluacionModal(false)} className="btn btn-ghost btn-circle btn-sm">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 overflow-y-auto space-y-4">
+              <EvaluacionPerfilSection
+                socio={socio}
+                activeProfile={activeProfile}
+                medidaActual={latestMeasure}
+                canManage={canManage}
+                onOpenCreate={handleOpenCreate}
+                onOpenEdit={() => {
+                  setShowEvaluacionModal(false);
+                  handleOpenEdit();
+                }}
+                onOpenNewVersion={() => {
+                  setShowEvaluacionModal(false);
+                  handleOpenVersion();
+                }}
+                onOpenCloseProfile={() => {
+                  setShowEvaluacionModal(false);
+                  setShowCloseModal(true);
+                }}
+              />
+            </div>
+            <div className="p-4 border-t border-base-200 flex justify-end">
+              <button onClick={() => setShowEvaluacionModal(false)} className="btn btn-ghost btn-sm">
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODALES: VISOR Y APROBACIÓN DE PROPUESTAS IA                              */}
+      {/* ========================================================================= */}
+      {selectedGeneracion && (
+        <ProposalViewerModal
+          generacion={selectedGeneracion}
+          onClose={() => setSelectedGeneracion(null)}
+          onApprove={(gen) => setGeneracionToApprove(gen)}
+          onReject={(gen) => setGeneracionToReject(gen)}
+          onArchive={(genId) => handleArchive(genId)}
+          canManage={canManage}
+        />
+      )}
+
+      {generacionToApprove && (
+        <ApprovalModal
+          generacion={generacionToApprove}
+          onClose={() => setGeneracionToApprove(null)}
+          onConfirm={handleConfirmApprove}
+        />
+      )}
+
+      {generacionToReject && (
+        <RejectModal
+          generacion={generacionToReject}
+          onClose={() => setGeneracionToReject(null)}
+          onConfirm={handleConfirmReject}
+        />
+      )}
+
+      {/* MODAL LISTA DE PROPUESTAS IA */}
+      {showProposalsModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-base-100 border border-base-200 rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="flex justify-between items-center p-5 border-b border-base-200 bg-base-200/50">
+              <h3 className="text-lg font-bold flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-primary" />
+                Historial de Propuestas IA
+              </h3>
+              <button onClick={() => setShowProposalsModal(false)} className="btn btn-ghost btn-circle btn-sm">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 overflow-y-auto space-y-3">
+              {generaciones.length === 0 ? (
+                <p className="text-center text-xs opacity-60 py-6">No hay propuestas generadas.</p>
+              ) : (
+                generaciones.map((gen) => (
+                  <div
+                    key={gen.id}
+                    className="p-4 bg-base-200/50 rounded-xl border border-base-200 flex items-center justify-between gap-3 text-xs"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold">Propuesta #{gen.numeroGeneracion}</span>
+                        <span className={`badge badge-xs ${gen.estado === "APROBADO" ? "badge-success text-white" : gen.estado === "RECHAZADO" ? "badge-error text-white" : "badge-warning"}`}>
+                          {gen.estado}
+                        </span>
+                      </div>
+                      <span className="opacity-60 text-[11px]">
+                        Fecha: {safeFormatDate(gen.createdAt)}
+                      </span>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        const detailRes = await obtenerGeneracionPorId(gen.id);
+                        if (detailRes.success && detailRes.data) {
+                          setSelectedGeneracion(detailRes.data);
+                          setShowProposalsModal(false);
+                        }
+                      }}
+                      className="btn btn-primary btn-xs gap-1"
+                    >
+                      <Eye className="w-3.5 h-3.5" /> Ver Detalle
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="p-4 border-t border-base-200 flex justify-end">
+              <button onClick={() => setShowProposalsModal(false)} className="btn btn-ghost btn-sm">
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODALES DE GESTIÓN DE PERFIL (CREAR / EDITAR / VERSIONAR / CERRAR)        */}
+      {/* ========================================================================= */}
       {(showCreateModal || showVersionModal || showEditModal) && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-base-100 border border-base-200 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in fade-in zoom-in-95">
@@ -947,70 +1070,109 @@ export default function PlanificacionTab({
                   </div>
 
                   <div>
+                    <label className="block font-semibold mb-1">Fecha de Inicio del Perfil</label>
+                    <input
+                      type="date"
+                      required
+                      value={formData.fechaInicio}
+                      onChange={(e) => setFormData({ ...formData, fechaInicio: e.target.value })}
+                      className="input input-bordered input-sm w-full"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
                     <label className="block font-semibold mb-1">Objetivo Específico / Secundario</label>
                     <input
                       type="text"
-                      placeholder="Ej. Enfoque en glúteos y hombros"
+                      placeholder="Ej. Mejorar sentadilla, tonificar abdomen, ganar 2kg masa magra"
                       value={formData.objetivoSecundario}
                       onChange={(e) => setFormData({ ...formData, objetivoSecundario: e.target.value })}
+                      className="input input-bordered input-sm w-full"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold mb-1">Tiempo Entrenando</label>
+                    <input
+                      type="text"
+                      placeholder="Ej. 6 meses, 1 año, Primera vez"
+                      value={formData.tiempoEntrenando}
+                      onChange={(e) => setFormData({ ...formData, tiempoEntrenando: e.target.value })}
+                      className="input input-bordered input-sm w-full"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold mb-1">Experiencia Previa en Deportes/Gimnasio</label>
+                    <input
+                      type="text"
+                      placeholder="Ej. Fútbol amateur, natación, crossfit previo"
+                      value={formData.experienciaPrevia}
+                      onChange={(e) => setFormData({ ...formData, experienciaPrevia: e.target.value })}
                       className="input input-bordered input-sm w-full"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* SECCIÓN 2: DISPONIBILIDAD Y TIEMPOS */}
+              {/* SECCIÓN 2: DISPONIBILIDAD */}
               <div className="space-y-3">
                 <h4 className="font-bold text-primary text-sm uppercase tracking-wider">
-                  2. Disponibilidad y Experiencia
+                  2. Disponibilidad y Horarios
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block font-semibold mb-1">Días por Semana (1-7)</label>
+                    <label className="block font-semibold mb-1">Días por Semana (Frecuencia)</label>
                     <input
                       type="number"
                       min={1}
                       max={7}
+                      required
                       value={formData.diasPorSemana}
                       onChange={(e) => setFormData({ ...formData, diasPorSemana: parseInt(e.target.value) || 3 })}
                       className="input input-bordered input-sm w-full"
                     />
                   </div>
+
                   <div>
-                    <label className="block font-semibold mb-1">Duración Sesión (min)</label>
+                    <label className="block font-semibold mb-1">Duración por Sesión (Minutos)</label>
                     <input
                       type="number"
-                      min={15}
-                      max={240}
+                      min={20}
+                      max={180}
+                      required
                       value={formData.duracionMinutos}
                       onChange={(e) => setFormData({ ...formData, duracionMinutos: parseInt(e.target.value) || 60 })}
                       className="input input-bordered input-sm w-full"
                     />
                   </div>
+
                   <div>
-                    <label className="block font-semibold mb-1">Horario Preferido</label>
-                    <input
-                      type="text"
-                      placeholder="Ej. Mañanas / Tardes 6pm"
+                    <label className="block font-semibold mb-1">Turno / Horario Preferido</label>
+                    <select
                       value={formData.horarioPreferido}
                       onChange={(e) => setFormData({ ...formData, horarioPreferido: e.target.value })}
-                      className="input input-bordered input-sm w-full"
-                    />
+                      className="select select-bordered select-sm w-full"
+                    >
+                      <option value="MAÑANA">Mañana (6:00 - 12:00)</option>
+                      <option value="TARDE">Tarde (12:00 - 18:00)</option>
+                      <option value="NOCHE">Noche (18:00 - 22:00)</option>
+                      <option value="FLEXIBLE">Flexible / Rotativo</option>
+                    </select>
                   </div>
                 </div>
 
-                {/* Días preferidos checkboxes */}
                 <div>
-                  <label className="block font-semibold mb-1.5">Días Preferidos de la Semana:</label>
-                  <div className="flex flex-wrap gap-2">
+                  <label className="block font-semibold mb-1">Días Acordados para Entrenar</label>
+                  <div className="flex flex-wrap gap-2 pt-1">
                     {DIAS_SEMANA.map((d) => {
-                      const isSelected = formData.diasPreferidos?.includes(d.key);
+                      const checked = (formData.diasPreferidos || []).includes(d.key);
                       return (
                         <button
                           type="button"
                           key={d.key}
                           onClick={() => handleToggleDay(d.key)}
-                          className={`btn btn-xs ${isSelected ? "btn-primary font-bold" : "btn-outline opacity-70"}`}
+                          className={`btn btn-xs ${checked ? "btn-primary text-white" : "btn-ghost bg-base-200"}`}
                         >
                           {d.label}
                         </button>
@@ -1018,177 +1180,114 @@ export default function PlanificacionTab({
                     })}
                   </div>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block font-semibold mb-1">Tiempo Entrenando Previo</label>
-                    <input
-                      type="text"
-                      placeholder="Ej. 1 año continuo"
-                      value={formData.tiempoEntrenando}
-                      onChange={(e) => setFormData({ ...formData, tiempoEntrenando: e.target.value })}
-                      className="input input-bordered input-sm w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-semibold mb-1">Experiencia / Deportes Previos</label>
-                    <input
-                      type="text"
-                      placeholder="Ej. Natación, Calistenia"
-                      value={formData.experienciaPrevia}
-                      onChange={(e) => setFormData({ ...formData, experienciaPrevia: e.target.value })}
-                      className="input input-bordered input-sm w-full"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block font-semibold mb-1">Capacidad Cardiovascular</label>
-                    <select
-                      value={formData.capacidadCardiovascular}
-                      onChange={(e) => setFormData({ ...formData, capacidadCardiovascular: e.target.value })}
-                      className="select select-bordered select-sm w-full"
-                    >
-                      <option value="BAJA">Baja</option>
-                      <option value="MEDIA">Media</option>
-                      <option value="ALTA">Alta</option>
-                      <option value="EXCELENTE">Excelente</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold mb-1">Capacidad de Fuerza</label>
-                    <select
-                      value={formData.capacidadFuerza}
-                      onChange={(e) => setFormData({ ...formData, capacidadFuerza: e.target.value })}
-                      className="select select-bordered select-sm w-full"
-                    >
-                      <option value="BAJA">Baja</option>
-                      <option value="MEDIA">Media</option>
-                      <option value="ALTA">Alta</option>
-                      <option value="AVANZADA">Avanzada</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold mb-1">Equipamiento Disponible</label>
-                    <select
-                      value={formData.equipamientoDisponible}
-                      onChange={(e) => setFormData({ ...formData, equipamientoDisponible: e.target.value })}
-                      className="select select-bordered select-sm w-full"
-                    >
-                      <option value="GIMNASIO_COMPLETO">Gimnasio Completo</option>
-                      <option value="MANCUERNAS_BANCOS">Mancuernas y Bancos</option>
-                      <option value="PESO_CORPORAL">Peso Corporal / Calistenia</option>
-                      <option value="BANDAS_RESISTENCIA">Bandas de Resistencia</option>
-                      <option value="OTRO">Otro</option>
-                    </select>
-                  </div>
-                </div>
               </div>
 
-              {/* SECCIÓN 3: ENTRENAMIENTO Y RESTRICCIONES */}
+              {/* SECCIÓN 3: PREFERENCIAS Y SALUD */}
               <div className="space-y-3">
                 <h4 className="font-bold text-primary text-sm uppercase tracking-wider">
-                  3. Entrenamiento y Restricciones
+                  3. Preferencias de Entrenamiento y Salud
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block font-semibold mb-1">Tipo de Entrenamiento Preferido</label>
                     <input
                       type="text"
-                      placeholder="Ej. Hipertrofia con peso libre"
+                      placeholder="Ej. Pesas tradicionales, Funcional, Máquinas"
                       value={formData.tipoEntrenamiento}
                       onChange={(e) => setFormData({ ...formData, tipoEntrenamiento: e.target.value })}
                       className="input input-bordered input-sm w-full"
                     />
                   </div>
+
                   <div>
-                    <label className="block font-semibold mb-1">Ejercicios Evitados</label>
+                    <label className="block font-semibold mb-1">Ejercicios Excluidos o Evitados</label>
                     <input
                       type="text"
-                      placeholder="Ej. Press tras nuca, Sentadilla profunda"
+                      placeholder="Ej. Sentadilla libre, Peso muerto, Saltos"
                       value={formData.ejerciciosEvitados}
                       onChange={(e) => setFormData({ ...formData, ejerciciosEvitados: e.target.value })}
                       className="input input-bordered input-sm w-full"
                     />
                   </div>
-                </div>
 
-                <div>
-                  <label className="block font-semibold mb-1 text-warning flex items-center gap-1.5">
-                    <AlertTriangle className="w-4 h-4" /> Lesiones / Limitaciones Reportadas
-                  </label>
-                  <textarea
-                    rows={2}
-                    placeholder="Declaración de molestias articulares o limitaciones de rango..."
-                    value={formData.lesionesReportadas}
-                    onChange={(e) => setFormData({ ...formData, lesionesReportadas: e.target.value })}
-                    className="textarea textarea-bordered w-full text-xs"
-                  />
-                  <span className="text-[10px] opacity-70 block mt-0.5">
-                    Nota: Información declarada por el socio. No constituye diagnóstico médico.
-                  </span>
+                  <div className="sm:col-span-2">
+                    <label className="block font-semibold mb-1 text-warning">
+                      Lesiones / Restricciones Físicas Declaradas
+                    </label>
+                    <textarea
+                      rows={2}
+                      placeholder="Ej. Hernia discal L5-S1 (evitar carga axial), condromalacia rotuliana..."
+                      value={formData.lesionesReportadas}
+                      onChange={(e) => setFormData({ ...formData, lesionesReportadas: e.target.value })}
+                      className="textarea textarea-bordered textarea-warning w-full text-xs"
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* SECCIÓN 4: PAUTAS ALIMENTARIAS DECLARADAS */}
+              {/* SECCIÓN 4: ALIMENTACIÓN */}
               <div className="space-y-3">
-                <h4 className="font-bold text-primary text-sm uppercase tracking-wider flex items-center gap-1.5">
-                  <Apple className="w-4 h-4" /> 4. Pautas y Hábitos Alimentarios Declarados
+                <h4 className="font-bold text-primary text-sm uppercase tracking-wider">
+                  4. Pautas y Hábitos Alimentarios
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block font-semibold mb-1">Preferencia Dietética</label>
-                    <input
-                      type="text"
-                      placeholder="Ej. Omnívoro / Vegetariano"
+                    <label className="block font-semibold mb-1">Preferencia Alimenticia</label>
+                    <select
                       value={formData.preferenciaAlimenticia}
                       onChange={(e) => setFormData({ ...formData, preferenciaAlimenticia: e.target.value })}
-                      className="input input-bordered input-sm w-full"
-                    />
+                      className="select select-bordered select-sm w-full"
+                    >
+                      <option value="OMNIVORO">Omnívoro</option>
+                      <option value="VEGETARIANO">Vegetariano</option>
+                      <option value="VEGANO">Vegano</option>
+                      <option value="PESCETARIANO">Pescetariano</option>
+                      <option value="KETO">Keto / Bajo en Carbohidratos</option>
+                      <option value="OTRO">Otro</option>
+                    </select>
                   </div>
+
                   <div>
                     <label className="block font-semibold mb-1">Comidas al Día</label>
                     <input
                       type="number"
                       min={1}
-                      max={10}
+                      max={8}
                       value={formData.numeroComidasDia}
                       onChange={(e) => setFormData({ ...formData, numeroComidasDia: parseInt(e.target.value) || 3 })}
                       className="input input-bordered input-sm w-full"
                     />
                   </div>
+
                   <div>
                     <label className="block font-semibold mb-1">Consumo de Agua (Litros/día)</label>
                     <input
                       type="number"
                       step="0.1"
-                      min={0}
-                      max={20}
+                      min={0.5}
+                      max={10}
                       value={formData.consumoAguaLitros}
                       onChange={(e) => setFormData({ ...formData, consumoAguaLitros: parseFloat(e.target.value) || 2.5 })}
                       className="input input-bordered input-sm w-full"
                     />
                   </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block font-semibold mb-1">Alergias / Intolerancias Declaradas</label>
+
+                  <div className="sm:col-span-2">
+                    <label className="block font-semibold mb-1 text-error">Alergias o Intolerancias Alimentarias</label>
                     <input
                       type="text"
-                      placeholder="Ej. Intolerancia a la lactosa"
+                      placeholder="Ej. Lactosa, Maní, Mariscos, Gluten"
                       value={formData.alergiasDeclaradas}
                       onChange={(e) => setFormData({ ...formData, alergiasDeclaradas: e.target.value })}
                       className="input input-bordered input-sm w-full"
                     />
                   </div>
+
                   <div>
-                    <label className="block font-semibold mb-1">Alimentos Evitados</label>
+                    <label className="block font-semibold mb-1">Alimentos Evitados por Gusto</label>
                     <input
                       type="text"
-                      placeholder="Ej. Mariscos, picantes"
+                      placeholder="Ej. Pescado azul, Brócoli"
                       value={formData.alimentosEvitados}
                       onChange={(e) => setFormData({ ...formData, alimentosEvitados: e.target.value })}
                       className="input input-bordered input-sm w-full"
@@ -1234,7 +1333,7 @@ export default function PlanificacionTab({
         </div>
       )}
 
-      {/* MODAL 4: FINALIZAR PERFIL */}
+      {/* MODAL CERRAR / FINALIZAR PERFIL */}
       {showCloseModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-base-100 border border-base-200 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95">
@@ -1273,77 +1372,6 @@ export default function PlanificacionTab({
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 5: VER DETALLE HISTÓRICO COMPLETO (SOLO LECTURA) */}
-      {viewDetailModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-base-100 border border-base-200 rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl animate-in fade-in zoom-in-95">
-            <div className="flex justify-between items-center p-5 border-b border-base-200 bg-base-200/50">
-              <div>
-                <h3 className="font-bold text-lg flex items-center gap-2">
-                  <History className="w-5 h-5 text-primary" />
-                  Detalle de Versión v{viewDetailModal.version} (Histórico)
-                </h3>
-                <p className="text-xs opacity-70">
-                  Vigencia: {safeFormatDate(viewDetailModal.fechaInicio)} → {safeFormatDate(viewDetailModal.fechaFin)}
-                </p>
-              </div>
-              <button onClick={() => setViewDetailModal(null)} className="btn btn-ghost btn-circle btn-sm">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-5 overflow-y-auto space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3 bg-base-200/50 p-3 rounded-xl">
-                <div>
-                  <span className="opacity-70 block">Objetivo Principal:</span>
-                  <strong className="text-sm">{viewDetailModal.objetivoPrincipal}</strong>
-                </div>
-                <div>
-                  <span className="opacity-70 block">Nivel:</span>
-                  <strong className="text-sm">{viewDetailModal.nivel}</strong>
-                </div>
-                <div>
-                  <span className="opacity-70 block">Entrenador Autor:</span>
-                  <strong>{viewDetailModal.entrenador?.nombres} {viewDetailModal.entrenador?.apellidos}</strong>
-                </div>
-                <div>
-                  <span className="opacity-70 block">Motivo de Versión:</span>
-                  <strong>{viewDetailModal.motivoVersionado || "Versión inicial"}</strong>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <span className="font-bold text-primary block">Disponibilidad:</span>
-                <p>{viewDetailModal.diasPorSemana} días por semana ({viewDetailModal.duracionMinutos} min/sesión) • Horario: {viewDetailModal.horarioPreferido || "Flexible"}</p>
-              </div>
-
-              <div className="space-y-2">
-                <span className="font-bold text-primary block">Restricciones declaradas:</span>
-                <p>{viewDetailModal.lesionesReportadas || "Ninguna reportada"}</p>
-              </div>
-
-              <div className="space-y-2">
-                <span className="font-bold text-primary block">Alimentación declarada:</span>
-                <p>{viewDetailModal.preferenciaAlimenticia || "Omnívoro"} • {viewDetailModal.numeroComidasDia || 3} comidas/día • {viewDetailModal.consumoAguaLitros || 2.5} L agua • Alergias: {viewDetailModal.alergiasDeclaradas || "Ninguna"}</p>
-              </div>
-
-              {viewDetailModal.observaciones && (
-                <div className="space-y-1">
-                  <span className="font-bold text-primary block">Observaciones:</span>
-                  <p>{viewDetailModal.observaciones}</p>
-                </div>
-              )}
-            </div>
-
-            <div className="p-4 border-t border-base-200 flex justify-end">
-              <button onClick={() => setViewDetailModal(null)} className="btn btn-ghost btn-sm">
-                Cerrar
-              </button>
-            </div>
           </div>
         </div>
       )}

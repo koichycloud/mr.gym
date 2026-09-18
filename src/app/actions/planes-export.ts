@@ -199,6 +199,7 @@ export async function exportarPlanAlimentacionPDF(input: z.infer<typeof exportar
     const contenidoJSON = (plan.contenido as any) || {};
     const recetas = contenidoJSON.recetas || [];
     const lineamientosGenerales = contenidoJSON.lineamientosGenerales || (plan.lineamientosGenerales as any) || ["Consumir agua regularmente."];
+    const objetivosNutricionalesDiarios = contenidoJSON.objetivosNutricionalesDiarios || null;
 
     const pdfData: NutritionPlanPDFData = {
       titulo: plan.titulo,
@@ -209,12 +210,20 @@ export async function exportarPlanAlimentacionPDF(input: z.infer<typeof exportar
       fechaFin: plan.fechaFin ? plan.fechaFin.toISOString().slice(0, 10) : undefined,
       lineamientosGenerales: Array.isArray(lineamientosGenerales) ? lineamientosGenerales : [String(lineamientosGenerales)],
       recomendacionHidratacion: plan.recomendacionHidratacion || contenidoJSON.recomendacionHidratacion || "Consumir 2.5 L a 3.0 L de agua al día.",
+      objetivosNutricionalesDiarios,
       recetas: recetas.map((r: any) => ({
-        momento: r.momentoSugerido || r.momento || "GENERAL",
+        idReceta: r.idReceta || "REC-01",
+        momentoSugerido: r.momentoSugerido || r.momento || "GENERAL",
         nombre: r.nombreReceta || r.nombre || "Receta",
-        ingredientes: Array.isArray(r.ingredientes) ? r.ingredientes : [String(r.ingredientes)],
-        preparacion: r.instrucciones || r.preparacion || "Según instrucciones estándar.",
-        sustituciones: r.opcionesSustitucion || undefined,
+        tiempoPreparacionMinutos: r.tiempoPreparacionMinutos || 15,
+        porcion: r.porcion || null,
+        ingredientesDetalle: r.ingredientesDetalle || null,
+        macrosPorcion: r.macrosPorcion || null,
+        ingredientes: Array.isArray(r.ingredientes) ? r.ingredientes : (r.ingredientes ? [String(r.ingredientes)] : []),
+        instrucciones: Array.isArray(r.instrucciones) ? r.instrucciones : (r.instrucciones || r.preparacion ? [String(r.instrucciones || r.preparacion)] : ["Según instrucciones estándar."]),
+        porciones: r.porciones || 1,
+        opcionesSustitucion: r.opcionesSustitucion || undefined,
+        beneficioClave: r.beneficioClave || undefined,
       })),
       observaciones: plan.observaciones || undefined,
     };

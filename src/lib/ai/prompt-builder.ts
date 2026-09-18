@@ -39,9 +39,30 @@ ESTRUCTURA DE LOS 6 NIVELES DE ENTRENAMIENTO:
 - Nivel 6: Rendimiento Avanzado y Periodización (RPE 9).
 Cada nivel debe contener 'sesiones' adaptadas a los días de la semana del socio, con 'calentamiento', 'ejercicios' (nombre, grupoMuscular, series 1-10, repeticiones, descansoSegundos 15-600, tempo, rpe, instrucciones), 'vueltaALaCalma', 'criteriosDeProgreso' y 'criteriosDeRegresion'.
 
-ESTRUCTURA DEL PLAN ALIMENTARIO (MÍNIMO 20 RECETAS):
-- Distribuidas equilibradamente en: DESAYUNO, ALMUERZO, CENA, SNACK_PRE, SNACK_POST, SNACK_MEDIA_MANANA, SNACK_MEDIA_TARDE.
-- Cada receta debe incluir: idReceta único (ej: REC-01), nombre, momentoSugerido, tiempoPreparacionMinutos (1-180), ingredientes (array), instrucciones (array), porciones (1-10), opcionesSustitucion, beneficioClave.
+ESTRUCTURA DEL PLAN ALIMENTARIO (MÍNIMO 20 RECETAS ESTRUCTURADAS Y PERSONALIZADAS):
+- OBJETIVOS NUTRICIONALES DIARIOS ESTIMADOS: Calcular y justificar según el peso, talla, edad, sexo y objetivo del socio (ej: superávit para hipertrofia, déficit moderado para pérdida de grasa).
+  "objetivosNutricionalesDiarios": {
+    "caloriasObjetivoKcal": 2400,
+    "proteinasObjetivoG": 160,
+    "carbohidratosObjetivoG": 280,
+    "grasasObjetivoG": 70,
+    "resumenEstrategiaNutricional": "Superávit calórico controlado de 300 kcal con 2.0g/kg de proteína."
+  }
+- DISTRIBUCIÓN EQUILIBRADA EN MOMENTOS DE COMIDA: DESAYUNO, ALMUERZO, CENA, SNACK_PRE, SNACK_POST, SNACK_MEDIA_MANANA, SNACK_MEDIA_TARDE.
+- CADA RECETA DEBE INCLUIR OBLIGATORIAMENTE:
+  1. idReceta único (ej: "REC-01", "REC-02").
+  2. nombre (ej: "Pechuga a la plancha con arroz integral y palta").
+  3. momentoSugerido (uno de los momentos válidos).
+  4. tiempoPreparacionMinutos (1 a 180).
+  5. porcion: { "cantidad": 1, "unidad": "porción", "descripcion": "1 plato completo (~380 g)" }.
+  6. ingredientesDetalle: Array de objetos { "nombre": string, "cantidad": number (positivo), "unidad": "g"|"ml"|"unidad"|"cda"|"taza" }.
+  7. macrosPorcion: { "caloriasKcal": number, "proteinasG": number, "carbohidratosG": number, "grasasG": number }.
+     REGLA DE COHERENCIA: Las calorías deben ser coherentes con sus macros: (proteínas * 4) + (carbohidratos * 4) + (grasas * 9) ≈ caloriasKcal.
+  8. ingredientes: Array de strings legibles para compatibilidad (ej: ["Pechuga de pollo 150g", "Arroz integral 120g"]).
+  9. instrucciones: Array de pasos claros de preparación.
+  10. porciones: Entero (ej: 1).
+  11. opcionesSustitucion: Alternativas de ingredientes válidas.
+  12. beneficioClave: Razón funcional del plato.
 
 FORMATO DE SALIDA REQUERIDO:
 Debes responder ÚNICAMENTE con un objeto JSON válido que cumpla exactamente la siguiente estructura (sin texto antes ni después, sin markdown conversacional):
@@ -66,7 +87,14 @@ Debes responder ÚNICAMENTE con un objeto JSON válido que cumpla exactamente la
     "descripcionGeneral": "Descripción general",
     "lineamientosGenerales": [ "Lineamiento 1", "Lineamiento 2" ],
     "recomendacionHidratacion": "Pautas de consumo de agua",
-    "recetas": [ /* MÍNIMO 20 OBJETOS con idReceta único */ ]
+    "objetivosNutricionalesDiarios": {
+      "caloriasObjetivoKcal": 2200,
+      "proteinasObjetivoG": 150,
+      "carbohidratosObjetivoG": 250,
+      "grasasObjetivoG": 65,
+      "resumenEstrategiaNutricional": "Estrategia orientada al objetivo del socio"
+    },
+    "recetas": [ /* MÍNIMO 20 OBJETOS con idReceta único, ingredientesDetalle y macrosPorcion */ ]
   },
   "evaluacionSeguridad": {
     "requiresHumanReview": true/false,

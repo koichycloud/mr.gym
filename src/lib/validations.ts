@@ -287,14 +287,19 @@ export type PlanningAIInput = z.infer<typeof planningAIInputSchema>
 
 // 2. ESTRUCTURA JSON PLAN DE ENTRENAMIENTO (6 NIVELES)
 export const ejercicioAISchema = z.object({
+    // FASE 7: ejercicioId es OPCIONAL — referencia a la Biblioteca de Ejercicios (Fase 6).
+    // Los planes históricos sin este campo continúan funcionando normalmente.
+    ejercicioId: z.string().uuid("ID de ejercicio inválido").optional().nullable(),
     nombre: z.string().min(1, "Nombre de ejercicio requerido"),
     grupoMuscular: z.string().min(1, "Grupo muscular requerido"),
-    series: z.number().int().min(1, "Mínimo 1 serie").max(10, "Máximo 10 series"),
+    series: z.number().int().min(1).max(10),
     repeticiones: z.string().min(1, "Repeticiones requeridas"),
-    descansoSegundos: z.number().int().min(15, "Mínimo 15 segundos").max(600, "Máximo 600 segundos"),
+    descansoSegundos: z.number().int().min(15).max(600),
     tempo: z.string().max(20).optional().nullable(),
     rpe: z.number().min(1).max(10).optional().nullable(),
     instrucciones: z.string().max(500).optional().nullable(),
+    // FASE 7: observaciones adicionales por ejercicio (distintas de instrucciones técnicas)
+    observaciones: z.string().max(500).optional().nullable(),
 })
 
 export const sesionEntrenamientoAISchema = z.object({
@@ -303,6 +308,12 @@ export const sesionEntrenamientoAISchema = z.object({
     calentamiento: z.string().min(1, "Calentamiento requerido"),
     ejercicios: z.array(ejercicioAISchema).min(1, "La sesión debe contener al menos 1 ejercicio"),
     vueltaALaCalma: z.string().max(500).optional().nullable(),
+    // FASE 7: campos de periodicidad — opcionales para compatibilidad histórica
+    semana: z.number().int().min(1).max(52).optional().nullable(),
+    orden: z.number().int().min(1).max(20).optional().nullable(),
+    objetivo: z.string().max(200).optional().nullable(),
+    duracionEstimadaMinutos: z.number().int().min(1).max(300).optional().nullable(),
+    observaciones: z.string().max(500).optional().nullable(),
 })
 
 export const nivelEntrenamientoAISchema = z.object({
@@ -313,6 +324,13 @@ export const nivelEntrenamientoAISchema = z.object({
     criteriosDeProgreso: z.string().min(1, "Criterios de progreso requeridos"),
     criteriosDeRegresion: z.string().min(1, "Criterios de regresión requeridos"),
     sesiones: z.array(sesionEntrenamientoAISchema).min(1, "El nivel debe contener al menos 1 sesión"),
+    ajustesProgresion: z.object({
+        descripcionProgresion: z.string().max(500).optional().nullable(),
+        cambioVolumen: z.string().max(200).optional().nullable(),
+        cambioIntensidad: z.string().max(200).optional().nullable(),
+        cambioDescanso: z.string().max(200).optional().nullable(),
+        observacionesProgresion: z.string().max(500).optional().nullable(),
+    }).optional().nullable(),
 })
 
 export const planEntrenamientoJSONSchema = z.object({
@@ -332,24 +350,90 @@ export const planEntrenamientoJSONSchema = z.object({
 
 export type PlanEntrenamientoJSON = z.infer<typeof planEntrenamientoJSONSchema>
 
-// 3. ESTRUCTURA JSON PLAN ALIMENTARIO (20+ RECETAS)
+// 3. ESTRUCTURA JSON PLAN ALIMENTARIO (20+ RECETAS, INGREDIENTES DETALLADOS Y MACRONUTRIENTES)
+
+export const ingredienteDetalleSchema = z.object({
+    nombre: z.string().min(1, "Nombre de ingrediente requerido"),
+    cantidad: z.number().positive("La cantidad debe ser positiva"),
+    unidad: z.string().min(1, "Unidad requerida (ej. g, ml, unidad, cda, taza)"),
+    notas: z.string().max(200).optional().nullable(),
+})
+
+export type IngredienteDetalle = z.infer<typeof ingredienteDetalleSchema>
+
+export const macrosPorcionSchema = z.object({
+    caloriasKcal: z.number().nonnegative("Calorías no pueden ser negativas"),
+    proteinasG: z.number().nonnegative("Proteínas no pueden ser negativas"),
+    carbohidratosG: z.number().nonnegative("Carbohidratos no pueden ser negativos"),
+    grasasG: z.number().nonnegative("Grasas no pueden ser negativas"),
+})
+
+export type MacrosPorcion = z.infer<typeof macrosPorcionSchema>
+
+export const porcionRecetaSchema = z.object({
+    cantidad: z.number().int().min(1).default(1),
+    unidad: z.string().default("porción"),
+    descripcion: z.string().max(200).optional().nullable(),
+})
+
+export type PorcionReceta = z.infer<typeof porcionRecetaSchema>
+
+export const objetivosNutricionalesDiariosSchema = z.object({
+    caloriasObjetivoKcal: z.number().int().positive("Calorías objetivo deben ser positivas"),
+    proteinasObjetivoG: z.number().int().positive("Proteínas objetivo deben ser positivas"),
+    carbohidratosObjetivoG: z.number().int().positive("Carbohidratos objetivo deben ser positivos"),
+    grasasObjetivoG: z.number().int().positive("Grasas objetivo deben ser positivas"),
+    distribucionCaloricaPorcentaje: z.object({
+        proteinas: z.number().min(0).max(100).optional().nullable(),
+        carbohidratos: z.number().min(0).max(100).optional().nullable(),
+        grasas: z.number().min(0).max(100).optional().nullable(),
+    }).optional().nullable(),
+    resumenEstrategiaNutricional: z.string().max(500).optional().nullable(),
+})
+
+export type ObjetivosNutricionalesDiarios = z.infer<typeof objetivosNutricionalesDiariosSchema>
+
+/**
+ * Valida la coherencia aproximada entre los macronutrientes declarados y las calorías (P*4 + C*4 + G*9 ~ kcal)
+ * con una tolerancia razonable de redondeo (±20%).
+ */
+export function validarCoherenciaMacros(macros: MacrosPorcion, toleranciaPorcentaje = 0.20): boolean {
+    const { caloriasKcal, proteinasG, carbohidratosG, grasasG } = macros;
+    if (caloriasKcal <= 0) return false;
+    const caloriasCalculadas = (proteinasG * 4) + (carbohidratosG * 4) + (grasasG * 9);
+    const diferencia = Math.abs(caloriasKcal - caloriasCalculadas);
+    const margenPermitido = Math.max(25, caloriasKcal * toleranciaPorcentaje);
+    return diferencia <= margenPermitido;
+}
+
 export const recetaSugeridaAISchema = z.object({
     idReceta: z.string().min(1, "ID de receta requerido"),
     nombre: z.string().min(1, "Nombre de receta requerido"),
     momentoSugerido: z.enum(MOMENTOS_COMIDA_VALIDOS),
     tiempoPreparacionMinutos: z.number().int().min(1).max(180),
-    ingredientes: z.array(z.string().min(1)).min(1, "Al menos 1 ingrediente"),
+    porcion: porcionRecetaSchema.optional().nullable(),
+    ingredientesDetalle: z.array(ingredienteDetalleSchema).optional().nullable(),
+    macrosPorcion: macrosPorcionSchema.optional().nullable(),
+    ingredientes: z.array(z.string().min(1)).optional().nullable(),
     instrucciones: z.array(z.string().min(1)).min(1, "Al menos 1 paso de preparación"),
     porciones: z.number().int().min(1).max(10).default(1),
     opcionesSustitucion: z.string().max(500).optional().nullable(),
     beneficioClave: z.string().max(300).optional().nullable(),
-})
+}).refine(
+    (data) => {
+        const tieneDetalle = Array.isArray(data.ingredientesDetalle) && data.ingredientesDetalle.length > 0;
+        const tieneHistorico = Array.isArray(data.ingredientes) && data.ingredientes.length > 0;
+        return tieneDetalle || tieneHistorico;
+    },
+    { message: "La receta debe contener al menos un ingrediente (ingredientesDetalle o ingredientes)" }
+)
 
 export const planAlimentacionJSONSchema = z.object({
     titulo: z.string().min(1, "Título de plan alimentario requerido"),
     descripcionGeneral: z.string().min(1, "Descripción requerida"),
     lineamientosGenerales: z.array(z.string().min(1)).min(1, "Al menos 1 lineamiento general"),
     recomendacionHidratacion: z.string().min(1, "Recomendación de hidratación requerida"),
+    objetivosNutricionalesDiarios: objetivosNutricionalesDiariosSchema.optional().nullable(),
     recetas: z.array(recetaSugeridaAISchema).min(20, "El plan alimentario debe contener un mínimo de 20 recetas"),
 }).refine(
     (data) => {
@@ -440,5 +524,148 @@ export type CreateEjercicioInput = z.infer<typeof createEjercicioSchema>
 export type UpdateEjercicioInput = z.infer<typeof updateEjercicioSchema>
 export type FilterEjercicioInput = z.infer<typeof filterEjercicioSchema>
 
+// ============================================================================
+// MÓDULO: ENTRENAMIENTO PERSONALIZADO Y HORARIOS (FASE H2)
+// ============================================================================
 
+export const DIAS_SEMANA_ENUM = [
+    "LUNES",
+    "MARTES",
+    "MIERCOLES",
+    "JUEVES",
+    "VIERNES",
+    "SABADO",
+    "DOMINGO",
+] as const
+
+export const ESTADOS_PERIODO_PERSONALIZADO = [
+    "ACTIVO",
+    "FINALIZADO",
+    "PAUSADO",
+    "CANCELADO",
+] as const
+
+export const ESTADOS_SESION_PERSONALIZADA = [
+    "PROGRAMADA",
+    "COMPLETADA",
+    "CANCELADA_CLIENTE",
+    "CANCELADA_ENTRENADOR",
+    "CANCELADA_GIMNASIO",
+    "NO_ASISTIO",
+    "REPROGRAMADA",
+] as const
+
+const basePeriodoSchema = z.object({
+    socioId: z.string().min(1, "El ID del socio es requerido"),
+    entrenadorId: z.string().min(1, "El ID del entrenador es requerido"),
+    fechaInicio: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de fecha de inicio inválido (YYYY-MM-DD)"),
+    fechaFin: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de fecha de fin inválido (YYYY-MM-DD)"),
+    frecuenciaRecomendada: z.number().int().min(1, "La frecuencia recomendada mínima es 1").max(7, "La frecuencia máxima es 7"),
+    frecuenciaAcordada: z.number().int().min(1, "La frecuencia acordada mínima es 1").max(7, "La frecuencia máxima es 7"),
+    diasAcordados: z.array(z.enum(DIAS_SEMANA_ENUM)).min(1, "Debe seleccionar al menos un día de la semana"),
+    horaInicioAcordada: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Formato de hora inválido (HH:mm)"),
+    duracionMinutos: z.number().int().min(15, "La duración mínima es 15 minutos").max(240, "La duración máxima es 240 minutos").default(60),
+})
+
+const validarPeriodoReglas = (data: z.infer<typeof basePeriodoSchema>, ctx: z.RefinementCtx) => {
+    if (data.fechaInicio > data.fechaFin) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "La fecha de inicio no puede ser posterior a la fecha de fin.",
+            path: ["fechaFin"],
+        })
+    }
+    if (data.frecuenciaAcordada !== data.diasAcordados.length) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `La cantidad de días seleccionados (${data.diasAcordados.length}) debe coincidir exactamente con la frecuencia acordada (${data.frecuenciaAcordada} días/sem).`,
+            path: ["diasAcordados"],
+        })
+    }
+}
+
+export const previewPeriodoPersonalizadoSchema = basePeriodoSchema.superRefine(validarPeriodoReglas)
+
+export const crearPeriodoPersonalizadoSchema = basePeriodoSchema.extend({
+    asignacionId: z.string().optional().nullable(),
+    perfilPlanificacionId: z.string().optional().nullable(),
+    mesesPeriodo: z.number().int().min(1, "El periodo mínimo es de 1 mes").max(24, "El periodo máximo es de 24 meses").default(1),
+    objetivoAcordado: z.string().max(300, "El objetivo no puede exceder 300 caracteres").optional().nullable(),
+    observaciones: z.string().max(1000, "Las observaciones no pueden exceder 1000 caracteres").optional().nullable(),
+}).superRefine(validarPeriodoReglas)
+
+export type PreviewPeriodoPersonalizadoInput = z.infer<typeof previewPeriodoPersonalizadoSchema>
+export type CrearPeriodoPersonalizadoInput = z.infer<typeof crearPeriodoPersonalizadoSchema>
+
+// ============================================================================
+// MÓDULO: REPROGRAMACIÓN Y CANCELACIÓN DE SESIONES PERSONALIZADAS (FASE H4)
+// ============================================================================
+
+export const TIPOS_CANCELACION_SESION = [
+    "CANCELADA_CLIENTE",
+    "CANCELADA_ENTRENADOR",
+    "CANCELADA_GIMNASIO",
+] as const
+
+export const reprogramarSesionPersonalizadaSchema = z.object({
+    sesionId: z.string().min(1, "El ID de la sesión es requerido"),
+    nuevaFecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Formato de fecha inválido (YYYY-MM-DD)"),
+    nuevaHoraInicio: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Formato de hora inválido (HH:mm)"),
+    duracionMinutos: z.number().int().min(15, "La duración mínima es 15 minutos").max(240, "La duración máxima es 240 minutos").optional(),
+    nuevoEntrenadorId: z.string().optional().nullable(),
+    motivoReprogramacion: z.string().min(3, "El motivo debe tener al menos 3 caracteres").max(500, "El motivo no puede exceder 500 caracteres"),
+})
+
+export const cancelarSesionPersonalizadaSchema = z.object({
+    sesionId: z.string().min(1, "El ID de la sesión es requerido"),
+    tipoCancelacion: z.enum(TIPOS_CANCELACION_SESION, {
+        message: "Tipo de cancelación inválido. Debe ser CANCELADA_CLIENTE, CANCELADA_ENTRENADOR o CANCELADA_GIMNASIO.",
+    }),
+    motivoCancelacion: z.string().min(3, "El motivo debe tener al menos 3 caracteres").max(500, "El motivo no puede exceder 500 caracteres"),
+})
+
+export type ReprogramarSesionPersonalizadaInput = z.infer<typeof reprogramarSesionPersonalizadaSchema>
+export type CancelarSesionPersonalizadaInput = z.infer<typeof cancelarSesionPersonalizadaSchema>
+
+// ============================================================================
+// MÓDULO: GESTIÓN OPERATIVA DEL PERIODO PERSONALIZADO (FASE H6)
+// ============================================================================
+
+export const ESTADOS_PERIODO_ENUM = [
+    "ACTIVO",
+    "PAUSADO",
+    "FINALIZADO",
+    "CANCELADO",
+] as const
+
+export const cambiarEstadoPeriodoSchema = z.object({
+    periodoId: z.string().min(1, "El ID del periodo es requerido"),
+    nuevoEstado: z.enum(ESTADOS_PERIODO_ENUM, {
+        message: "Estado inválido. Debe ser ACTIVO, PAUSADO, FINALIZADO o CANCELADO.",
+    }),
+    motivo: z.string().max(500, "El motivo no puede exceder 500 caracteres").optional().nullable(),
+})
+
+export const actualizarAcuerdoPeriodoSchema = z.object({
+    periodoId: z.string().min(1, "El ID del periodo es requerido"),
+    frecuenciaRecomendada: z.number().int().min(1).max(7).optional(),
+    frecuenciaAcordada: z.number().int().min(1, "La frecuencia acordada mínima es 1").max(7, "La frecuencia máxima es 7"),
+    diasAcordados: z.array(z.enum(DIAS_SEMANA_ENUM)).min(1, "Debe seleccionar al menos un día de la semana"),
+    horaInicioAcordada: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Formato de hora inválido (HH:mm)"),
+    duracionMinutos: z.number().int().min(15, "La duración mínima es 15 minutos").max(240, "La duración máxima es 240 minutos").default(60),
+    objetivoAcordado: z.string().max(300, "El objetivo no puede exceder 300 caracteres").optional().nullable(),
+    observaciones: z.string().max(1000, "Las observaciones no pueden exceder 1000 caracteres").optional().nullable(),
+    motivoCambio: z.string().min(3, "El motivo del cambio debe tener al menos 3 caracteres").max(500, "El motivo no puede exceder 500 caracteres"),
+}).superRefine((data, ctx) => {
+    if (data.frecuenciaAcordada !== data.diasAcordados.length) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `La cantidad de días seleccionados (${data.diasAcordados.length}) debe coincidir exactamente con la frecuencia acordada (${data.frecuenciaAcordada} días/sem).`,
+            path: ["diasAcordados"],
+        })
+    }
+})
+
+export type CambiarEstadoPeriodoInput = z.infer<typeof cambiarEstadoPeriodoSchema>
+export type ActualizarAcuerdoPeriodoInput = z.infer<typeof actualizarAcuerdoPeriodoSchema>
 

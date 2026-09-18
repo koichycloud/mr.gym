@@ -47,6 +47,8 @@ model Socio {
   generacionesIA         GeneracionIA[]
   planesEntrenamiento    PlanEntrenamiento[]
   planesAlimentacion     PlanAlimentacion[]
+  periodosPersonalizados PeriodoEntrenamientoPersonalizado[]
+  sesionesPersonalizadas SesionEntrenamientoPersonalizado[]
   fotoUrl          String? // URL de la foto del socio (Base64)
   estado           String        @default("ACTIVO") // ACTIVO o ANULADO
   motivoAnulacion  String? // Motivo por el cual se anula el registro
@@ -197,6 +199,8 @@ model Personal {
   generacionesIA         GeneracionIA[]
   planesEntrenamiento    PlanEntrenamiento[]
   planesAlimentacion     PlanAlimentacion[]
+  periodosPersonalizadosEntrenador PeriodoEntrenamientoPersonalizado[]
+  sesionesPersonalizadasEntrenador SesionEntrenamientoPersonalizado[]
   
   @@index([nombres, apellidos])
 }
@@ -298,7 +302,8 @@ model AsignacionEntrenador {
   socio      Socio    @relation(fields: [socioId], references: [id], onDelete: Restrict)
   entrenador Personal @relation(fields: [entrenadorId], references: [id], onDelete: Restrict)
 
-  perfilesPlanificacion PerfilPlanificacion[]
+  perfilesPlanificacion  PerfilPlanificacion[]
+  periodosPersonalizados PeriodoEntrenamientoPersonalizado[]
 
   @@index([socioId])
   @@index([entrenadorId])
@@ -354,6 +359,7 @@ model PerfilPlanificacion {
   generacionesIA         GeneracionIA[]
   planesEntrenamiento    PlanEntrenamiento[]
   planesAlimentacion     PlanAlimentacion[]
+  periodosPersonalizados PeriodoEntrenamientoPersonalizado[]
 
   @@index([socioId])
   @@index([entrenadorId])
@@ -494,5 +500,105 @@ model Ejercicio {
   @@index([nivel])
   @@index([equipamientoRequerido])
   @@index([activo])
+}
+
+// ============================================================================
+// MÓDULO: ENTRENAMIENTO PERSONALIZADO Y HORARIOS (FASE H1)
+// ============================================================================
+
+model PeriodoEntrenamientoPersonalizado {
+  id                    String                @id @default(uuid())
+  socioId               String
+  entrenadorId          String
+  asignacionId          String?
+  perfilPlanificacionId String?
+
+  // Vigencia temporal del contrato/periodo
+  fechaInicio           DateTime
+  fechaFin              DateTime
+  mesesPeriodo          Int                   @default(1)
+  estado                String                @default("ACTIVO") // ACTIVO, FINALIZADO, PAUSADO, CANCELADO
+
+  // Acuerdo de entrenamiento
+  frecuenciaRecomendada Int                   // Recomendación técnica del entrenador (ej. 4 días/sem)
+  frecuenciaAcordada    Int                   // Frecuencia pactada formalmente con el socio (ej. 2 días/sem)
+  diasAcordados         Json                  // Días de la semana pactados: ["LUNES", "MIERCOLES"]
+  horaInicioAcordada    String                // Hora de inicio base en America/Lima: "08:00"
+  duracionMinutos       Int                   @default(60) // Duración de cada sesión (45, 60, 75, 90, 120)
+
+  // Observaciones y Trazabilidad
+  objetivoAcordado      String?
+  observaciones         String?
+  creadoPorUsuarioId    String?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  // Relaciones
+  socio                 Socio                 @relation(fields: [socioId], references: [id], onDelete: Restrict)
+  entrenador            Personal              @relation(fields: [entrenadorId], references: [id], onDelete: Restrict)
+  asignacion            AsignacionEntrenador? @relation(fields: [asignacionId], references: [id], onDelete: Restrict)
+  perfilPlanificacion   PerfilPlanificacion?  @relation(fields: [perfilPlanificacionId], references: [id], onDelete: Restrict)
+
+  sesiones              SesionEntrenamientoPersonalizado[]
+
+  @@index([socioId])
+  @@index([entrenadorId])
+  @@index([asignacionId])
+  @@index([perfilPlanificacionId])
+  @@index([estado])
+  @@index([fechaInicio, fechaFin])
+}
+
+model SesionEntrenamientoPersonalizado {
+  id                     String                             @id @default(uuid())
+  periodoId              String
+  socioId                String
+  entrenadorId           String
+
+  // Tiempos exactos y Fuente de Verdad
+  fecha                  DateTime                           // Fecha del día (medianoche en Lima)
+  horaInicio             String                             // "08:00" (representación formateada en Lima)
+  horaFin                String                             // "09:00" (representación formateada en Lima)
+  fechaHoraInicio        DateTime                           // Timestamp UTC exacto para ordenamiento y consultas
+  fechaHoraFin           DateTime                           // Timestamp UTC exacto para detección de solapamientos
+  duracionMinutos        Int                                @default(60)
+
+  // Estado de la sesión
+  estado                 String                             @default("PROGRAMADA") // PROGRAMADA, COMPLETADA, CANCELADA_CLIENTE, CANCELADA_ENTRENADOR, CANCELADA_GIMNASIO, NO_ASISTIO, REPROGRAMADA
+
+  // Trazabilidad de Reprogramación
+  esReprogramada         Boolean                            @default(false)
+  sesionOriginalId       String?                            // Apunta a la sesión original previa si esta es nueva
+  reprogramadaEnSesionId String?                            // Apunta a la sesión de destino si esta fue reprogramada
+  motivoReprogramacion   String?
+
+  // Cancelación y Notas
+  motivoCancelacion      String?
+  notasEntrenador        String?
+
+  // Asistencia específica de sesión (Human Check-in para FASE H7)
+  asistio                Boolean?
+  horaCheckIn            DateTime?
+  marcadoPorUsuarioId    String?
+
+  // Auditoría
+  creadoPorUsuarioId     String?
+  createdAt              DateTime                           @default(now())
+  updatedAt              DateTime                           @updatedAt
+
+  // Relaciones
+  periodo                PeriodoEntrenamientoPersonalizado  @relation(fields: [periodoId], references: [id], onDelete: Restrict)
+  socio                  Socio                              @relation(fields: [socioId], references: [id], onDelete: Restrict)
+  entrenador             Personal                           @relation(fields: [entrenadorId], references: [id], onDelete: Restrict)
+
+  sesionOriginal         SesionEntrenamientoPersonalizado?  @relation("HistorialReprogramacion", fields: [sesionOriginalId], references: [id], onDelete: SetNull)
+  sesionesDerivadas      SesionEntrenamientoPersonalizado[] @relation("HistorialReprogramacion")
+
+  @@index([socioId, fechaHoraInicio])
+  @@index([entrenadorId, fechaHoraInicio])
+  @@index([periodoId])
+  @@index([estado])
+  @@index([fecha])
+  @@index([fechaHoraInicio, fechaHoraFin])
 }
 

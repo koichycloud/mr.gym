@@ -110,6 +110,22 @@ export const PLANNING_AI_RESPONSE_SCHEMA = {
           items: { type: Type.STRING },
         },
         recomendacionHidratacion: { type: Type.STRING },
+        objetivosNutricionalesDiarios: {
+          type: Type.OBJECT,
+          properties: {
+            caloriasObjetivoKcal: { type: Type.INTEGER },
+            proteinasObjetivoG: { type: Type.INTEGER },
+            carbohidratosObjetivoG: { type: Type.INTEGER },
+            grasasObjetivoG: { type: Type.INTEGER },
+            resumenEstrategiaNutricional: { type: Type.STRING },
+          },
+          required: [
+            "caloriasObjetivoKcal",
+            "proteinasObjetivoG",
+            "carbohidratosObjetivoG",
+            "grasasObjetivoG",
+          ],
+        },
         recetas: {
           type: Type.ARRAY,
           items: {
@@ -119,6 +135,37 @@ export const PLANNING_AI_RESPONSE_SCHEMA = {
               nombre: { type: Type.STRING },
               momentoSugerido: { type: Type.STRING },
               tiempoPreparacionMinutos: { type: Type.INTEGER },
+              porcion: {
+                type: Type.OBJECT,
+                properties: {
+                  cantidad: { type: Type.INTEGER },
+                  unidad: { type: Type.STRING },
+                  descripcion: { type: Type.STRING },
+                },
+                required: ["cantidad", "unidad", "descripcion"],
+              },
+              ingredientesDetalle: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    nombre: { type: Type.STRING },
+                    cantidad: { type: Type.NUMBER },
+                    unidad: { type: Type.STRING },
+                  },
+                  required: ["nombre", "cantidad", "unidad"],
+                },
+              },
+              macrosPorcion: {
+                type: Type.OBJECT,
+                properties: {
+                  caloriasKcal: { type: Type.INTEGER },
+                  proteinasG: { type: Type.INTEGER },
+                  carbohidratosG: { type: Type.INTEGER },
+                  grasasG: { type: Type.INTEGER },
+                },
+                required: ["caloriasKcal", "proteinasG", "carbohidratosG", "grasasG"],
+              },
               ingredientes: {
                 type: Type.ARRAY,
                 items: { type: Type.STRING },
@@ -136,6 +183,9 @@ export const PLANNING_AI_RESPONSE_SCHEMA = {
               "nombre",
               "momentoSugerido",
               "tiempoPreparacionMinutos",
+              "porcion",
+              "ingredientesDetalle",
+              "macrosPorcion",
               "ingredientes",
               "instrucciones",
               "porciones",
@@ -148,6 +198,7 @@ export const PLANNING_AI_RESPONSE_SCHEMA = {
         "descripcionGeneral",
         "lineamientosGenerales",
         "recomendacionHidratacion",
+        "objetivosNutricionalesDiarios",
         "recetas",
       ],
     },
@@ -181,7 +232,7 @@ export const PLANNING_AI_RESPONSE_SCHEMA = {
   ],
 };
 
-import { isLocalDevEnvironment, getAIConfig } from "./config";
+import { getAIConfig } from "./config";
 
 /**
  * Proveedor real de planificación personalizada utilizando el SDK oficial @google/genai
@@ -195,7 +246,7 @@ export class GeminiAIPlanningProvider implements AIPlanningProvider {
   constructor(apiKey?: string, timeoutMs?: number, modelName?: string) {
     const config = getAIConfig();
     // Sanitización defensiva: eliminar CR/LF y espacios que puedan contaminar el nombre del modelo
-    this.name = (modelName || config.model || "gemini-3.6-flash").trim();
+    this.name = (modelName || config.model || "gemini-2.5-flash").trim();
     this.apiKey = apiKey !== undefined ? apiKey : (process.env.GEMINI_API_KEY || null);
     this.timeoutMs = typeof timeoutMs === "number" ? timeoutMs : config.timeoutMs;
   }

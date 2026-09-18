@@ -15,6 +15,8 @@ const AjusteEntrenamientoSchema = z.object({
   nivelIdx: z.number().int().min(0).max(5).optional(),
   rutinaIdx: z.number().int().min(0).optional(),
   ejercicioIdx: z.number().int().min(0).optional(),
+  nombre: z.string().max(150).optional(),
+  ejercicioId: z.string().uuid().optional().nullable(),
   series: z.number().int().min(1).max(20).optional(),
   repeticiones: z.string().max(50).optional(),
   descansoSegundos: z.number().int().min(0).max(600).optional(),
@@ -154,6 +156,8 @@ export async function ajustarOperativamentePlanEntrenamiento(input: {
   nivelIdx?: number;
   rutinaIdx?: number;
   ejercicioIdx?: number;
+  nombre?: string;
+  ejercicioId?: string | null;
   series?: number;
   repeticiones?: string;
   descansoSegundos?: number;
@@ -181,6 +185,8 @@ export async function ajustarOperativamentePlanEntrenamiento(input: {
       contenido.nivelesProgresivos?.[parsed.nivelIdx]?.rutinas?.[parsed.rutinaIdx]?.ejercicios?.[parsed.ejercicioIdx]
     ) {
       const ej = contenido.nivelesProgresivos[parsed.nivelIdx].rutinas[parsed.rutinaIdx].ejercicios[parsed.ejercicioIdx];
+      if (parsed.nombre !== undefined) ej.nombre = parsed.nombre;
+      if (parsed.ejercicioId !== undefined) ej.ejercicioId = parsed.ejercicioId;
       if (parsed.series !== undefined) ej.series = parsed.series;
       if (parsed.repeticiones !== undefined) ej.repeticiones = parsed.repeticiones;
       if (parsed.descansoSegundos !== undefined) ej.descansoSegundos = parsed.descansoSegundos;

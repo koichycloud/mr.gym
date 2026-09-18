@@ -134,32 +134,140 @@ export class MockAIPlanningProvider implements AIPlanningProvider {
       };
     });
 
-    // Generar 20 recetas o cantidad según behavior
+    // Generar 20 recetas estructuradas con ingredientes, cantidades y macros
     let numRecetas = 20;
     if (this.behavior === "LESS_THAN_20_RECIPES") numRecetas = 12;
 
-    const momentos = ["DESAYUNO", "ALMUERZO", "CENA", "SNACK_PRE", "SNACK_POST"] as const;
+    const pesoSocio = input?.medidasActuales?.pesoKg || 70;
+    const tallaSocio = input?.medidasActuales?.tallaCm || 170;
+    const edadSocio = input?.socio?.edad || 25;
+    const sexoSocio = input?.socio?.sexo || "M";
+    const objetivoSocio = input?.objetivos?.principal || "HIPERTROFIA";
+
+    // Estimación nutricional científica (Mifflin-St Jeor + factor de actividad + objetivo)
+    const bmr = sexoSocio === "F"
+      ? (10 * pesoSocio) + (6.25 * tallaSocio) - (5 * edadSocio) - 161
+      : (10 * pesoSocio) + (6.25 * tallaSocio) - (5 * edadSocio) + 5;
+    const tdee = Math.round(bmr * 1.45);
+
+    let caloriasObjetivo = tdee;
+    let factorProt = 1.8;
+    if (objetivoSocio === "HIPERTROFIA" || objetivoSocio === "FUERZA") {
+      caloriasObjetivo = Math.round(tdee + 300);
+      factorProt = 2.0;
+    } else if (objetivoSocio === "PERDIDA_GRASA" || objetivoSocio === "RECOMPOSICION") {
+      caloriasObjetivo = Math.round(tdee - 350);
+      factorProt = 2.2;
+    }
+
+    const proteinasObjetivo = Math.round(pesoSocio * factorProt);
+    const grasasObjetivo = Math.round((caloriasObjetivo * 0.25) / 9);
+    const carbohidratosObjetivo = Math.round((caloriasObjetivo - (proteinasObjetivo * 4) - (grasasObjetivo * 9)) / 4);
+
+    const momentos = [
+      "DESAYUNO",
+      "ALMUERZO",
+      "CENA",
+      "SNACK_PRE",
+      "SNACK_POST",
+      "SNACK_MEDIA_MANANA",
+      "SNACK_MEDIA_TARDE",
+    ] as const;
+
+    const recetasPlantillas = [
+      {
+        nombre: "Omelette de claras con avena y palta",
+        momento: "DESAYUNO" as const,
+        minutos: 15,
+        porcion: { cantidad: 1, unidad: "plato", descripcion: "1 porción completa (~320 g)" },
+        ingredientesDetalle: [
+          { nombre: "Claras de huevo pasteurizadas", cantidad: 150, unidad: "ml" },
+          { nombre: "Huevo entero", cantidad: 1, unidad: "unidad" },
+          { nombre: "Avena en hojuelas", cantidad: 45, unidad: "g" },
+          { nombre: "Palta / Aguacate fresco", cantidad: 40, unidad: "g" },
+          { nombre: "Espinacas baby", cantidad: 50, unidad: "g" },
+        ],
+        macros: { caloriasKcal: 410, proteinasG: 32, carbohidratosG: 34, grasasG: 16 },
+      },
+      {
+        nombre: "Pechuga de pollo a la plancha con arroz integral y brócoli",
+        momento: "ALMUERZO" as const,
+        minutos: 25,
+        porcion: { cantidad: 1, unidad: "plato", descripcion: "1 plato balanceado (~420 g)" },
+        ingredientesDetalle: [
+          { nombre: "Pechuga de pollo magra", cantidad: 160, unidad: "g" },
+          { nombre: "Arroz integral cocido", cantidad: 130, unidad: "g" },
+          { nombre: "Brócoli al vapor", cantidad: 100, unidad: "g" },
+          { nombre: "Aceite de oliva virgen extra", cantidad: 8, unidad: "ml" },
+        ],
+        macros: { caloriasKcal: 535, proteinasG: 46, carbohidratosG: 45, grasasG: 17 },
+      },
+      {
+        nombre: "Filete de pescado blanco al horno con camote y ensalada",
+        momento: "CENA" as const,
+        minutos: 25,
+        porcion: { cantidad: 1, unidad: "plato", descripcion: "1 plato ligero (~380 g)" },
+        ingredientesDetalle: [
+          { nombre: "Filete de pescado blanco (tilapia o corvina)", cantidad: 170, unidad: "g" },
+          { nombre: "Camote / Batata horneada", cantidad: 100, unidad: "g" },
+          { nombre: "Ensalada verde mixta", cantidad: 80, unidad: "g" },
+          { nombre: "Aceite de oliva", cantidad: 6, unidad: "ml" },
+        ],
+        macros: { caloriasKcal: 430, proteinasG: 40, carbohidratosG: 35, grasasG: 14 },
+      },
+      {
+        nombre: "Batido proteico con plátano y crema de maní",
+        momento: "SNACK_PRE" as const,
+        minutos: 5,
+        porcion: { cantidad: 1, unidad: "vaso", descripcion: "1 vaso grande (~350 ml)" },
+        ingredientesDetalle: [
+          { nombre: "Proteína de suero (Whey)", cantidad: 30, unidad: "g" },
+          { nombre: "Plátano maduro", cantidad: 1, unidad: "unidad" },
+          { nombre: "Crema de maní natural", cantidad: 15, unidad: "g" },
+          { nombre: "Bebida vegetal de almendras sin azúcar", cantidad: 200, unidad: "ml" },
+        ],
+        macros: { caloriasKcal: 340, proteinasG: 28, carbohidratosG: 35, grasasG: 10 },
+      },
+      {
+        nombre: "Yogurt griego natural con frutos rojos y nueces",
+        momento: "SNACK_POST" as const,
+        minutos: 5,
+        porcion: { cantidad: 1, unidad: "bowl", descripcion: "1 bowl mediano (~250 g)" },
+        ingredientesDetalle: [
+          { nombre: "Yogurt griego natural sin azúcar", cantidad: 180, unidad: "g" },
+          { nombre: "Arándanos y fresas frescas", cantidad: 60, unidad: "g" },
+          { nombre: "Nueces picadas", cantidad: 15, unidad: "g" },
+        ],
+        macros: { caloriasKcal: 260, proteinasG: 20, carbohidratosG: 18, grasasG: 12 },
+      },
+    ];
+
     const recetas = Array.from({ length: numRecetas }).map((_, idx) => {
       const id = this.behavior === "DUPLICATE_RECIPES" && idx > 5 ? "REC-DUPLICADA" : `REC-${idx + 1}`;
+      const plantilla = recetasPlantillas[idx % recetasPlantillas.length];
       const momento = momentos[idx % momentos.length];
+
+      const ingredientesResumen = plantilla.ingredientesDetalle.map(
+        (ing) => `${ing.nombre} ${ing.cantidad} ${ing.unidad}`
+      );
+
       return {
         idReceta: id,
-        nombre: `Receta Saludable #${idx + 1} (${momento})`,
+        nombre: `${plantilla.nombre} #${idx + 1}`,
         momentoSugerido: momento,
-        tiempoPreparacionMinutos: 15,
-        ingredientes: [
-          `Ingrediente principal balanceado 150g`,
-          `Vegetales o guarnición fresca 100g`,
-          `Grasa saludable (aceite de oliva / aguacate) 10g`,
-        ],
+        tiempoPreparacionMinutos: plantilla.minutos,
+        porcion: plantilla.porcion,
+        ingredientesDetalle: plantilla.ingredientesDetalle,
+        macrosPorcion: plantilla.macros,
+        ingredientes: ingredientesResumen,
         instrucciones: [
-          "Paso 1: Lavar y cortar los ingredientes frescos.",
-          "Paso 2: Cocinar a la plancha o vapor a fuego medio durante 8-10 minutos.",
-          "Paso 3: Servir tibio y acompañar con agua fresca.",
+          "Paso 1: Lavar y preparar los ingredientes frescos pesando las porciones exactas indicadas.",
+          "Paso 2: Cocinar a la plancha, horno o vapor a fuego medio controlando los tiempos.",
+          "Paso 3: Servir en plato según la porción indicada y consumir caliente o fresco.",
         ],
-        porciones: 1,
-        opcionesSustitucion: "Puede sustituir la proteína por pechuga de pollo, tofu o claras de huevo",
-        beneficioClave: "Aporte óptimo de macronutrientes y micronutrientes para el objetivo declarado",
+        porciones: plantilla.porcion.cantidad,
+        opcionesSustitucion: "Puede sustituir la fuente proteica por otra opción magra equivalente respetando el gramaje indicado.",
+        beneficioClave: "Aporte óptimo y balanceado de macronutrientes adaptado a los requerimientos calóricos del socio.",
       };
     });
 
@@ -179,14 +287,26 @@ export class MockAIPlanningProvider implements AIPlanningProvider {
         niveles,
       },
       planAlimentacion: {
-        titulo: `Plan Alimentario Sugerido — 20+ Recetas Equilibradas`,
-        descripcionGeneral: `Guía alimentaria orientativa adaptada a preferencia ${input?.alimentacionDeclarada?.preferencia || "Omnívoro"}.`,
+        titulo: `Plan Alimentario Sugerido — 20+ Recetas Personalizadas`,
+        descripcionGeneral: `Guía alimentaria orientativa adaptada a preferencia ${input?.alimentacionDeclarada?.preferencia || "Omnívoro"} y objetivo ${objetivoSocio}.`,
         lineamientosGenerales: [
-          "Priorizar alimentos enteros y no ultraprocesados.",
-          "Distribuir la ingesta proteica a lo largo de las comidas del día.",
-          "Consumir variedad de vegetales y frutas de temporada.",
+          "Priorizar alimentos enteros, magros y no ultraprocesados.",
+          "Distribuir la ingesta proteica en 3 a 5 tomas diarias para optimizar la síntesis muscular.",
+          "Ajustar la ingesta hídrica según la intensidad del entrenamiento diario.",
         ],
         recomendacionHidratacion: `Consumir aproximadamente ${input?.alimentacionDeclarada?.consumoAguaLitrosPorDia || 2.5} litros de agua al día.`,
+        objetivosNutricionalesDiarios: {
+          caloriasObjetivoKcal: caloriasObjetivo,
+          proteinasObjetivoG: proteinasObjetivo,
+          carbohidratosObjetivoG: carbohidratosObjetivo,
+          grasasObjetivoG: grasasObjetivo,
+          distribucionCaloricaPorcentaje: {
+            proteinas: Math.round((proteinasObjetivo * 4 / caloriasObjetivo) * 100),
+            carbohidratos: Math.round((carbohidratosObjetivo * 4 / caloriasObjetivo) * 100),
+            grasas: Math.round((grasasObjetivo * 9 / caloriasObjetivo) * 100),
+          },
+          resumenEstrategiaNutricional: `Estrategia nutricional estimada para socio de ${pesoSocio} kg con meta de ${objetivoSocio}.`,
+        },
         recetas,
       },
       evaluacionSeguridad: {

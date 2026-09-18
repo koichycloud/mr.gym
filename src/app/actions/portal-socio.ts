@@ -48,7 +48,7 @@ export async function getMiPlanSocio() {
       return { success: false, error: "No se encontró una ficha de socio asociada a su cuenta." };
     }
 
-    // 1. Obtener Perfil de Planificación Vigente
+    // 1. Obtener Perfil de Planificación Vigente con Entrenador y Horarios
     const perfilActivo = await prisma.perfilPlanificacion.findFirst({
       where: { socioId: socio.id, activo: true },
       select: {
@@ -58,7 +58,18 @@ export async function getMiPlanSocio() {
         objetivoPrincipal: true,
         objetivoSecundario: true,
         diasPorSemana: true,
+        diasPreferidos: true,
+        duracionMinutos: true,
+        horarioPreferido: true,
         fechaInicio: true,
+        entrenador: {
+          select: {
+            id: true,
+            nombres: true,
+            apellidos: true,
+            telefono: true,
+          },
+        },
       },
     });
 
@@ -99,6 +110,10 @@ export async function getMiPlanSocio() {
       getAdherenciaYCumplimientoSocio(socio.id, 30),
     ]);
 
+    const diasParsed = Array.isArray(perfilActivo?.diasPreferidos)
+      ? (perfilActivo?.diasPreferidos as string[])
+      : [];
+
     return {
       success: true,
       data: {
@@ -109,7 +124,32 @@ export async function getMiPlanSocio() {
         },
         perfilActivo: perfilActivo
           ? {
-              ...perfilActivo,
+              id: perfilActivo.id,
+              version: perfilActivo.version,
+              nivel: perfilActivo.nivel,
+              objetivoPrincipal: perfilActivo.objetivoPrincipal,
+              objetivoSecundario: perfilActivo.objetivoSecundario,
+              diasPorSemana: perfilActivo.diasPorSemana,
+              duracionMinutos: perfilActivo.duracionMinutos,
+              horarioPreferido: perfilActivo.horarioPreferido,
+              diasPreferidos: diasParsed,
+              fechaInicio: format(perfilActivo.fechaInicio, "dd/MM/yyyy"),
+              entrenadorNombre: perfilActivo.entrenador
+                ? `${perfilActivo.entrenador.nombres} ${perfilActivo.entrenador.apellidos || ""}`.trim()
+                : "Entrenador Asignado",
+              entrenadorTelefono: perfilActivo.entrenador?.telefono || null,
+            }
+          : null,
+        horario: perfilActivo
+          ? {
+              entrenador: perfilActivo.entrenador
+                ? `${perfilActivo.entrenador.nombres} ${perfilActivo.entrenador.apellidos || ""}`.trim()
+                : "Entrenador Asignado",
+              telefonoEntrenador: perfilActivo.entrenador?.telefono || null,
+              diasPorSemana: perfilActivo.diasPorSemana,
+              diasPreferidos: diasParsed,
+              duracionMinutos: perfilActivo.duracionMinutos,
+              horarioPreferido: perfilActivo.horarioPreferido || "Por coordinar con entrenador",
               fechaInicio: format(perfilActivo.fechaInicio, "dd/MM/yyyy"),
             }
           : null,

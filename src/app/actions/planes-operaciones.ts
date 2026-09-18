@@ -616,7 +616,9 @@ export async function createNutritionPlanManual(input: {
       const evitadosPalabras = alimentosEvitadosTexto.split(/[,;\s]+/).filter((w) => w.length > 2);
 
       for (const receta of contenidoValido.recetas) {
-        const textoReceta = `${receta.nombre} ${receta.ingredientes.join(" ")}`.toLowerCase();
+        const nombresDetalle = (receta.ingredientesDetalle || []).map((i: any) => i.nombre).join(" ");
+        const nombresHistoricos = (receta.ingredientes || []).join(" ");
+        const textoReceta = `${receta.nombre} ${nombresDetalle} ${nombresHistoricos}`.toLowerCase();
 
         for (const alergia of alergiasPalabras) {
           if (textoReceta.includes(alergia)) {

@@ -56,11 +56,34 @@ export interface NutritionPlanPDFData {
   lineamientosGenerales: string[];
   recomendacionHidratacion: string;
   observaciones?: string | null;
+  objetivosNutricionalesDiarios?: {
+    caloriasObjetivoKcal: number;
+    proteinasObjetivoG: number;
+    carbohidratosObjetivoG: number;
+    grasasObjetivoG: number;
+    resumenEstrategiaNutricional?: string | null;
+  } | null;
   recetas: Array<{
     idReceta: string;
     nombre: string;
     momentoSugerido: string;
     tiempoPreparacionMinutos: number;
+    porcion?: {
+      cantidad: number;
+      unidad: string;
+      descripcion?: string | null;
+    } | null;
+    ingredientesDetalle?: Array<{
+      nombre: string;
+      cantidad: number;
+      unidad: string;
+    }> | null;
+    macrosPorcion?: {
+      caloriasKcal: number;
+      proteinasG: number;
+      carbohidratosG: number;
+      grasasG: number;
+    } | null;
     ingredientes: string[];
     instrucciones: string[];
     porciones: number;
@@ -266,12 +289,33 @@ export function generateNutritionPlanPDF(
   doc.text(`Hidratación Sugerida: ${data.recomendacionHidratacion}`, 14, y);
   y += 6;
 
+  // Objetivos Nutricionales Diarios si existen
+  if (data.objetivosNutricionalesDiarios) {
+    doc.setFillColor(236, 253, 245); // Emerald-50
+    doc.roundedRect(14, y, pageWidth - 28, 14, 2, 2, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(5, 150, 105); // Emerald-600
+    doc.text("OBJETIVOS NUTRICIONALES DIARIOS ESTIMADOS:", 18, y + 5);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(30, 41, 59);
+    const obj = data.objetivosNutricionalesDiarios;
+    const txtMacros = `Calorías: ${obj.caloriasObjetivoKcal} kcal   |   Proteínas: ${obj.proteinasObjetivoG}g   |   Carbohidratos: ${obj.carbohidratosObjetivoG}g   |   Grasas: ${obj.grasasObjetivoG}g`;
+    doc.text(txtMacros, 18, y + 10.5);
+    y += 18;
+  }
+
   // Lineamientos Generales
   doc.setFont("helvetica", "bold");
+  doc.setFontSize(9.5);
+  doc.setTextColor(30, 41, 59);
   doc.text("Lineamientos Generales:", 14, y);
   y += 4.5;
 
   doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
   data.lineamientosGenerales.forEach((lin) => {
     doc.text(`• ${lin}`, 18, y);
     y += 4.5;
@@ -297,7 +341,7 @@ export function generateNutritionPlanPDF(
     const listaRecetas = recetasPorMomento[momento];
     if (!listaRecetas || listaRecetas.length === 0) return;
 
-    if (y > 250) {
+    if (y > 240) {
       doc.addPage();
       y = 20;
     }
@@ -310,21 +354,44 @@ export function generateNutritionPlanPDF(
     doc.text(`MOMENTO: ${momento.replace(/_/g, " ")} (${listaRecetas.length} Recetas)`, 18, y + 5.5);
     y += 12;
 
-    const tableData = listaRecetas.map((r) => [
-      r.nombre,
-      `${r.tiempoPreparacionMinutos} min`,
-      r.ingredientes.join(", "),
-      r.instrucciones.join(" "),
-      r.opcionesSustitucion || "-"
-    ]);
+    const tableData = listaRecetas.map((r) => {
+      const porcionDesc = r.porcion?.descripcion || (r.porciones ? `${r.porciones} porción` : "1 porción");
+      const colNombre = `${r.nombre}\n(Porción: ${porcionDesc})`;
+
+      const macrosTxt = r.macrosPorcion
+        ? `${r.macrosPorcion.caloriasKcal} kcal\nP: ${r.macrosPorcion.proteinasG}g | C: ${r.macrosPorcion.carbohidratosG}g | G: ${r.macrosPorcion.grasasG}g`
+        : "-";
+      const colPrepMacros = `${r.tiempoPreparacionMinutos} min\n${macrosTxt}`;
+
+      const colIngredientes = r.ingredientesDetalle && r.ingredientesDetalle.length > 0
+        ? r.ingredientesDetalle.map((i) => `• ${i.nombre} (${i.cantidad} ${i.unidad})`).join("\n")
+        : (Array.isArray(r.ingredientes) ? r.ingredientes.map((i) => `• ${i}`).join("\n") : String(r.ingredientes));
+
+      const colInstrucciones = Array.isArray(r.instrucciones) ? r.instrucciones.join("\n") : String(r.instrucciones);
+
+      return [
+        colNombre,
+        colPrepMacros,
+        colIngredientes,
+        colInstrucciones,
+        r.opcionesSustitucion || "-"
+      ];
+    });
 
     autoTable(doc, {
       startY: y,
-      head: [["Receta", "Prep", "Ingredientes Clave", "Preparación", "Sustituciones"]],
+      head: [["Receta / Porción", "Prep / Macros", "Ingredientes & Cantidades", "Preparación", "Sustituciones"]],
       body: tableData,
       theme: "grid",
       headStyles: { fillColor: [16, 185, 129], fontSize: 8, fontStyle: "bold" },
-      bodyStyles: { fontSize: 8 },
+      bodyStyles: { fontSize: 7.5 },
+      columnStyles: {
+        0: { cellWidth: 38 },
+        1: { cellWidth: 32 },
+        2: { cellWidth: 45 },
+        3: { cellWidth: 45 },
+        4: { cellWidth: 22 },
+      },
       margin: { left: 14, right: 14 },
     });
 

@@ -28,6 +28,7 @@ import {
   changeTrainerAssignment,
   getMemberTrainerHistory,
 } from "@/app/actions/asignacion-entrenador";
+import AgendaEntrenadorSection from "@/app/components/planificacion/AgendaEntrenadorSection";
 import { useRouter } from "next/navigation";
 
 interface CurrentUser {
@@ -124,11 +125,9 @@ export default function AsignacionesClient({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  // Tab activo: si el usuario es entrenador y no admin, inicia en "mis-socios"
+  // Tab activo: por defecto inicia en la agenda semanal del entrenador
   const isLinkedTrainer = Boolean(currentUser.personalId);
-  const [activeTab, setActiveTab] = useState<"mis-socios" | "gestion">(
-    isLinkedTrainer && !currentUser.canManage ? "mis-socios" : "mis-socios"
-  );
+  const [activeTab, setActiveTab] = useState<"agenda" | "mis-socios" | "gestion">("agenda");
 
   // Filtros
   const [selectedTrainerId, setSelectedTrainerId] = useState<string>(
@@ -394,6 +393,18 @@ export default function AsignacionesClient({
       {/* Tabs de Navegación */}
       <div className="flex border-b border-zinc-800 gap-6">
         <button
+          onClick={() => setActiveTab("agenda")}
+          className={`pb-3 font-semibold text-sm flex items-center gap-2 border-b-2 transition-all ${
+            activeTab === "agenda"
+              ? "border-yellow-500 text-yellow-500"
+              : "border-transparent text-zinc-400 hover:text-zinc-200"
+          }`}
+        >
+          <Calendar className="w-4 h-4" />
+          Agenda Semanal
+        </button>
+
+        <button
           onClick={() => setActiveTab("mis-socios")}
           className={`pb-3 font-semibold text-sm flex items-center gap-2 border-b-2 transition-all ${
             activeTab === "mis-socios"
@@ -419,6 +430,43 @@ export default function AsignacionesClient({
           </button>
         )}
       </div>
+
+      {/* CONTENIDO TAB 0: AGENDA SEMANAL */}
+      {activeTab === "agenda" && (
+        <div className="space-y-4">
+          {/* Selector de Entrenador para la Agenda */}
+          <div className="flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center bg-zinc-900/60 p-3.5 rounded-2xl border border-zinc-800/80">
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-zinc-400 font-medium whitespace-nowrap">
+                Entrenador:
+              </label>
+              <select
+                value={selectedTrainerId === "all" && trainers.length > 0 ? trainers[0]!.id : selectedTrainerId}
+                onChange={(e) => setSelectedTrainerId(e.target.value)}
+                className="bg-zinc-900 border border-zinc-800 text-white rounded-xl px-3 py-2 text-sm focus:border-yellow-500 focus:outline-none font-medium"
+              >
+                {trainers.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.nombres} {t.apellidos} ({t.rol})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <span className="text-xs text-zinc-400">
+              Distribución de sesiones, carga horaria semanal y alertas de superposición en tiempo real.
+            </span>
+          </div>
+
+          <AgendaEntrenadorSection
+            entrenadorId={
+              selectedTrainerId === "all" && trainers.length > 0
+                ? trainers[0]!.id
+                : selectedTrainerId
+            }
+            canManage={currentUser.canManage}
+          />
+        </div>
+      )}
 
       {/* CONTENIDO TAB 1: MIS SOCIOS */}
       {activeTab === "mis-socios" && (

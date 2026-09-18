@@ -59,7 +59,9 @@ export function evaluatePlanningSafety(
       .filter((w) => w.length > 3);
 
     for (const receta of output.planAlimentacion.recetas) {
-      const textoIngredientes = receta.ingredientes.join(" ").toLowerCase();
+      const nombresDetalle = (receta.ingredientesDetalle || []).map((i: any) => i.nombre).join(" ");
+      const nombresHistoricos = (receta.ingredientes || []).join(" ");
+      const textoIngredientes = `${nombresDetalle} ${nombresHistoricos}`.toLowerCase();
       for (const palabra of palabrasAlergia) {
         if (textoIngredientes.includes(palabra)) {
           banderas.push(

@@ -364,7 +364,33 @@ export default function ProposalViewerModal({
                 <span className="badge badge-success badge-outline text-xs">{recetas.length} recetas disponibles</span>
               </div>
 
-              {/* Lineamientos Generales & Hidratación */}
+              {/* Lineamientos Generales, Objetivos Diarios & Hidratación */}
+              {planAlim.objetivosNutricionalesDiarios && (
+                <div className="bg-success/10 border border-success/30 p-4 rounded-2xl space-y-2 text-xs">
+                  <span className="font-black text-success uppercase tracking-wider text-[11px] block">
+                    🔥 Objetivo Nutricional Diario Estimado
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div className="bg-base-100 p-2 rounded-xl text-center border border-base-200">
+                      <span className="text-[10px] text-amber-500 font-bold block">Calorías</span>
+                      <span className="font-black text-sm">{planAlim.objetivosNutricionalesDiarios.caloriasObjetivoKcal} kcal</span>
+                    </div>
+                    <div className="bg-base-100 p-2 rounded-xl text-center border border-base-200">
+                      <span className="text-[10px] text-error font-bold block">Proteína</span>
+                      <span className="font-black text-sm">{planAlim.objetivosNutricionalesDiarios.proteinasObjetivoG}g</span>
+                    </div>
+                    <div className="bg-base-100 p-2 rounded-xl text-center border border-base-200">
+                      <span className="text-[10px] text-primary font-bold block">Carbos</span>
+                      <span className="font-black text-sm">{planAlim.objetivosNutricionalesDiarios.carbohidratosObjetivoG}g</span>
+                    </div>
+                    <div className="bg-base-100 p-2 rounded-xl text-center border border-base-200">
+                      <span className="text-[10px] text-success font-bold block">Grasas</span>
+                      <span className="font-black text-sm">{planAlim.objetivosNutricionalesDiarios.grasasObjetivoG}g</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-base-200/40 p-4 rounded-2xl border border-base-200 text-xs">
                 <div>
                   <span className="font-bold text-success flex items-center gap-1 text-[11px] uppercase tracking-wider">
@@ -406,10 +432,14 @@ export default function ProposalViewerModal({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                 {filteredRecipes.map((receta: any) => {
                   const isExpanded = openRecipeId === receta.id;
+                  const tieneDetalle = Array.isArray(receta.ingredientesDetalle) && receta.ingredientesDetalle.length > 0;
+                  const tieneMacros = receta.macrosPorcion && typeof receta.macrosPorcion.caloriasKcal === "number";
+                  const porcionTxt = receta.porcion?.descripcion || (receta.porciones ? `${receta.porciones} porción` : "1 porción");
+
                   return (
                     <div
                       key={receta.id}
-                      className="bg-base-100 border border-base-200 rounded-2xl p-4 shadow-sm hover:border-success/40 transition-all flex flex-col justify-between"
+                      className="bg-base-100 border border-base-200 rounded-2xl p-4 shadow-sm hover:border-success/40 transition-all flex flex-col justify-between space-y-3"
                     >
                       <div className="space-y-2.5">
                         <div className="flex items-start justify-between gap-2">
@@ -421,24 +451,62 @@ export default function ProposalViewerModal({
                           </div>
                           <div className="text-right shrink-0 text-[11px] opacity-70">
                             {receta.tiempoPreparacionMinutos && <span>⏱️ {receta.tiempoPreparacionMinutos} min</span>}
-                            {receta.porciones && <span className="block">🍽️ {receta.porciones} porción</span>}
+                            <span className="block text-[10px] text-base-content/80 font-medium">🍽️ {porcionTxt}</span>
                           </div>
                         </div>
 
-                        {/* Ingredientes */}
+                        {/* Ingredientes Estructurados */}
                         <div className="text-xs bg-base-200/40 p-2.5 rounded-xl">
                           <span className="font-bold text-[10px] uppercase text-success block">Ingredientes:</span>
-                          <ul className="mt-1 space-y-0.5 text-base-content/80 list-disc list-inside">
-                            {receta.ingredientes?.slice(0, isExpanded ? 50 : 3).map((ing: string, iIdx: number) => (
-                              <li key={iIdx} className="text-[11px]">{ing}</li>
-                            ))}
-                            {!isExpanded && receta.ingredientes?.length > 3 && (
-                              <li className="text-[10px] text-primary list-none font-semibold">
-                                + {receta.ingredientes.length - 3} ingredientes más...
-                              </li>
-                            )}
-                          </ul>
+                          {tieneDetalle ? (
+                            <ul className="mt-1 space-y-1 text-base-content/85">
+                              {receta.ingredientesDetalle.slice(0, isExpanded ? 50 : 3).map((ing: any, iIdx: number) => (
+                                <li key={iIdx} className="text-[11px] flex items-center justify-between">
+                                  <span>• {ing.nombre}</span>
+                                  <span className="font-bold text-primary text-[10px]">{ing.cantidad} {ing.unidad}</span>
+                                </li>
+                              ))}
+                              {!isExpanded && receta.ingredientesDetalle.length > 3 && (
+                                <li className="text-[10px] text-primary list-none font-semibold">
+                                  + {receta.ingredientesDetalle.length - 3} ingredientes más...
+                                </li>
+                              )}
+                            </ul>
+                          ) : (
+                            <ul className="mt-1 space-y-0.5 text-base-content/80 list-disc list-inside">
+                              {receta.ingredientes?.slice(0, isExpanded ? 50 : 3).map((ing: string, iIdx: number) => (
+                                <li key={iIdx} className="text-[11px]">{ing}</li>
+                              ))}
+                              {!isExpanded && receta.ingredientes?.length > 3 && (
+                                <li className="text-[10px] text-primary list-none font-semibold">
+                                  + {receta.ingredientes.length - 3} ingredientes más...
+                                </li>
+                              )}
+                            </ul>
+                          )}
                         </div>
+
+                        {/* Macros por porción */}
+                        {tieneMacros && (
+                          <div className="grid grid-cols-4 gap-1.5 text-center text-[10px]">
+                            <div className="bg-amber-500/10 p-1 rounded-lg">
+                              <span className="text-amber-600 block font-bold">🔥 {receta.macrosPorcion.caloriasKcal}</span>
+                              <span className="text-[9px] opacity-60">kcal</span>
+                            </div>
+                            <div className="bg-error/10 p-1 rounded-lg">
+                              <span className="text-error block font-bold">🍗 {receta.macrosPorcion.proteinasG}g</span>
+                              <span className="text-[9px] opacity-60">prot</span>
+                            </div>
+                            <div className="bg-primary/10 p-1 rounded-lg">
+                              <span className="text-primary block font-bold">🍚 {receta.macrosPorcion.carbohidratosG}g</span>
+                              <span className="text-[9px] opacity-60">carbs</span>
+                            </div>
+                            <div className="bg-success/10 p-1 rounded-lg">
+                              <span className="text-success block font-bold">🥑 {receta.macrosPorcion.grasasG}g</span>
+                              <span className="text-[9px] opacity-60">grasas</span>
+                            </div>
+                          </div>
+                        )}
 
                         {/* Instrucciones Detalladas (expandibles) */}
                         {isExpanded && (
@@ -451,9 +519,9 @@ export default function ProposalViewerModal({
                                 ))}
                               </ol>
                             </div>
-                            {receta.beneficiosNutricionales && (
+                            {receta.beneficioClave && (
                               <div className="bg-success/10 p-2 rounded-lg text-success text-[11px]">
-                                <strong>Beneficio:</strong> {receta.beneficiosNutricionales}
+                                <strong>Beneficio:</strong> {receta.beneficioClave}
                               </div>
                             )}
                           </div>

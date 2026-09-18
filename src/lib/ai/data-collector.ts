@@ -54,6 +54,7 @@ export interface RawPlanningData {
     hombros?: number | null;
     biceps?: number | null;
     antebrazos?: number | null;
+    muslos?: number | null;
     cuadriceps?: number | null;
     pantorrillas?: number | null;
   } | null;
@@ -124,6 +125,7 @@ export async function collectPlanningData(socioId: string): Promise<RawPlanningD
       hombros: true,
       biceps: true,
       antebrazos: true,
+      muslos: true,
       cuadriceps: true,
       pantorrillas: true,
     },

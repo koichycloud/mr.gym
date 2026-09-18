@@ -21,9 +21,15 @@ import { exportarPlanEntrenamientoPDF } from "@/app/actions/planes-export";
 
 interface Props {
   socioId: string;
+  onOpenGenerateIA?: () => void;
+  generatingIA?: boolean;
 }
 
-export default function RutinasDetalleSection({ socioId }: Props) {
+export default function RutinasDetalleSection({
+  socioId,
+  onOpenGenerateIA,
+  generatingIA = false,
+}: Props) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedNivel, setSelectedNivel] = useState(0);
@@ -89,6 +95,7 @@ export default function RutinasDetalleSection({ socioId }: Props) {
         nivelIdx: editingExercise.nivelIdx,
         rutinaIdx: editingExercise.rutinaIdx,
         ejercicioIdx: editingExercise.ejercicioIdx,
+        nombre: editingExercise.nombre,
         series: editingExercise.series,
         repeticiones: editingExercise.repeticiones,
         descansoSegundos: editingExercise.descansoSegundos,
@@ -111,146 +118,231 @@ export default function RutinasDetalleSection({ socioId }: Props) {
 
   if (loading) {
     return (
-      <div className="p-8 text-center bg-base-100 rounded-2xl border border-base-200 shadow-sm">
+      <div className="card bg-base-100 p-8 text-center rounded-2xl border border-base-200 shadow-sm">
         <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto mb-2" />
-        <span className="text-xs opacity-70">Cargando rutinas y 6 niveles de entrenamiento...</span>
+        <span className="text-xs opacity-70">Cargando plan de entrenamiento...</span>
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div className="p-6 bg-base-100 rounded-2xl border border-base-200 text-center text-xs opacity-70">
-        No se encontró un plan de entrenamiento activo para este socio.
+      <div className="card bg-base-100 shadow-sm border border-base-200 p-6">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <Dumbbell className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-black text-base text-base-content flex items-center gap-2">
+                2. Plan de Entrenamiento
+              </h3>
+              <p className="text-xs text-base-content/70">
+                El socio no cuenta con un plan de entrenamiento activo. Genere una propuesta con IA para activarlo.
+              </p>
+            </div>
+          </div>
+          {onOpenGenerateIA && (
+            <button
+              onClick={onOpenGenerateIA}
+              disabled={generatingIA}
+              className="btn btn-primary btn-sm gap-2 whitespace-nowrap shadow-sm font-bold"
+            >
+              {generatingIA ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Generando...
+                </>
+              ) : (
+                <>
+                  <Dumbbell className="w-4 h-4" /> Generar Propuesta IA
+                </>
+              )}
+            </button>
+          )}
+        </div>
       </div>
     );
   }
 
-  const niveles = data.contenido?.nivelesProgresivos || [];
+  const niveles = data.contenido?.niveles || data.contenido?.nivelesProgresivos || [];
   const currentNivelData = niveles[selectedNivel] || {};
-  const rutinas = currentNivelData.rutinas || [];
+  const rutinas = currentNivelData.sesiones || currentNivelData.rutinas || [];
 
   return (
-    <div className="bg-base-100 p-6 rounded-2xl border border-base-200 shadow-sm space-y-6">
+    <div className="card bg-base-100 shadow-sm border border-base-200 overflow-hidden">
       {/* Header Plan Active Details */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-base-200 pb-4">
+      <div className="p-5 bg-base-200/40 border-b border-base-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h3 className="font-extrabold text-lg text-base-content">{data.titulo}</h3>
-            <span className="badge badge-primary text-white text-xs font-bold">v{data.version}</span>
-            <span className="badge badge-success text-white text-xs font-bold">ACTIVO</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="font-black text-lg text-base-content flex items-center gap-2">
+              <Dumbbell className="w-5 h-5 text-primary" />
+              2. Plan de Entrenamiento ({data.titulo || "Personalizado"})
+            </h3>
+            <span className="badge badge-primary font-bold text-xs">v{data.version}</span>
+            <span className="badge badge-success text-white font-bold text-xs">ACTIVO</span>
           </div>
           <p className="text-xs text-base-content/70 mt-1">
             Split: <strong>{data.splitSugerido || "General"}</strong> • Frecuencia: <strong>{data.frecuenciaSemanal} días/semana</strong> • Inicio: {data.fechaInicio}
           </p>
         </div>
 
-        <button onClick={handleExportPDF} className="btn btn-outline btn-sm gap-2">
-          <FileText className="w-4 h-4 text-error" />
-          Exportar PDF
-        </button>
-      </div>
-
-      {/* Selector de 6 Niveles Progresivos */}
-      <div>
-        <label className="label text-xs font-bold uppercase text-base-content/70">
-          Niveles Progresivos de Entrenamiento:
-        </label>
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-          {niveles.map((n: any, idx: number) => {
-            const isCurrent = data.nivelActual === idx + 1;
-            const isSelected = selectedNivel === idx;
-            return (
-              <button
-                key={idx}
-                onClick={() => setSelectedNivel(idx)}
-                className={`btn btn-sm ${
-                  isSelected
-                    ? "btn-primary text-white"
-                    : isCurrent
-                    ? "btn-outline btn-primary"
-                    : "btn-ghost bg-base-200/60"
-                } relative`}
-              >
-                Nivel {idx + 1}
-                {isCurrent && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-success rounded-full ring-2 ring-base-100" />}
-              </button>
-            );
-          })}
+        <div className="flex items-center gap-2 flex-wrap">
+          {onOpenGenerateIA && (
+            <button
+              onClick={onOpenGenerateIA}
+              disabled={generatingIA}
+              className="btn btn-primary btn-sm gap-1.5 font-bold shadow-sm"
+              title="Generar nueva propuesta de entrenamiento con IA"
+            >
+              {generatingIA ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Dumbbell className="w-3.5 h-3.5" />
+              )}
+              Nueva Propuesta IA
+            </button>
+          )}
+          <button onClick={handleExportPDF} className="btn btn-outline btn-sm gap-1.5">
+            <FileText className="w-4 h-4 text-error" />
+            Exportar PDF
+          </button>
         </div>
       </div>
 
-      {/* Rutinas del Nivel Seleccionado */}
-      <div className="space-y-4">
-        <h4 className="font-extrabold text-sm flex items-center gap-2 text-base-content">
-          <Layers className="w-4 h-4 text-primary" />
-          Rutinas del Nivel {selectedNivel + 1} ({currentNivelData.enfoqueNivel || "Progreso técnico"})
-        </h4>
-
-        {rutinas.length > 0 ? (
-          <div className="space-y-4">
-            {rutinas.map((rutina: any, rIdx: number) => (
-              <div key={rIdx} className="p-4 bg-base-200/40 rounded-xl border border-base-300 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h5 className="font-bold text-xs text-primary flex items-center gap-1.5">
-                    <ChevronRight className="w-4 h-4 text-primary" />
-                    Día {rutina.diaSemana || rIdx + 1}: {rutina.nombreRutina || `Sesión ${rIdx + 1}`}
-                  </h5>
-                  <span className="text-[11px] opacity-70">Enfoque: {rutina.enfoqueSesion || "General"}</span>
-                </div>
-
-                {/* Lista de Ejercicios */}
-                <div className="overflow-x-auto">
-                  <table className="table table-xs w-full bg-base-100 rounded-lg">
-                    <thead>
-                      <tr>
-                        <th>Ejercicio</th>
-                        <th>Series</th>
-                        <th>Repeticiones</th>
-                        <th>Descanso</th>
-                        <th>Instrucciones</th>
-                        <th className="text-right">Ajuste</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(rutina.ejercicios || []).map((ej: any, eIdx: number) => (
-                        <tr key={eIdx}>
-                          <td className="font-bold text-base-content">{ej.nombreEjercicio || ej.nombre}</td>
-                          <td><span className="badge badge-ghost font-bold">{ej.series}</span></td>
-                          <td>{ej.repeticiones}</td>
-                          <td>{ej.descansoSegundos || 60} seg</td>
-                          <td className="text-[11px] opacity-80 max-w-xs truncate">{ej.instrucciones || ej.observaciones || "-"}</td>
-                          <td className="text-right">
-                            <button
-                              onClick={() =>
-                                setEditingExercise({
-                                  nivelIdx: selectedNivel,
-                                  rutinaIdx: rIdx,
-                                  ejercicioIdx: eIdx,
-                                  nombre: ej.nombreEjercicio || ej.nombre,
-                                  series: ej.series,
-                                  repeticiones: ej.repeticiones,
-                                  descansoSegundos: ej.descansoSegundos || 60,
-                                  observaciones: ej.instrucciones || ej.observaciones || "",
-                                })
-                              }
-                              className="btn btn-ghost btn-xs text-primary"
-                              title="Ajustar ejercicio"
-                            >
-                              <Edit3 className="w-3.5 h-3.5" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ))}
+      <div className="p-5 md:p-6 space-y-6">
+        {/* Selector de 6 Niveles Progresivos */}
+        <div>
+          <label className="label text-xs font-bold uppercase text-base-content/70 pb-1">
+            Niveles Progresivos de Entrenamiento (1 a 6):
+          </label>
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+            {niveles.map((n: any, idx: number) => {
+              const isCurrent = (data.nivelActual || 1) === (n.numeroNivel || idx + 1);
+              const isSelected = selectedNivel === idx;
+              return (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedNivel(idx)}
+                  className={`btn btn-sm ${
+                    isSelected
+                      ? "btn-primary text-white"
+                      : isCurrent
+                      ? "btn-outline btn-primary"
+                      : "btn-ghost bg-base-200/60"
+                  } relative`}
+                >
+                  Nivel {n.numeroNivel || idx + 1}
+                  {isCurrent && (
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-success rounded-full ring-2 ring-base-100" />
+                  )}
+                </button>
+              );
+            })}
           </div>
-        ) : (
-          <p className="text-xs opacity-60 text-center py-4">No hay rutinas definidas para este nivel.</p>
-        )}
+        </div>
+
+        {/* Rutinas del Nivel Seleccionado */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between border-b border-base-200 pb-2">
+            <h4 className="font-extrabold text-sm flex items-center gap-2 text-base-content">
+              <Layers className="w-4 h-4 text-primary" />
+              Sesiones del Nivel {selectedNivel + 1}:{" "}
+              <span className="text-primary font-semibold">
+                {currentNivelData.nombreNivel || currentNivelData.enfoqueNivel || "Acondicionamiento"}
+              </span>
+            </h4>
+            {currentNivelData.duracionSugeridaSemanas && (
+              <span className="badge badge-outline badge-sm text-xs font-semibold">
+                {currentNivelData.duracionSugeridaSemanas} semanas sugeridas
+              </span>
+            )}
+          </div>
+
+          {rutinas.length > 0 ? (
+            <div className="space-y-4">
+              {rutinas.map((rutina: any, rIdx: number) => (
+                <div key={rIdx} className="p-4 bg-base-200/40 rounded-xl border border-base-300 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h5 className="font-bold text-xs text-primary flex items-center gap-1.5 uppercase tracking-wide">
+                      <ChevronRight className="w-4 h-4 text-primary" />
+                      {rutina.dia || (rutina.diaSemana ? `Día ${rutina.diaSemana}` : `Día ${rIdx + 1}`)}: {rutina.nombre || rutina.nombreRutina || `Sesión ${rIdx + 1}`}
+                    </h5>
+                    {rutina.calentamiento && (
+                      <span className="text-[11px] opacity-70 hidden sm:inline">
+                        Calentamiento: {rutina.calentamiento}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Lista de Ejercicios */}
+                  <div className="overflow-x-auto">
+                    <table className="table table-xs w-full bg-base-100 rounded-lg">
+                      <thead>
+                        <tr>
+                          <th>Ejercicio</th>
+                          <th>Series</th>
+                          <th>Repeticiones</th>
+                          <th>Descanso</th>
+                          <th>Instrucciones</th>
+                          <th className="text-right">Ajuste</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(rutina.ejercicios || []).map((ej: any, eIdx: number) => (
+                          <tr key={eIdx}>
+                            <td className="font-bold text-base-content">
+                              <div className="flex items-center gap-1.5">
+                                <span>{ej.nombre || ej.nombreEjercicio}</span>
+                                {ej.ejercicioId && (
+                                  <span className="badge badge-ghost badge-xs text-[9px] font-mono text-primary" title="Vinculado a biblioteca">
+                                    catálogo
+                                  </span>
+                                )}
+                              </div>
+                              {ej.grupoMuscular && (
+                                <span className="text-[10px] opacity-60 font-normal block">
+                                  {ej.grupoMuscular}
+                                </span>
+                              )}
+                            </td>
+                            <td><span className="badge badge-ghost font-bold">{ej.series}</span></td>
+                            <td>{ej.repeticiones}</td>
+                            <td>{ej.descansoSegundos || 60} seg</td>
+                            <td className="text-[11px] opacity-80 max-w-xs truncate">
+                              {ej.instrucciones || ej.observaciones || "—"}
+                            </td>
+                            <td className="text-right">
+                              <button
+                                onClick={() =>
+                                  setEditingExercise({
+                                    nivelIdx: selectedNivel,
+                                    rutinaIdx: rIdx,
+                                    ejercicioIdx: eIdx,
+                                    nombre: ej.nombre || ej.nombreEjercicio,
+                                    series: ej.series,
+                                    repeticiones: ej.repeticiones,
+                                    descansoSegundos: ej.descansoSegundos || 60,
+                                    observaciones: ej.instrucciones || ej.observaciones || "",
+                                  })
+                                }
+                                className="btn btn-ghost btn-xs text-primary"
+                                title="Ajustar ejercicio"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs opacity-60 text-center py-4">No hay sesiones definidas para este nivel.</p>
+          )}
+        </div>
       </div>
 
       {/* Modal Ajuste Operativo */}
@@ -263,6 +355,17 @@ export default function RutinasDetalleSection({ socioId }: Props) {
             </h4>
 
             <div className="space-y-3 text-xs">
+              <div className="form-control">
+                <label className="label font-bold">Nombre del Ejercicio:</label>
+                <input
+                  type="text"
+                  value={editingExercise.nombre}
+                  onChange={(e) => setEditingExercise({ ...editingExercise, nombre: e.target.value })}
+                  className="input input-sm input-bordered font-semibold"
+                  placeholder="Ej. Press de Banca Plano"
+                />
+              </div>
+
               <div className="form-control">
                 <label className="label font-bold">Series:</label>
                 <input

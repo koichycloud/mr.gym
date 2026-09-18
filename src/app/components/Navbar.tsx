@@ -85,11 +85,6 @@ export default function Navbar() {
                             </Link>
                         </li>
                         <li>
-                            <Link href="/mi-plan" className={getActiveClassName('/mi-plan')}>
-                                <Sparkles size={18} /> Mi Plan
-                            </Link>
-                        </li>
-                        <li>
                             <Link href="/asistencia" className={getActiveClassName('/asistencia')}>
                                 <CalendarDays size={18} /> Asistencia
                             </Link>
@@ -146,7 +141,7 @@ export default function Navbar() {
                                             <li onClick={() => setAdminMenuOpen(false)}><Link href="/admin/productos-personal"><PackageSearch size={16} /> Prods. Personal</Link></li>
                                         )}
                                         {hasPermission('PLANES_PERSONALIZADOS_GESTIONAR') && (
-                                            <li onClick={() => setAdminMenuOpen(false)}><Link href="/admin/asignaciones"><Dumbbell size={16} /> Mis Socios / Asignaciones</Link></li>
+                                            <li onClick={() => setAdminMenuOpen(false)}><Link href="/admin/asignaciones"><Dumbbell size={16} /> Agenda y Asignaciones</Link></li>
                                         )}
                                         {hasPermission('PLANES_PERSONALIZADOS_GESTIONAR') && (
                                             <li onClick={() => setAdminMenuOpen(false)}><Link href="/admin/ia"><Sparkles size={16} /> Monitoreo IA</Link></li>
