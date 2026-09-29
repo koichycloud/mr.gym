@@ -1,4 +1,5 @@
 import { PlanningAIInput } from "../validations";
+import { calcularRangoEjerciciosPorDuracion } from "./volume-rules";
 
 export interface PlanningPrompt {
   systemPrompt: string;
@@ -8,9 +9,12 @@ export interface PlanningPrompt {
 /**
  * Ensambla el prompt estructurado para el motor de planificación IA.
  * Aplica principios de periodización deportiva, seguridad biomecánica,
- * aislamiento de alérgenos y defensas contra inyección de instrucciones.
+ * aislamiento de alérgenos, control estricto de volumen por duración y defensas contra inyección.
  */
 export function buildPlanningPrompt(input: PlanningAIInput): PlanningPrompt {
+  const duracionMinutos = input.disponibilidad?.duracionMinutosPorSesion || 60;
+  const rangoVolumen = calcularRangoEjerciciosPorDuracion(duracionMinutos);
+
   const systemPrompt = `
 ERES EL MOTOR DE PLANIFICACIÓN DEPORTIVA Y NUTRICIONAL DE "MR. GYM", UN SISTEMA AVANZADO DE GESTIÓN DE GIMNASIOS.
 
@@ -38,6 +42,17 @@ ESTRUCTURA DE LOS 6 NIVELES DE ENTRENAMIENTO:
 - Nivel 5: Consolidación y Máximo Estímulo (RPE 8-9).
 - Nivel 6: Rendimiento Avanzado y Periodización (RPE 9).
 Cada nivel debe contener 'sesiones' adaptadas a los días de la semana del socio, con 'calentamiento', 'ejercicios' (nombre, grupoMuscular, series 1-10, repeticiones, descansoSegundos 15-600, tempo, rpe, instrucciones), 'vueltaALaCalma', 'criteriosDeProgreso' y 'criteriosDeRegresion'.
+
+REGLAS OBLIGATORIAS DE VOLUMEN POR DURACIÓN DE SESIÓN:
+- La duración acordada por sesión (${duracionMinutos} minutos) es una restricción técnica vinculante.
+- Cada sesión individual de entrenamiento DEBE contener OBLIGATORIAMENTE entre ${rangoVolumen.min} y ${rangoVolumen.max} ejercicios (volumen objetivo: ${rangoVolumen.sugerido} ejercicios).
+- ESTÁ PROHIBIDO generar menos de ${rangoVolumen.min} ejercicios por sesión para una duración de ${duracionMinutos} minutos.
+- NO exceder ${rangoVolumen.max} ejercicios por sesión para garantizar la viabilidad temporal del entrenamiento.
+- DISTRIBUCIÓN PEDAGÓGICA Y BALANCEADA POR SESIÓN:
+  * 1–2 Ejercicios Principales / Compuestos (patrones multiarticulares y fuerza base).
+  * 2–4 Ejercicios Secundarios / Accesorios (hipertrofia, soporte funcional y balance unilateral).
+  * 1–2 Ejercicios Complementarios / Core / Aislamiento (según el tiempo y fatiga acumulada).
+- NO repetir el mismo ejercicio dentro de una misma sesión.
 
 ESTRUCTURA DEL PLAN ALIMENTARIO (MÍNIMO 20 RECETAS ESTRUCTURADAS Y PERSONALIZADAS):
 - OBJETIVOS NUTRICIONALES DIARIOS ESTIMADOS: Calcular y justificar según el peso, talla, edad, sexo y objetivo del socio (ej: superávit para hipertrofia, déficit moderado para pérdida de grasa).
@@ -112,7 +127,7 @@ ${JSON.stringify(input, null, 2)}
 \`\`\`
 
 INSTRUCCIÓN FINAL:
-Genera la propuesta técnica personalizada respetando el objetivo (${input.objetivos.principal}), nivel (${input.objetivos.nivel}), disponibilidad (${input.disponibilidad.diasPorSemana} días/semana) y todas las restricciones declaradas. Responde EXCLUSIVAMENTE con el JSON estructurado.
+Genera la propuesta técnica personalizada respetando el objetivo (${input.objetivos.principal}), nivel (${input.objetivos.nivel}), disponibilidad (${input.disponibilidad.diasPorSemana} días/semana), duración de sesión (${duracionMinutos} min -> OBLIGATORIAMENTE entre ${rangoVolumen.min} y ${rangoVolumen.max} ejercicios por sesión, objetivo: ${rangoVolumen.sugerido} ejercicios) y todas las restricciones declaradas. Responde EXCLUSIVAMENTE con el JSON estructurado.
 `.trim();
 
   return {

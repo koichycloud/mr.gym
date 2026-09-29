@@ -1,4 +1,5 @@
 import { PlanningAIInput, PlanningAIOutput } from "../validations";
+import { calcularRangoEjerciciosPorDuracion } from "./volume-rules";
 
 export interface SafetyEvaluationResult {
   requiresHumanReview: boolean;
@@ -8,7 +9,7 @@ export interface SafetyEvaluationResult {
 }
 
 /**
- * Evalúa las condiciones de seguridad biomecánica y nutricional del input y output.
+ * Evalúa las condiciones de seguridad biomecánica, nutricional y volumen del input y output.
  * Aplica el principio conservador: ante cualquier condición de riesgo declarada o
  * información insuficiente, se exige revisión humana obligatoria (requiresHumanReview = true).
  */
@@ -52,7 +53,35 @@ export function evaluatePlanningSafety(
     );
   }
 
-  // 6. Auditoría de Recetas contra Alérgenos Conocidos si hay Output
+  // 6. Auditoría Defensiva de Volumen de Ejercicios por Duración de Sesión (FASE B1)
+  if (output && output.planEntrenamiento?.niveles) {
+    const duracionSesion = input.disponibilidad?.duracionMinutosPorSesion || 60;
+    const rangoVolumen = calcularRangoEjerciciosPorDuracion(duracionSesion);
+
+    for (const nivel of output.planEntrenamiento.niveles) {
+      for (const sesion of nivel.sesiones || []) {
+        const totalEj = (sesion.ejercicios || []).length;
+        if (totalEj < rangoVolumen.min) {
+          banderas.push(
+            `Volumen reducido en Nivel ${nivel.numeroNivel} (${sesion.nombre}): contiene ${totalEj} ejercicios, inferior al mínimo recomendado de ${rangoVolumen.min} para una sesión de ${duracionSesion} minutos.`
+          );
+        }
+
+        // Detección defensiva de duplicados dentro de la misma sesión
+        const nombresEj = (sesion.ejercicios || [])
+          .map((e: any) => e.nombre?.trim().toLowerCase())
+          .filter(Boolean);
+        const setNombres = new Set(nombresEj);
+        if (setNombres.size < nombresEj.length) {
+          banderas.push(
+            `Posible ejercicio duplicado detectado en Nivel ${nivel.numeroNivel} (${sesion.nombre}).`
+          );
+        }
+      }
+    }
+  }
+
+  // 7. Auditoría de Recetas contra Alérgenos Conocidos si hay Output
   if (output && output.planAlimentacion?.recetas && alergiasMitigadas.length > 0) {
     const palabrasAlergia = alergiasMitigadas
       .flatMap((a) => a.toLowerCase().split(/[,\s]+/))

@@ -15,9 +15,9 @@ export interface EjercicioSeedData {
   activo: boolean
 }
 
-export const CATALOGO_64_EJERCICIOS: EjercicioSeedData[] = [
+export const CATALOGO_64_EJERCICIOS_FASE_A: EjercicioSeedData[] = [
   // ============================================================================
-  // 1. PECHO (8 Ejercicios)
+  // 1. PECHO (8 Ejercicios Base)
   // ============================================================================
   {
     nombre: "Press de Banca Plano con Barra",
@@ -117,7 +117,7 @@ export const CATALOGO_64_EJERCICIOS: EjercicioSeedData[] = [
   },
 
   // ============================================================================
-  // 2. ESPALDA (8 Ejercicios)
+  // 2. ESPALDA (8 Ejercicios Base)
   // ============================================================================
   {
     nombre: "Dominadas Pronas (Pull-Ups)",
@@ -217,7 +217,7 @@ export const CATALOGO_64_EJERCICIOS: EjercicioSeedData[] = [
   },
 
   // ============================================================================
-  // 3. HOMBROS (8 Ejercicios)
+  // 3. HOMBROS (8 Ejercicios Base)
   // ============================================================================
   {
     nombre: "Press Militar con Barra de Pie (Overhead Press)",
@@ -317,7 +317,7 @@ export const CATALOGO_64_EJERCICIOS: EjercicioSeedData[] = [
   },
 
   // ============================================================================
-  // 4. BÍCEPS (6 Ejercicios)
+  // 4. BÍCEPS (6 Ejercicios Base)
   // ============================================================================
   {
     nombre: "Curl de Bíceps con Barra de Pie",
@@ -393,7 +393,7 @@ export const CATALOGO_64_EJERCICIOS: EjercicioSeedData[] = [
   },
 
   // ============================================================================
-  // 5. TRÍCEPS (6 Ejercicios)
+  // 5. TRÍCEPS (6 Ejercicios Base)
   // ============================================================================
   {
     nombre: "Press de Banca con Agarre Cerrado",
@@ -469,7 +469,7 @@ export const CATALOGO_64_EJERCICIOS: EjercicioSeedData[] = [
   },
 
   // ============================================================================
-  // 6. PIERNAS / CUÁDRICEPS & ISQUIOSURALES (10 Ejercicios)
+  // 6. PIERNAS / CUÁDRICEPS & ISQUIOSURALES (10 Ejercicios Base)
   // ============================================================================
   {
     nombre: "Sentadilla Trasera con Barra (Back Squat)",
@@ -593,7 +593,7 @@ export const CATALOGO_64_EJERCICIOS: EjercicioSeedData[] = [
   },
 
   // ============================================================================
-  // 7. GLÚTEOS (6 Ejercicios)
+  // 7. GLÚTEOS (6 Ejercicios Base)
   // ============================================================================
   {
     nombre: "Hip Thrust con Barra en Banco",
@@ -669,7 +669,7 @@ export const CATALOGO_64_EJERCICIOS: EjercicioSeedData[] = [
   },
 
   // ============================================================================
-  // 8. CORE (8 Ejercicios)
+  // 8. CORE (8 Ejercicios Base)
   // ============================================================================
   {
     nombre: "Plancha Abdominal Frontal Isométrica (Plank)",
@@ -769,7 +769,7 @@ export const CATALOGO_64_EJERCICIOS: EjercicioSeedData[] = [
   },
 
   // ============================================================================
-  // 9. CUERPO COMPLETO / FUNCIONAL (4 Ejercicios)
+  // 9. CUERPO COMPLETO / FUNCIONAL (4 Ejercicios Base)
   // ============================================================================
   {
     nombre: "Peso Muerto Convencional con Barra (Deadlift)",
@@ -821,9 +821,456 @@ export const CATALOGO_64_EJERCICIOS: EjercicioSeedData[] = [
   },
 ]
 
+export const CATALOGO_34_NUEVOS_EJERCICIOS_FASE_B: EjercicioSeedData[] = [
+  // ============================================================================
+  // PECHO (4 Nuevos)
+  // ============================================================================
+  {
+    nombre: "Press de Pecho en Máquina Convergente (Chest Press Machine)",
+    descripcion: "Empuje horizontal guiado con trayectoria convergente para máxima sobrecarga pectoral con seguridad articular.",
+    instrucciones: "Sentado con la espalda y cabeza bien apoyadas, empujar las empuñaduras hacia adelante extendiendo brazos sin bloquear codos.",
+    grupoMuscular: "PECHO",
+    grupoMuscularSecundario: "TRICEPS, HOMBROS",
+    nivel: "PRINCIPIANTE",
+    tipoEjercicio: "HIPERTROFIA",
+    equipamientoRequerido: "GIMNASIO_COMPLETO",
+    restricciones: "Ajustar altura del asiento para evitar abducción excesiva de hombro.",
+    activo: true,
+  },
+  {
+    nombre: "Aperturas Inclinadas con Mancuernas en Banco a 30°",
+    descripcion: "Aislamiento y máximo estiramiento de las fibras claviculares del pectoral mayor en plano inclinado.",
+    instrucciones: "En banco a 30°, descender las mancuernas en arco amplio con codos semiflexionados y cerrar contrayendo el pecho superior.",
+    grupoMuscular: "PECHO",
+    grupoMuscularSecundario: "DELTOIDES_ANTERIOR",
+    nivel: "INTERMEDIO",
+    tipoEjercicio: "HIPERTROFIA",
+    equipamientoRequerido: "MANCUERNAS_BANCOS",
+    restricciones: "Inestabilidad anterior de hombro.",
+    activo: true,
+  },
+  {
+    nombre: "Cruces en Polea Baja para Pectoral Superior",
+    descripcion: "Aducción horizontal y elevación diagonal ascendente en poleas bajas con tensión continua.",
+    instrucciones: "Desde poleas bajas, elevar los manerales hacia el centro y arriba a la altura del mentón contrayendo la porción clavicular.",
+    grupoMuscular: "PECHO",
+    grupoMuscularSecundario: "DELTOIDES_ANTERIOR",
+    nivel: "INTERMEDIO",
+    tipoEjercicio: "HIPERTROFIA",
+    equipamientoRequerido: "GIMNASIO_COMPLETO",
+    restricciones: "Pinzamiento acromial al elevar por encima del mentón.",
+    activo: true,
+  },
+  {
+    nombre: "Contractora de Pecho en Máquina (Pec Deck / Butterfly)",
+    descripcion: "Aducción horizontal pura en máquina guiada con apoyo de brazos para máximo pico de contracción.",
+    instrucciones: "Sentado con codos y antebrazos en las almohadillas, juntar los brazos al frente apretando el centro del pecho 1 segundo.",
+    grupoMuscular: "PECHO",
+    grupoMuscularSecundario: "DELTOIDES_ANTERIOR",
+    nivel: "PRINCIPIANTE",
+    tipoEjercicio: "HIPERTROFIA",
+    equipamientoRequerido: "GIMNASIO_COMPLETO",
+    restricciones: "Evitar ajuste de rango que hiperextienda el hombro hacia atrás.",
+    activo: true,
+  },
+
+  // ============================================================================
+  // ESPALDA (4 Nuevos)
+  // ============================================================================
+  {
+    nombre: "Dominadas Supinas (Chin-Ups)",
+    descripcion: "Tracción vertical con agarre supino a anchura de hombros para dorsal y fuerte reclutamiento bicipital.",
+    instrucciones: "Colgado con palmas mirando hacia el rostro, traccionar el cuerpo hasta que la barbilla supere holgadamente la barra.",
+    grupoMuscular: "ESPALDA",
+    grupoMuscularSecundario: "BICEPS, ANTEBRAZOS",
+    nivel: "AVANZADO",
+    tipoEjercicio: "FUERZA",
+    equipamientoRequerido: "PESO_CORPORAL",
+    restricciones: "Molestias en muñecas o codos (epitrocleitis).",
+    activo: true,
+  },
+  {
+    nombre: "Jalón al Pecho con Agarre Neutro Estrecho (Close-Grip Lat Pulldown)",
+    descripcion: "Tracción vertical con maneral V que reduce el estrés de rotación humeral y optimiza el trabajo del dorsal bajo.",
+    instrucciones: "Sujetar el maneral V, inclinar ligeramente el torso hacia atrás y traccionar llevando el accesorio al esternón superior.",
+    grupoMuscular: "ESPALDA",
+    grupoMuscularSecundario: "BICEPS, BRAQUIAL",
+    nivel: "PRINCIPIANTE",
+    tipoEjercicio: "HIPERTROFIA",
+    equipamientoRequerido: "GIMNASIO_COMPLETO",
+    restricciones: "Balanceo lumbar excesivo durante la tracción.",
+    activo: true,
+  },
+  {
+    nombre: "Remo en Máquina de Palanca / Placas Unilateral",
+    descripcion: "Remo horizontal guiado con apoyo de pecho para trabajo unilateral estricto y corrección de desbalances.",
+    instrucciones: "Pecho apoyado, traccionar una palanca llevando el codo hacia la cadera concentrando la contracción en el dorsal medio/bajo.",
+    grupoMuscular: "ESPALDA",
+    grupoMuscularSecundario: "BICEPS, ROMBOIDES",
+    nivel: "PRINCIPIANTE",
+    tipoEjercicio: "HIPERTROFIA",
+    equipamientoRequerido: "GIMNASIO_COMPLETO",
+    restricciones: "Rotación forzada del torso.",
+    activo: true,
+  },
+  {
+    nombre: "Encogimientos de Hombros con Mancuernas o Barra (Shrugs)",
+    descripcion: "Elevación escapular pura contra resistencia para desarrollo de masa y fuerza en trapecios superiores.",
+    instrucciones: "De pie con peso en las manos, elevar los hombros verticalmente hacia las orejas sin rotar los hombros y pausar arriba.",
+    grupoMuscular: "ESPALDA",
+    grupoMuscularSecundario: "HOMBROS, ANTEBRAZOS",
+    nivel: "PRINCIPIANTE",
+    tipoEjercicio: "HIPERTROFIA",
+    equipamientoRequerido: "MANCUERNAS_BANCOS",
+    restricciones: "Evitar círculos con los hombros para proteger la articulación acromioclavicular.",
+    activo: true,
+  },
+
+  // ============================================================================
+  // HOMBROS (4 Nuevos)
+  // ============================================================================
+  {
+    nombre: "Remo al Mentón con Barra Z o Polea (Upright Row)",
+    descripcion: "Tracción vertical multiarticular para desarrollo del deltoides lateral y trapecio con agarre ancho.",
+    instrucciones: "Sujetar la barra con agarre a anchura de hombros, elevar los codos hacia los lados y arriba hasta la altura del pecho.",
+    grupoMuscular: "HOMBROS",
+    grupoMuscularSecundario: "TRAPECIO, BICEPS",
+    nivel: "INTERMEDIO",
+    tipoEjercicio: "HIPERTROFIA",
+    equipamientoRequerido: "GIMNASIO_COMPLETO",
+    restricciones: "Pinzamiento subacromial con agarres excesivamente estrechos.",
+    activo: true,
+  },
+  {
+    nombre: "Pájaros en Máquina Contractora Inversa (Reverse Pec Deck)",
+    descripcion: "Aislamiento estricto y guiado del deltoides posterior y romboides con trayectoria anatómica fija.",
+    instrucciones: "Pecho apoyado en respaldo, brazos casi rectos, abrir los manerales hacia los laterales apretando la parte posterior del hombro.",
+    grupoMuscular: "HOMBROS",
+    grupoMuscularSecundario: "ESPALDA, ROMBOIDES",
+    nivel: "PRINCIPIANTE",
+    tipoEjercicio: "HIPERTROFIA",
+    equipamientoRequerido: "GIMNASIO_COMPLETO",
+    restricciones: "Sobrecarga cervical.",
+    activo: true,
+  },
+  {
+    nombre: "Press de Hombros en Máquina de Palancas (Shoulder Press Machine)",
+    descripcion: "Empuje vertical en máquina guiada que ofrece estabilidad total para sobrecarga segura del deltoides.",
+    instrucciones: "Sentado con espalda firme, empujar las agarraderas hacia arriba manteniendo los codos en el plano de la máquina.",
+    grupoMuscular: "HOMBROS",
+    grupoMuscularSecundario: "TRICEPS",
+    nivel: "PRINCIPIANTE",
+    tipoEjercicio: "HIPERTROFIA",
+    equipamientoRequerido: "GIMNASIO_COMPLETO",
+    restricciones: "Molestias en cuello o deltoides anterior.",
+    activo: true,
+  },
+  {
+    nombre: "Elevaciones Laterales en Banco Inclinado (Decúbito Lateral)",
+    descripcion: "Elevación lateral acostado de lado en banco inclinado a 45° para cambiar la curva de tensión del deltoides lateral.",
+    instrucciones: "Tumbado de lado en banco a 45°, elevar la mancuerna desde la cadera hasta la horizontal con control excéntrico continuo.",
+    grupoMuscular: "HOMBROS",
+    grupoMuscularSecundario: "TRAPECIO",
+    nivel: "INTERMEDIO",
+    tipoEjercicio: "HIPERTROFIA",
+    equipamientoRequerido: "MANCUERNAS_BANCOS",
+    restricciones: "Molestia acromioclavicular.",
+    activo: true,
+  },
+
+  // ============================================================================
+  // BRAZOS (5 Nuevos)
+  // ============================================================================
+  {
+    nombre: "Curl de Bíceps Concentrado en Banco con Mancuerna (Concentration Curl)",
+    descripcion: "Aislamiento unilateral estricto con el codo fijado contra el muslo interior, anulando cualquier balanceo.",
+    instrucciones: "Sentado, apoyar el codo en la cara interna del muslo, flexionar la mancuerna hacia el hombro y descender lento.",
+    grupoMuscular: "BRAZOS",
+    grupoMuscularSecundario: "ANTEBRAZOS",
+    nivel: "PRINCIPIANTE",
+    tipoEjercicio: "HIPERTROFIA",
+    equipamientoRequerido: "MANCUERNAS_BANCOS",
+    restricciones: "Tendinopatía bicipital distal.",
+    activo: true,
+  },
+  {
+    nombre: "Curl de Bíceps Spider en Banco Inclinado (Spider Curl con Barra EZ)",
+    descripcion: "Flexión de codos con pecho apoyado en banco inclinado a 45° y brazos verticales para pico de contracción.",
+    instrucciones: "Apoyar el pecho en banco inclinado, dejar colgar los brazos verticalmente y flexionar la barra EZ sin mover los codos hacia atrás.",
+    grupoMuscular: "BRAZOS",
+    grupoMuscularSecundario: "ANTEBRAZOS",
+    nivel: "INTERMEDIO",
+    tipoEjercicio: "HIPERTROFIA",
+    equipamientoRequerido: "MANCUERNAS_BANCOS",
+    restricciones: "Molestias en muñecas con barra recta (usar EZ).",
+    activo: true,
+  },
+  {
+    nombre: "Extensiones Katana para Tríceps en Polea (Overhead Cable Katana Extension)",
+    descripcion: "Extensión sobre la cabeza en polea cruzada alineada con el plano escapular para máxima elongación de la cabeza larga.",
+    instrucciones: "De espaldas a la torre, extender los antebrazos diagonalmente hacia afuera y arriba siguiendo el ángulo natural del hombro.",
+    grupoMuscular: "BRAZOS",
+    grupoMuscularSecundario: "HOMBROS",
+    nivel: "INTERMEDIO",
+    tipoEjercicio: "HIPERTROFIA",
+    equipamientoRequerido: "GIMNASIO_COMPLETO",
+    restricciones: "Molestias en codos en flexión profunda.",
+    activo: true,
+  },
+  {
+    nombre: "Extensiones Unilaterales de Tríceps en Polea con Agarre Invertido",
+    descripcion: "Extensión unilateral con agarre supino en polea para trabajo analítico de la cabeza medial del tríceps.",
+    instrucciones: "De pie frente a la polea con palma hacia arriba, extender el antebrazo hacia abajo bloqueando el codo al costado.",
+    grupoMuscular: "BRAZOS",
+    grupoMuscularSecundario: "ANTEBRAZOS",
+    nivel: "INTERMEDIO",
+    tipoEjercicio: "HIPERTROFIA",
+    equipamientoRequerido: "GIMNASIO_COMPLETO",
+    restricciones: "Sobrecarga en flexores de muñeca.",
+    activo: true,
+  },
+  {
+    nombre: "Curl de Muñeca con Barra en Banco (Flexión y Extensión de Antebrazo)",
+    descripcion: "Trabajo específico de antebrazos para hipertrofia de flexores/extensores y aumento de potencia de agarre.",
+    instrucciones: "Antebrazos apoyados sobre el banco con muñecas por fuera, realizar flexiones o extensiones de muñeca con rango completo.",
+    grupoMuscular: "BRAZOS",
+    grupoMuscularSecundario: "ANTEBRAZOS",
+    nivel: "PRINCIPIANTE",
+    tipoEjercicio: "HIPERTROFIA",
+    equipamientoRequerido: "MANCUERNAS_BANCOS",
+    restricciones: "Síndrome del túnel carpiano o tendinitis de muñeca.",
+    activo: true,
+  },
+
+  // ============================================================================
+  // PIERNAS (6 Nuevos)
+  // ============================================================================
+  {
+    nombre: "Sentadilla Hack en Máquina (Hack Squat)",
+    descripcion: "Sentadilla guiada en plano inclinado con respaldo que maximiza la flexión de rodilla y el desarrollo del cuádriceps.",
+    instrucciones: "Espalda apoyada en respaldo acolchado, descender flexionando rodillas hasta 90° y empujar a través de toda la planta del pie.",
+    grupoMuscular: "PIERNAS",
+    grupoMuscularSecundario: "GLUTEOS",
+    nivel: "INTERMEDIO",
+    tipoEjercicio: "FUERZA",
+    equipamientoRequerido: "GIMNASIO_COMPLETO",
+    restricciones: "Dolor femororrotuliano severo.",
+    activo: true,
+  },
+  {
+    nombre: "Sentadilla Sissy (Sissy Squat) en Soporte o Libre",
+    descripcion: "Flexión pura de rodilla con extensión de cadera que genera tensión excéntrica masiva en el recto femoral.",
+    instrucciones: "Pies asegurados en soporte sissy, descender inclinando el tronco hacia atrás mientras las rodillas se proyectan al frente.",
+    grupoMuscular: "PIERNAS",
+    grupoMuscularSecundario: "CORE",
+    nivel: "AVANZADO",
+    tipoEjercicio: "HIPERTROFIA",
+    equipamientoRequerido: "PESO_CORPORAL",
+    restricciones: "Tendinopatía rotuliana activa o falta de acondicionamiento articular previo.",
+    activo: true,
+  },
+  {
+    nombre: "Aducción de Cadera en Máquina (Seated Hip Adduction)",
+    descripcion: "Aislamiento en máquina para los músculos aductores de la cara interna del muslo, clave en balance y estabilidad.",
+    instrucciones: "Sentado con piernas abiertas en las almohadillas, cerrar las piernas con fuerza hacia el centro, pausar 1 segundo y abrir controlado.",
+    grupoMuscular: "PIERNAS",
+    grupoMuscularSecundario: "CORE",
+    nivel: "PRINCIPIANTE",
+    tipoEjercicio: "HIPERTROFIA",
+    equipamientoRequerido: "GIMNASIO_COMPLETO",
+    restricciones: "Molestias en pubis o aductor agudo.",
+    activo: true,
+  },
+  {
+    nombre: "Sentadilla Sumo con Mancuerna / Kettlebell (Sumo Squat)",
+    descripcion: "Sentadilla con postura ancha y pies rotados externamente para estimular aductores, glúteos y vasto medial.",
+    instrucciones: "Pies más anchos que hombros a 45°, sostener la mancuerna colgando al centro y descender manteniendo las rodillas alineadas a las puntas de los pies.",
+    grupoMuscular: "PIERNAS",
+    grupoMuscularSecundario: "ADUCTORES, GLUTEOS",
+    nivel: "PRINCIPIANTE",
+    tipoEjercicio: "HIPERTROFIA",
+    equipamientoRequerido: "MANCUERNAS_BANCOS",
+    restricciones: "Falta de movilidad en caderas o colapso medial de rodillas.",
+    activo: true,
+  },
+  {
+    nombre: "Curl Nórdico de Isquiosurales (Nordic Hamstring Curl)",
+    descripcion: "Ejercicio excéntrico de altísima intensidad para fuerza funcional y prevención de roturas en isquiosurales.",
+    instrucciones: "De rodillas con tobillos anclados, descender el cuerpo hacia el suelo lo más lento posible frenando la caída con los isquiosurales.",
+    grupoMuscular: "PIERNAS",
+    grupoMuscularSecundario: "GLUTEOS, CORE",
+    nivel: "AVANZADO",
+    tipoEjercicio: "FUERZA",
+    equipamientoRequerido: "PESO_CORPORAL",
+    restricciones: "Sobrecarga aguda en tendones isquiotibiales.",
+    activo: true,
+  },
+  {
+    nombre: "Elevación de Talones Sentado en Máquina (Soleus Calf Raise)",
+    descripcion: "Extensión de tobillo con rodilla flexionada a 90° para aislamiento selectivo del músculo sóleo.",
+    instrucciones: "Sentado con almohadillas sobre los muslos, descender talones para estirar y elevar al máximo empujando con metatarsos.",
+    grupoMuscular: "PIERNAS",
+    grupoMuscularSecundario: "PANTORRILLAS",
+    nivel: "PRINCIPIANTE",
+    tipoEjercicio: "HIPERTROFIA",
+    equipamientoRequerido: "GIMNASIO_COMPLETO",
+    restricciones: "Fascitis plantar aguda.",
+    activo: true,
+  },
+
+  // ============================================================================
+  // GLÚTEOS / CADENA POSTERIOR (4 Nuevos)
+  // ============================================================================
+  {
+    nombre: "Hip Thrust Unilateral con Mancuerna o Peso Corporal",
+    descripcion: "Empuje de cadera sobre una pierna para corregir asimetrías de fuerza y activar intensamente el glúteo mayor y medio.",
+    instrucciones: "Espalda apoyada en banco, elevar una pierna y empujar con el talón de la pierna de apoyo hasta alinear pelvis y muslo.",
+    grupoMuscular: "PIERNAS",
+    grupoMuscularSecundario: "GLUTEOS, CORE",
+    nivel: "INTERMEDIO",
+    tipoEjercicio: "HIPERTROFIA",
+    equipamientoRequerido: "MANCUERNAS_BANCOS",
+    restricciones: "Inestabilidad pélvica lateral excesiva.",
+    activo: true,
+  },
+  {
+    nombre: "Extensión de Cadera en Banco de Hiperextensiones a 45° con Enfoque en Glúteos (Glute-Focused 45° Back Extension)",
+    descripcion: "Extensión de cadera en banco a 45° con espalda curvada y pies hacia afuera para focalizar glúteos e isquiosurales.",
+    instrucciones: "Pies a 45° hacia afuera, redondear la espalda alta y extender únicamente desde la cadera apretando glúteos arriba.",
+    grupoMuscular: "PIERNAS",
+    grupoMuscularSecundario: "GLUTEOS, ISQUIOSURALES",
+    nivel: "PRINCIPIANTE",
+    tipoEjercicio: "HIPERTROFIA",
+    equipamientoRequerido: "GIMNASIO_COMPLETO",
+    restricciones: "Evitar hiperextender la zona lumbar en la subida.",
+    activo: true,
+  },
+  {
+    nombre: "Frog Pumps en Suelo con Mancuerna",
+    descripcion: "Puente de glúteos con plantas de pies unidas para máxima activación de fibras medias y superiores del glúteo.",
+    instrucciones: "Boca arriba con plantas de pies juntas y rodillas abiertas en mariposa, elevar la cadera apretando los glúteos arriba.",
+    grupoMuscular: "PIERNAS",
+    grupoMuscularSecundario: "GLUTEOS",
+    nivel: "PRINCIPIANTE",
+    tipoEjercicio: "HIPERTROFIA",
+    equipamientoRequerido: "MANCUERNAS_BANCOS",
+    restricciones: "Molestias en abductores o cadera.",
+    activo: true,
+  },
+  {
+    nombre: "Zancada Inversa en Déficit desde Disco / Escalón (Deficit Reverse Lunge)",
+    descripcion: "Desplante hacia atrás partiendo desde plataforma elevada para mayor rango de estiramiento y trabajo de glúteo.",
+    instrucciones: "Parado sobre un disco de 10-15 cm, dar un paso atrás y descender la rodilla hacia el suelo sintiendo gran estiramiento glúteo.",
+    grupoMuscular: "PIERNAS",
+    grupoMuscularSecundario: "GLUTEOS, CUADRICEPS",
+    nivel: "INTERMEDIO",
+    tipoEjercicio: "HIPERTROFIA",
+    equipamientoRequerido: "MANCUERNAS_BANCOS",
+    restricciones: "Falta de equilibrio o molestias patelares.",
+    activo: true,
+  },
+
+  // ============================================================================
+  // CORE (4 Nuevos)
+  // ============================================================================
+  {
+    nombre: "Giros Rusos con Disco o Balón Medicinal (Russian Twists)",
+    descripcion: "Rotación controlada de tronco en posición de V para fortalecimiento dinámico de la pared oblicua y transverso.",
+    instrucciones: "Sentado con pies elevados y torso reclinado a 45°, rotar el peso de un lado al otro tocando el suelo de forma controlada.",
+    grupoMuscular: "CORE",
+    grupoMuscularSecundario: "OBLICUOS",
+    nivel: "PRINCIPIANTE",
+    tipoEjercicio: "FUERZA",
+    equipamientoRequerido: "MANCUERNAS_BANCOS",
+    restricciones: "Hernia discal lumbar sintomática en torsión.",
+    activo: true,
+  },
+  {
+    nombre: "Elevación de Pelvis en Suelo (Reverse Crunch / Elevación Inversa)",
+    descripcion: "Retroversión pélvica acostado para sobrecarga del abdomen inferior sin tracción cervical.",
+    instrucciones: "Tumbado boca arriba, flexionar rodillas y elevar la pelvis despegando el sacro del suelo mediante contracción abdominal pura.",
+    grupoMuscular: "CORE",
+    grupoMuscularSecundario: "ABDOMEN",
+    nivel: "PRINCIPIANTE",
+    tipoEjercicio: "HIPERTROFIA",
+    equipamientoRequerido: "PESO_CORPORAL",
+    restricciones: "Evitar usar inercia o impulso de piernas.",
+    activo: true,
+  },
+  {
+    nombre: "Hollow Body Hold (Postura Hueca Gimnástica)",
+    descripcion: "Postura isométrica gimnástica fundamental para fortaleza anti-extensión y sellado lumbopélvico.",
+    instrucciones: "Tumbado boca arriba con zona lumbar plana contra el suelo, extender brazos y piernas a pocos centímetros del piso manteniendo tensión total.",
+    grupoMuscular: "CORE",
+    grupoMuscularSecundario: "ABDOMEN, HOMBROS",
+    nivel: "INTERMEDIO",
+    tipoEjercicio: "FUERZA",
+    equipamientoRequerido: "PESO_CORPORAL",
+    restricciones: "Despegue de la zona lumbar del suelo (retroceder flexionando rodillas).",
+    activo: true,
+  },
+  {
+    nombre: "Plancha con Toques de Hombro (Shoulder Taps)",
+    descripcion: "Plancha alta dinámica con apoyo alterno de tres puntos para desarrollo de estabilidad anti-rotacional.",
+    instrucciones: "En plancha alta sobre manos, levantar una mano y tocar el hombro opuesto sin que las caderas se balanceen hacia los lados.",
+    grupoMuscular: "CORE",
+    grupoMuscularSecundario: "HOMBROS, GLUTEOS",
+    nivel: "PRINCIPIANTE",
+    tipoEjercicio: "FUERZA",
+    equipamientoRequerido: "PESO_CORPORAL",
+    restricciones: "Dolor en muñecas en apoyo simple.",
+    activo: true,
+  },
+
+  // ============================================================================
+  // CUERPO COMPLETO (3 Nuevos)
+  // ============================================================================
+  {
+    nombre: "Thruster con Mancuernas o Barra (Sentadilla con Empuje)",
+    descripcion: "Encadenamiento continuo de sentadilla frontal profunda y press de hombros vertical para potencia total del cuerpo.",
+    instrucciones: "Con mancuernas a los hombros, descender en sentadilla profunda y usar el impulso de subida para empujar las pesas sobre la cabeza.",
+    grupoMuscular: "CUERPO_COMPLETO",
+    grupoMuscularSecundario: "PIERNAS, HOMBROS, CORE",
+    nivel: "AVANZADO",
+    tipoEjercicio: "FUERZA",
+    equipamientoRequerido: "MANCUERNAS_BANCOS",
+    restricciones: "Fatiga técnica excesiva o mala movilidad de tobillo/hombro.",
+    activo: true,
+  },
+  {
+    nombre: "Manmaker con Mancuernas (Flexión + Remo + Clean + Press)",
+    descripcion: "Complejo multiarticular funcional integrado que combina empuje, tracción, cargada y press en una secuencia fluida.",
+    instrucciones: "En plancha sobre mancuernas, hacer una flexión, remo con cada brazo, saltar a cuclillas, cargada y press vertical completo.",
+    grupoMuscular: "CUERPO_COMPLETO",
+    grupoMuscularSecundario: "PECHO, ESPALDA, PIERNAS, HOMBROS, CORE",
+    nivel: "AVANZADO",
+    tipoEjercicio: "FUERZA",
+    equipamientoRequerido: "MANCUERNAS_BANCOS",
+    restricciones: "Problemas articulares múltiples o falta de acondicionamiento.",
+    activo: true,
+  },
+  {
+    nombre: "Wall Balls con Balón Medicinal (Lanzamiento a la Pared)",
+    descripcion: "Sentadilla profunda seguida de lanzamiento vertical del balón medicinal hacia una diana en pared.",
+    instrucciones: "Sostener el balón al pecho, descender en sentadilla y al extenderse lanzar el balón hacia el objetivo en pared, atrapándolo en la bajada.",
+    grupoMuscular: "CUERPO_COMPLETO",
+    grupoMuscularSecundario: "PIERNAS, HOMBROS, CORE",
+    nivel: "INTERMEDIO",
+    tipoEjercicio: "CARDIO",
+    equipamientoRequerido: "OTRO",
+    restricciones: "Dolor de hombro al recibir el impacto del balón.",
+    activo: true,
+  },
+]
+
+export const CATALOGO_MAESTRO_EJERCICIOS: EjercicioSeedData[] = [
+  ...CATALOGO_64_EJERCICIOS_FASE_A,
+  ...CATALOGO_34_NUEVOS_EJERCICIOS_FASE_B,
+]
+
 export async function seedEjercicios() {
   console.log("==================================================================")
-  console.log("MR. GYM — SEED DE CATÁLOGO DE EJERCICIOS (64 EJERCICIOS)")
+  console.log("MR. GYM — SEED DE CATÁLOGO DE EJERCICIOS (FASE B: 100 EJERCICIOS)")
   console.log("==================================================================\n")
 
   const totalAntes = await prisma.ejercicio.count()
@@ -832,7 +1279,7 @@ export async function seedEjercicios() {
   let creados = 0
   let actualizados = 0
 
-  for (const ej of CATALOGO_64_EJERCICIOS) {
+  for (const ej of CATALOGO_MAESTRO_EJERCICIOS) {
     const existing = await prisma.ejercicio.findUnique({
       where: { nombre: ej.nombre },
     })
@@ -880,13 +1327,10 @@ export async function seedEjercicios() {
 
   return { totalAntes, creados, actualizados, totalDespues }
 }
-
-if (require.main === module) {
-  seedEjercicios()
-    .then(() => prisma.$disconnect())
-    .catch((e) => {
-      console.error("Error al ejecutar seed de ejercicios:", e)
-      prisma.$disconnect()
-      process.exit(1)
-    })
-}
+seedEjercicios()
+  .then(() => prisma.$disconnect())
+  .catch((e) => {
+    console.error("Error al ejecutar seed de ejercicios:", e)
+    prisma.$disconnect()
+    process.exit(1)
+  })

@@ -9,3 +9,4 @@ export * from "./gemini-provider";
 export * from "./provider-factory";
 export * from "./planning-engine";
 export * from "./config";
+export * from "./volume-rules";
