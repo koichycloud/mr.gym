@@ -1,6 +1,7 @@
 import { PlanningAIInput, PlanningAIOutput } from "../validations";
 import { AIPlanningProvider, AIProviderResponse } from "./types";
 import { calcularRangoEjerciciosPorDuracion } from "./volume-rules";
+import { getActiveExerciseCatalog, normalizeExerciseName, CatalogExerciseItem } from "./catalog-helper";
 
 export type MockProviderBehavior =
   | "VALID"
@@ -12,11 +13,11 @@ export type MockProviderBehavior =
   | "SIMULATED_ERROR"
   | "SIMULATED_TIMEOUT";
 
-// Catálogos base de ejercicios mock estructurados por temática de sesión para evitar duplicados
+// Catálogos base de ejercicios mock estructurados por temática con nombres canónicos del catálogo de 100
 const POOL_TORSO_EMPUJE = [
   {
-    nombre: "Press Banca Plano con Barra",
-    grupoMuscular: "Pectoral / Tríceps",
+    nombre: "Press de Banca Plano con Barra",
+    grupoMuscular: "PECHO",
     series: 4,
     repeticiones: "8-10",
     descansoSegundos: 90,
@@ -25,8 +26,8 @@ const POOL_TORSO_EMPUJE = [
     instrucciones: "Pies firmes en el suelo, retracción escapular y trayectoria controlada.",
   },
   {
-    nombre: "Press Militar con Mancuernas",
-    grupoMuscular: "Hombros",
+    nombre: "Press Militar Sentado con Mancuernas",
+    grupoMuscular: "HOMBROS",
     series: 3,
     repeticiones: "10-12",
     descansoSegundos: 75,
@@ -36,7 +37,7 @@ const POOL_TORSO_EMPUJE = [
   },
   {
     nombre: "Press Inclinado con Mancuernas",
-    grupoMuscular: "Pectoral Superior",
+    grupoMuscular: "PECHO",
     series: 3,
     repeticiones: "10-12",
     descansoSegundos: 75,
@@ -46,7 +47,7 @@ const POOL_TORSO_EMPUJE = [
   },
   {
     nombre: "Elevaciones Laterales con Mancuernas",
-    grupoMuscular: "Deltoides Lateral",
+    grupoMuscular: "HOMBROS",
     series: 4,
     repeticiones: "12-15",
     descansoSegundos: 60,
@@ -55,8 +56,8 @@ const POOL_TORSO_EMPUJE = [
     instrucciones: "Elevación hasta la altura de hombros sin balanceo del torso.",
   },
   {
-    nombre: "Fondos en Paralelas",
-    grupoMuscular: "Tríceps / Pectoral",
+    nombre: "Fondos en Paralelas para Tríceps (Dips)",
+    grupoMuscular: "BRAZOS",
     series: 3,
     repeticiones: "8-12",
     descansoSegundos: 75,
@@ -65,8 +66,8 @@ const POOL_TORSO_EMPUJE = [
     instrucciones: "Ligera inclinación del torso, descenso controlado a 90 grados.",
   },
   {
-    nombre: "Extensiones de Tríceps en Polea Alta",
-    grupoMuscular: "Tríceps",
+    nombre: "Extensiones de Tríceps en Polea Alta con Cuerda (Pushdown)",
+    grupoMuscular: "BRAZOS",
     series: 3,
     repeticiones: "12-15",
     descansoSegundos: 60,
@@ -76,7 +77,7 @@ const POOL_TORSO_EMPUJE = [
   },
   {
     nombre: "Aperturas con Mancuernas en Banco Plano",
-    grupoMuscular: "Pectoral",
+    grupoMuscular: "PECHO",
     series: 3,
     repeticiones: "12-15",
     descansoSegundos: 60,
@@ -85,8 +86,8 @@ const POOL_TORSO_EMPUJE = [
     instrucciones: "Apertura amplia con codos semiflexionados, sintiendo estiramiento.",
   },
   {
-    nombre: "Press Francés con Barra Z",
-    grupoMuscular: "Tríceps",
+    nombre: "Press Francés con Barra EZ en Banco Plano (Skull Crushers)",
+    grupoMuscular: "BRAZOS",
     series: 3,
     repeticiones: "10-12",
     descansoSegundos: 60,
@@ -95,8 +96,8 @@ const POOL_TORSO_EMPUJE = [
     instrucciones: "Brazos perpendiculares, flexión únicamente de los codos.",
   },
   {
-    nombre: "Plank Abdominal Isométrico",
-    grupoMuscular: "Core",
+    nombre: "Plancha Abdominal Frontal Isométrica (Plank)",
+    grupoMuscular: "CORE",
     series: 3,
     repeticiones: "45-60s",
     descansoSegundos: 45,
@@ -105,8 +106,8 @@ const POOL_TORSO_EMPUJE = [
     instrucciones: "Alineación neutra de columna, activación de transverso y glúteos.",
   },
   {
-    nombre: "Crunch en Polea Alta",
-    grupoMuscular: "Abdomen",
+    nombre: "Crunch en Polea Alta con Cuerda (Cable Crunch)",
+    grupoMuscular: "CORE",
     series: 3,
     repeticiones: "15-20",
     descansoSegundos: 45,
@@ -118,8 +119,8 @@ const POOL_TORSO_EMPUJE = [
 
 const POOL_PIERNA_TRACCION = [
   {
-    nombre: "Sentadilla Trasera con Barra",
-    grupoMuscular: "Cuádriceps / Glúteos",
+    nombre: "Sentadilla Trasera con Barra (Back Squat)",
+    grupoMuscular: "PIERNAS",
     series: 4,
     repeticiones: "8-10",
     descansoSegundos: 120,
@@ -128,8 +129,8 @@ const POOL_PIERNA_TRACCION = [
     instrucciones: "Descenso controlado rompiendo paralelo con columna neutra.",
   },
   {
-    nombre: "Peso Muerto Rumano con Mancuernas",
-    grupoMuscular: "Isquiosurales / Glúteos",
+    nombre: "Peso Muerto Rumano con Barra (RDL)",
+    grupoMuscular: "PIERNAS",
     series: 4,
     repeticiones: "10-12",
     descansoSegundos: 90,
@@ -138,8 +139,8 @@ const POOL_PIERNA_TRACCION = [
     instrucciones: "Bisagra de cadera manteniendo ligera flexión de rodilla.",
   },
   {
-    nombre: "Jalón al Pecho en Polea",
-    grupoMuscular: "Dorsales / Espalda Alta",
+    nombre: "Jalón al Pecho en Polea (Lat Pulldown)",
+    grupoMuscular: "ESPALDA",
     series: 4,
     repeticiones: "10-12",
     descansoSegundos: 75,
@@ -148,58 +149,48 @@ const POOL_PIERNA_TRACCION = [
     instrucciones: "Tracción hacia la parte superior del pecho con retracción escapular.",
   },
   {
-    nombre: "Remo con Mancuerna a una Mano",
-    grupoMuscular: "Dorsal / Espalda Media",
+    nombre: "Remo con Barra Inclinado (Bent-Over Row)",
+    grupoMuscular: "ESPALDA",
+    series: 4,
+    repeticiones: "8-10",
+    descansoSegundos: 90,
+    tempo: "2-0-1-0",
+    rpe: 8,
+    instrucciones: "Torso a 45 grados, tirón hacia la cadera manteniendo columna neutra.",
+  },
+  {
+    nombre: "Prensa de Piernas Inclinada a 45° (Leg Press)",
+    grupoMuscular: "PIERNAS",
+    series: 4,
+    repeticiones: "10-12",
+    descansoSegundos: 90,
+    tempo: "3-0-1-0",
+    rpe: 8.5,
+    instrucciones: "Pies a la anchura de hombros, rango completo sin bloquear rodillas.",
+  },
+  {
+    nombre: "Curl de Bíceps con Barra de Pie",
+    grupoMuscular: "BRAZOS",
     series: 3,
     repeticiones: "10-12",
     descansoSegundos: 60,
-    tempo: "2-0-1-0",
+    tempo: "2-0-1-1",
     rpe: 8,
-    instrucciones: "Apoyo en banco plano, codo viajando hacia la cadera.",
+    instrucciones: "Sin balanceo de torso, flexión pura de codos con agarre supino.",
   },
   {
-    nombre: "Prensa de Piernas Inclinada",
-    grupoMuscular: "Cuádriceps / Glúteos",
-    series: 3,
-    repeticiones: "12-15",
-    descansoSegundos: 75,
-    tempo: "2-1-1-0",
-    rpe: 8,
-    instrucciones: "Pies a ancho de hombros, evitar bloqueo articular de rodillas.",
-  },
-  {
-    nombre: "Curl Femoral Tumbado",
-    grupoMuscular: "Isquiosurales",
+    nombre: "Curl Femoral Tumbado en Máquina (Lying Leg Curl)",
+    grupoMuscular: "PIERNAS",
     series: 3,
     repeticiones: "12-15",
     descansoSegundos: 60,
     tempo: "2-0-1-1",
     rpe: 8,
-    instrucciones: "Flexión completa manteniendo caderas pegadas al banco.",
+    instrucciones: "Cadera pegada al banco, contracción máxima y descenso controlado.",
   },
   {
-    nombre: "Curl de Bíceps con Barra Z",
-    grupoMuscular: "Bíceps",
-    series: 3,
-    repeticiones: "10-12",
-    descansoSegundos: 60,
-    tempo: "2-0-1-0",
-    rpe: 8,
-    instrucciones: "Codos fijos a los costados, contracción concéntrica limpia.",
-  },
-  {
-    nombre: "Curl Martillo con Mancuernas",
-    grupoMuscular: "Braquial / Antebrazos",
-    series: 3,
-    repeticiones: "12-15",
-    descansoSegundos: 60,
-    tempo: "2-0-1-0",
-    rpe: 8,
-    instrucciones: "Agarre neutro continuo, control estricto en la bajada.",
-  },
-  {
-    nombre: "Elevación de Talones en Máquina",
-    grupoMuscular: "Pantorrillas",
+    nombre: "Elevación de Talones de Pie en Máquina (Calf Raises)",
+    grupoMuscular: "PIERNAS",
     series: 4,
     repeticiones: "15-20",
     descansoSegundos: 45,
@@ -208,21 +199,31 @@ const POOL_PIERNA_TRACCION = [
     instrucciones: "Rango completo con pausa de 1 segundo en máxima contracción.",
   },
   {
-    nombre: "Rueda Abdominal (Ab Wheel)",
-    grupoMuscular: "Core",
+    nombre: "Face Pull en Polea Alta",
+    grupoMuscular: "HOMBROS",
     series: 3,
+    repeticiones: "15-20",
+    descansoSegundos: 45,
+    tempo: "2-0-1-1",
+    rpe: 7.5,
+    instrucciones: "Tracción hacia los ojos con rotación externa de hombros.",
+  },
+  {
+    nombre: "Hip Thrust con Barra en Banco",
+    grupoMuscular: "PIERNAS",
+    series: 4,
     repeticiones: "10-12",
-    descansoSegundos: 60,
-    tempo: "2-1-1-0",
-    rpe: 8,
-    instrucciones: "Extensión controlada de cadera sin arquear zona lumbar.",
+    descansoSegundos: 90,
+    tempo: "2-0-1-2",
+    rpe: 8.5,
+    instrucciones: "Empuje de cadera con bloqueo glúteo y pausa arriba.",
   },
 ];
 
 const POOL_FULLBODY_FUNCIONAL = [
   {
-    nombre: "Sentadilla Goblet con Mancuerna",
-    grupoMuscular: "Cuádriceps / Core",
+    nombre: "Sentadilla Goblet con Mancuerna o Kettlebell",
+    grupoMuscular: "PIERNAS",
     series: 4,
     repeticiones: "10-12",
     descansoSegundos: 75,
@@ -231,8 +232,8 @@ const POOL_FULLBODY_FUNCIONAL = [
     instrucciones: "Mancuerna pegada al pecho, codos dentro de rodillas en descenso.",
   },
   {
-    nombre: "Press de Banca con Mancuernas",
-    grupoMuscular: "Pectoral",
+    nombre: "Press de Pecho en Máquina Convergente (Chest Press Machine)",
+    grupoMuscular: "PECHO",
     series: 4,
     repeticiones: "10-12",
     descansoSegundos: 75,
@@ -241,8 +242,8 @@ const POOL_FULLBODY_FUNCIONAL = [
     instrucciones: "Recorrido amplio y control en la porción inferior del movimiento.",
   },
   {
-    nombre: "Remo en Polea Baja",
-    grupoMuscular: "Espalda Media / Dorsales",
+    nombre: "Remo Sentado en Polea Baja (Seated Cable Row)",
+    grupoMuscular: "ESPALDA",
     series: 4,
     repeticiones: "10-12",
     descansoSegundos: 75,
@@ -251,8 +252,8 @@ const POOL_FULLBODY_FUNCIONAL = [
     instrucciones: "Pecho erguido, tracción hacia el abdomen bajo con pausa.",
   },
   {
-    nombre: "Zancadas Caminando con Mancuernas",
-    grupoMuscular: "Cuádriceps / Glúteos",
+    nombre: "Zancadas / Desplantes Caminando (Walking Lunges)",
+    grupoMuscular: "PIERNAS",
     series: 3,
     repeticiones: "12 pasos/lado",
     descansoSegundos: 60,
@@ -261,8 +262,8 @@ const POOL_FULLBODY_FUNCIONAL = [
     instrucciones: "Paso amplio manteniendo el torso erguido y rodilla posterior a 90°.",
   },
   {
-    nombre: "Elevaciones Laterales en Polea",
-    grupoMuscular: "Deltoides Lateral",
+    nombre: "Elevaciones Laterales en Polea Baja",
+    grupoMuscular: "HOMBROS",
     series: 3,
     repeticiones: "12-15",
     descansoSegundos: 45,
@@ -272,7 +273,7 @@ const POOL_FULLBODY_FUNCIONAL = [
   },
   {
     nombre: "Hip Thrust con Barra en Banco",
-    grupoMuscular: "Glúteos",
+    grupoMuscular: "PIERNAS",
     series: 4,
     repeticiones: "10-12",
     descansoSegundos: 90,
@@ -282,7 +283,7 @@ const POOL_FULLBODY_FUNCIONAL = [
   },
   {
     nombre: "Face Pull en Polea Alta",
-    grupoMuscular: "Deltoides Posterior / Trapecio",
+    grupoMuscular: "HOMBROS",
     series: 3,
     repeticiones: "15-20",
     descansoSegundos: 45,
@@ -291,8 +292,8 @@ const POOL_FULLBODY_FUNCIONAL = [
     instrucciones: "Tracción hacia los ojos con rotación externa de hombros.",
   },
   {
-    nombre: "Extensiones de Cuádriceps en Máquina",
-    grupoMuscular: "Cuádriceps",
+    nombre: "Extensiones de Cuádriceps en Máquina (Leg Extension)",
+    grupoMuscular: "PIERNAS",
     series: 3,
     repeticiones: "12-15",
     descansoSegundos: 60,
@@ -301,24 +302,24 @@ const POOL_FULLBODY_FUNCIONAL = [
     instrucciones: "Pausa de 1 segundo en máxima contracción antes de bajar.",
   },
   {
-    nombre: "Elevación de Piernas en Paralelas",
-    grupoMuscular: "Abdomen Inferior",
+    nombre: "Elevación de Pelvis en Suelo (Reverse Crunch / Elevación Inversa)",
+    grupoMuscular: "CORE",
     series: 3,
     repeticiones: "12-15",
     descansoSegundos: 45,
     tempo: "2-0-1-0",
     rpe: 8,
-    instrucciones: "Elevación controlada de rodillas a 90 grados sin balanceo.",
+    instrucciones: "Elevación controlada de pelvis sin balanceo.",
   },
   {
-    nombre: "Paseo del Granjero (Farmer's Walk)",
-    grupoMuscular: "Core / Antebrazo / Full Body",
+    nombre: "Thruster con Mancuernas o Barra (Sentadilla con Empuje)",
+    grupoMuscular: "CUERPO_COMPLETO",
     series: 3,
-    repeticiones: "40 metros",
+    repeticiones: "10-12",
     descansoSegundos: 60,
     tempo: "Continuo",
     rpe: 8,
-    instrucciones: "Marcha controlada con mancuernas pesadas manteniendo postura erguida.",
+    instrucciones: "Sentadilla profunda seguida de empuje vertical fluido.",
   },
 ];
 
@@ -380,6 +381,29 @@ export class MockAIPlanningProvider implements AIPlanningProvider {
       };
     }
 
+    // Cargar catálogo de ejercicios activos de la BD para asociar UUIDs reales
+    let activeCatalog: CatalogExerciseItem[] = [];
+    try {
+      activeCatalog = await getActiveExerciseCatalog();
+    } catch {
+      activeCatalog = [];
+    }
+
+    const nameToItemMap = new Map<string, CatalogExerciseItem>();
+    for (const item of activeCatalog) {
+      nameToItemMap.set(normalizeExerciseName(item.nombre), item);
+    }
+
+    const mapWithCatalog = (ej: any) => {
+      const match = nameToItemMap.get(normalizeExerciseName(ej.nombre));
+      return {
+        ...ej,
+        ejercicioId: match?.id || null,
+        nombre: match?.nombre || ej.nombre,
+        grupoMuscular: match?.grupoMuscular || ej.grupoMuscular,
+      };
+    };
+
     // Calcular volumen oficial dinámico según duración de sesión del socio
     const duracionSesionMinutos = input?.disponibilidad?.duracionMinutosPorSesion || 60;
     const rangoVolumen = calcularRangoEjerciciosPorDuracion(duracionSesionMinutos);
@@ -397,19 +421,19 @@ export class MockAIPlanningProvider implements AIPlanningProvider {
       const n = idx + 1;
 
       // Sesión 1: Torso / Empuje
-      const ejerciciosSesion1 = POOL_TORSO_EMPUJE.slice(0, cantidadEjerciciosObjetivo).map((ej) => ({
+      const ejerciciosSesion1 = POOL_TORSO_EMPUJE.slice(0, cantidadEjerciciosObjetivo).map((ej) => mapWithCatalog({
         ...ej,
         series: n >= 4 ? Math.min(ej.series + 1, 6) : ej.series,
       }));
 
       // Sesión 2: Pierna / Tracción
-      const ejerciciosSesion2 = POOL_PIERNA_TRACCION.slice(0, cantidadEjerciciosObjetivo).map((ej) => ({
+      const ejerciciosSesion2 = POOL_PIERNA_TRACCION.slice(0, cantidadEjerciciosObjetivo).map((ej) => mapWithCatalog({
         ...ej,
         series: n >= 4 ? Math.min(ej.series + 1, 6) : ej.series,
       }));
 
       // Sesión 3 (si hay 3 o más días): Full Body / Funcional
-      const ejerciciosSesion3 = POOL_FULLBODY_FUNCIONAL.slice(0, cantidadEjerciciosObjetivo).map((ej) => ({
+      const ejerciciosSesion3 = POOL_FULLBODY_FUNCIONAL.slice(0, cantidadEjerciciosObjetivo).map((ej) => mapWithCatalog({
         ...ej,
         series: n >= 4 ? Math.min(ej.series + 1, 6) : ej.series,
       }));

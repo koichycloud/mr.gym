@@ -57,6 +57,7 @@ export const PLANNING_AI_RESPONSE_SCHEMA = {
                       items: {
                         type: Type.OBJECT,
                         properties: {
+                          ejercicioId: { type: Type.STRING },
                           nombre: { type: Type.STRING },
                           grupoMuscular: { type: Type.STRING },
                           series: { type: Type.INTEGER },
@@ -65,8 +66,10 @@ export const PLANNING_AI_RESPONSE_SCHEMA = {
                           tempo: { type: Type.STRING },
                           rpe: { type: Type.NUMBER },
                           instrucciones: { type: Type.STRING },
+                          observaciones: { type: Type.STRING },
                         },
                         required: [
+                          "ejercicioId",
                           "nombre",
                           "grupoMuscular",
                           "series",

@@ -10,3 +10,4 @@ export * from "./provider-factory";
 export * from "./planning-engine";
 export * from "./config";
 export * from "./volume-rules";
+export * from "./catalog-helper";

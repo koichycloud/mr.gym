@@ -1,5 +1,6 @@
 import { PlanningAIInput, PlanningAIOutput } from "../validations";
 import { calcularRangoEjerciciosPorDuracion } from "./volume-rules";
+import { CatalogExerciseItem, normalizeExerciseName } from "./catalog-helper";
 
 export interface SafetyEvaluationResult {
   requiresHumanReview: boolean;
@@ -9,13 +10,15 @@ export interface SafetyEvaluationResult {
 }
 
 /**
- * Evalúa las condiciones de seguridad biomecánica, nutricional y volumen del input y output.
+ * Evalúa las condiciones de seguridad biomecánica, nutricional, volumen y catálogo del input y output.
  * Aplica el principio conservador: ante cualquier condición de riesgo declarada o
  * información insuficiente, se exige revisión humana obligatoria (requiresHumanReview = true).
  */
 export function evaluatePlanningSafety(
   input: PlanningAIInput,
-  output?: PlanningAIOutput | null
+  output?: PlanningAIOutput | null,
+  catalog?: CatalogExerciseItem[],
+  reconciliationWarnings?: string[]
 ): SafetyEvaluationResult {
   const banderas: string[] = [];
   const alergiasMitigadas: string[] = [];
@@ -81,7 +84,89 @@ export function evaluatePlanningSafety(
     }
   }
 
-  // 7. Auditoría de Recetas contra Alérgenos Conocidos si hay Output
+  // 7. Auditoría de Integridad del Catálogo y Compatibilidad Biomecánica (FASE C)
+  if (output && output.planEntrenamiento?.niveles) {
+    const catalogMap = new Map<string, CatalogExerciseItem>();
+    if (catalog) {
+      for (const item of catalog) {
+        catalogMap.set(item.id, item);
+      }
+    }
+
+    const ejerciciosExcluidosTexto = (input.entrenamiento.ejerciciosExcluidos || "").toLowerCase();
+    const lesionesTexto = (input.entrenamiento.lesionesDeclaradas || "").toLowerCase();
+    const equipamientoSocio = (input.entrenamiento.equipamientoDisponible || "").toUpperCase();
+
+    for (const nivel of output.planEntrenamiento.niveles) {
+      for (const sesion of nivel.sesiones || []) {
+        for (const ej of sesion.ejercicios || []) {
+          // A. Ejercicio sin UUID o con UUID huérfano
+          if (!ej.ejercicioId) {
+            // Solo warning de calidad para no invalidar planes históricos
+            banderas.push(
+              `Ejercicio sin vincular al catálogo en Nivel ${nivel.numeroNivel} (${sesion.nombre}): "${ej.nombre}".`
+            );
+          } else if (catalog && !catalogMap.has(ej.ejercicioId)) {
+            banderas.push(
+              `Ejercicio con ID no reconocido en catálogo en Nivel ${nivel.numeroNivel} (${sesion.nombre}): "${ej.nombre}" (ID: ${ej.ejercicioId}).`
+            );
+          } else if (catalog && catalogMap.has(ej.ejercicioId)) {
+            const catItem = catalogMap.get(ej.ejercicioId)!;
+
+            // B. Ejercicio Inactivo
+            if (!catItem.activo) {
+              banderas.push(
+                `Ejercicio inactivo prescrito en Nivel ${nivel.numeroNivel} (${sesion.nombre}): "${catItem.nombre}".`
+              );
+            }
+
+            // C. Incompatibilidad con ejercicios excluidos declarados
+            if (
+              ejerciciosExcluidosTexto.length > 0 &&
+              (ejerciciosExcluidosTexto.includes(catItem.nombre.toLowerCase()) ||
+                ejerciciosExcluidosTexto.includes(normalizeExerciseName(catItem.nombre)))
+            ) {
+              banderas.push(
+                `Ejercicio excluido prescrito en Nivel ${nivel.numeroNivel} (${sesion.nombre}): "${catItem.nombre}".`
+              );
+            }
+
+            // D. Incompatibilidad con equipamiento (si el socio tiene solo peso corporal pero se prescribe gimnasio completo)
+            if (
+              equipamientoSocio === "PESO_CORPORAL" &&
+              catItem.equipamientoRequerido === "GIMNASIO_COMPLETO"
+            ) {
+              banderas.push(
+                `Equipamiento incompatible en Nivel ${nivel.numeroNivel} (${sesion.nombre}): "${catItem.nombre}" requiere ${catItem.equipamientoRequerido} pero el socio solo dispone de peso corporal.`
+              );
+            }
+
+            // E. Discrepancia no resuelta entre UUID y Nombre
+            const normalizedCatName = normalizeExerciseName(catItem.nombre);
+            const normalizedEjName = normalizeExerciseName(ej.nombre);
+            if (
+              normalizedCatName !== normalizedEjName &&
+              !normalizedEjName.includes(normalizedCatName) &&
+              !normalizedCatName.includes(normalizedEjName)
+            ) {
+              banderas.push(
+                `Discrepancia detectada en Nivel ${nivel.numeroNivel} (${sesion.nombre}): ejercicioId "${ej.ejercicioId}" pertenece a "${catItem.nombre}" pero se especificó "${ej.nombre}". Requiere revisión humana.`
+              );
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 8. Incorporar Advertencias de Reconciliación
+  if (reconciliationWarnings && reconciliationWarnings.length > 0) {
+    for (const w of reconciliationWarnings) {
+      banderas.push(w);
+    }
+  }
+
+  // 9. Auditoría de Recetas contra Alérgenos Conocidos si hay Output
   if (output && output.planAlimentacion?.recetas && alergiasMitigadas.length > 0) {
     const palabrasAlergia = alergiasMitigadas
       .flatMap((a) => a.toLowerCase().split(/[,\s]+/))

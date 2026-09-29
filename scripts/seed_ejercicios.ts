@@ -1261,6 +1261,30 @@ export const CATALOGO_34_NUEVOS_EJERCICIOS_FASE_B: EjercicioSeedData[] = [
     restricciones: "Dolor de hombro al recibir el impacto del balón.",
     activo: true,
   },
+  {
+    nombre: "Sentadilla Goblet con Mancuerna o Kettlebell",
+    descripcion: "Sentadilla con carga frontal sostenida frente al pecho, ideal para aprender el patrón de sentadilla profunda con columna erguida.",
+    instrucciones: "Sostener una mancuerna o kettlebell vertical frente al pecho con ambas manos, descender manteniendo el torso erguido y codos dentro de las rodillas, empujar desde los talones.",
+    grupoMuscular: "PIERNAS",
+    grupoMuscularSecundario: "CORE, GLUTEOS",
+    nivel: "PRINCIPIANTE",
+    tipoEjercicio: "FUERZA",
+    equipamientoRequerido: "MANCUERNAS_BANCOS",
+    restricciones: "Molestia femororrotuliana aguda.",
+    activo: true,
+  },
+  {
+    nombre: "Press de Hombros en Polea con Cuerda",
+    descripcion: "Empuje vertical con tensión continua en todo el rango articular para deltoides anterior y lateral.",
+    instrucciones: "Desde polea baja con cuerda, colocar las manos a la altura de las clavículas y empujar verticalmente bloqueando en la cima con control en el descenso.",
+    grupoMuscular: "HOMBROS",
+    grupoMuscularSecundario: "TRICEPS, CORE",
+    nivel: "INTERMEDIO",
+    tipoEjercicio: "HIPERTROFIA",
+    equipamientoRequerido: "GIMNASIO_COMPLETO",
+    restricciones: "Dolor o inestabilidad de hombro.",
+    activo: true,
+  },
 ]
 
 export const CATALOGO_MAESTRO_EJERCICIOS: EjercicioSeedData[] = [

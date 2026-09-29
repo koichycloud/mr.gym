@@ -1,5 +1,6 @@
 import { PlanningAIInput } from "../validations";
 import { calcularRangoEjerciciosPorDuracion } from "./volume-rules";
+import { CatalogExerciseItem, formatCatalogForPrompt } from "./catalog-helper";
 
 export interface PlanningPrompt {
   systemPrompt: string;
@@ -9,11 +10,16 @@ export interface PlanningPrompt {
 /**
  * Ensambla el prompt estructurado para el motor de planificación IA.
  * Aplica principios de periodización deportiva, seguridad biomecánica,
- * aislamiento de alérgenos, control estricto de volumen por duración y defensas contra inyección.
+ * aislamiento de alérgenos, control estricto de volumen por duración,
+ * inyección del catálogo oficial de 100 ejercicios y defensas contra inyección.
  */
-export function buildPlanningPrompt(input: PlanningAIInput): PlanningPrompt {
+export function buildPlanningPrompt(
+  input: PlanningAIInput,
+  catalog?: CatalogExerciseItem[]
+): PlanningPrompt {
   const duracionMinutos = input.disponibilidad?.duracionMinutosPorSesion || 60;
   const rangoVolumen = calcularRangoEjerciciosPorDuracion(duracionMinutos);
+  const catalogoTexto = catalog && catalog.length > 0 ? formatCatalogForPrompt(catalog) : "";
 
   const systemPrompt = `
 ERES EL MOTOR DE PLANIFICACIÓN DEPORTIVA Y NUTRICIONAL DE "MR. GYM", UN SISTEMA AVANZADO DE GESTIÓN DE GIMNASIOS.
@@ -41,7 +47,15 @@ ESTRUCTURA DE LOS 6 NIVELES DE ENTRENAMIENTO:
 - Nivel 4: Especialización e Intensificación (RPE 8).
 - Nivel 5: Consolidación y Máximo Estímulo (RPE 8-9).
 - Nivel 6: Rendimiento Avanzado y Periodización (RPE 9).
-Cada nivel debe contener 'sesiones' adaptadas a los días de la semana del socio, con 'calentamiento', 'ejercicios' (nombre, grupoMuscular, series 1-10, repeticiones, descansoSegundos 15-600, tempo, rpe, instrucciones), 'vueltaALaCalma', 'criteriosDeProgreso' y 'criteriosDeRegresion'.
+Cada nivel debe contener 'sesiones' adaptadas a los días de la semana del socio, con 'calentamiento', 'ejercicios' (ejercicioId, nombre, grupoMuscular, series 1-10, repeticiones, descansoSegundos 15-600, tempo, rpe, instrucciones), 'vueltaALaCalma', 'criteriosDeProgreso' y 'criteriosDeRegresion'.
+
+REGLAS OBLIGATORIAS DE SELECCIÓN DE EJERCICIOS DEL CATÁLOGO OFICIAL:
+- DEBES SELECCIONAR EXCLUSIVAMENTE ejercicios del catálogo oficial proporcionado al final de estas instrucciones.
+- ESTÁ ESTRICTAMENTE PROHIBIDO inventar nombres de ejercicios o inventar UUIDs.
+- Cada ejercicio de cada sesión DEBE incluir obligatoriamente su 'ejercicioId' (UUID exacto correspondiente en el catálogo) y su 'nombre' oficial.
+- Respetar el grupo muscular, nivel de dificultad del socio y equipamiento disponible.
+- NO prescribir ejercicios contraindicados por lesiones o que figuren en la lista de evitados.
+- NO repetir el mismo ejercicio dentro de una misma sesión.
 
 REGLAS OBLIGATORIAS DE VOLUMEN POR DURACIÓN DE SESIÓN:
 - La duración acordada por sesión (${duracionMinutos} minutos) es una restricción técnica vinculante.
@@ -53,6 +67,11 @@ REGLAS OBLIGATORIAS DE VOLUMEN POR DURACIÓN DE SESIÓN:
   * 2–4 Ejercicios Secundarios / Accesorios (hipertrofia, soporte funcional y balance unilateral).
   * 1–2 Ejercicios Complementarios / Core / Aislamiento (según el tiempo y fatiga acumulada).
 - NO repetir el mismo ejercicio dentro de una misma sesión.
+${
+  catalogoTexto
+    ? `\nCATÁLOGO OFICIAL DE EJERCICIOS DISPONIBLES:\n${catalogoTexto}\n`
+    : ""
+}
 
 ESTRUCTURA DEL PLAN ALIMENTARIO (MÍNIMO 20 RECETAS ESTRUCTURADAS Y PERSONALIZADAS):
 - OBJETIVOS NUTRICIONALES DIARIOS ESTIMADOS: Calcular y justificar según el peso, talla, edad, sexo y objetivo del socio (ej: superávit para hipertrofia, déficit moderado para pérdida de grasa).

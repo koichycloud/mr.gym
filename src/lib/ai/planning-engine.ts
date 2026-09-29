@@ -4,14 +4,16 @@ import { sanitizePlanningAIInput } from "./sanitizer";
 import { buildPlanningPrompt } from "./prompt-builder";
 import { parseAndValidateAIOutput } from "./parser";
 import { evaluatePlanningSafety } from "./safety-evaluator";
+import { getActiveExerciseCatalog, reconcilePlanTrainingExercises } from "./catalog-helper";
 import { getAIPlanningProvider } from "./provider-factory";
 import { PlanningEngineOptions, PlanningEngineResult, AIPlanningProvider } from "./types";
 
 /**
  * Motor central de planificación con Inteligencia Artificial.
- * Orquesta la recopilación de datos, sanitización, ensamblado de prompt,
- * invocación del proveedor IA, validación de esquemas Zod, evaluación de
- * seguridad y registro transaccional en la tabla GeneracionIA.
+ * Orquesta la recopilación de datos, sanitización, inyección del catálogo activo,
+ * ensamblado de prompt, invocación del proveedor IA, validación de esquemas Zod,
+ * reconciliación determinista de catálogo, evaluación de seguridad y registro
+ * transaccional en la tabla GeneracionIA.
  */
 export async function executePlanningGeneration(
   socioId: string,
@@ -27,8 +29,11 @@ export async function executePlanningGeneration(
   // 2. Sanitización y eliminación estricta de PII (PlanningAIInput)
   const sanitizedInput = sanitizePlanningAIInput(rawData);
 
-  // 3. Ensamblado del prompt estructurado
-  const prompt = buildPlanningPrompt(sanitizedInput);
+  // 3. Obtener catálogo activo de ejercicios para inyección en prompt y reconciliación
+  const activeCatalog = await getActiveExerciseCatalog();
+
+  // 4. Ensamblado del prompt estructurado con catálogo de ejercicios oficial
+  const prompt = buildPlanningPrompt(sanitizedInput, activeCatalog);
 
   // Validar si el usuarioId existe físicamente en BD (para evitar FK violations con mocks o tokens de test)
   let validUsuarioId: string | null = null;
@@ -40,10 +45,10 @@ export async function executePlanningGeneration(
     if (userRecord) validUsuarioId = userRecord.id;
   }
 
-  // 4. Invocación del proveedor IA (Mock o Real según configuración)
+  // 5. Invocación del proveedor IA (Mock o Real según configuración)
   const aiResponse = await provider.generateStructuredPlan(sanitizedInput, prompt);
 
-  // 5. Manejo de fallo a nivel de comunicación del proveedor (Error / Timeout)
+  // 6. Manejo de fallo a nivel de comunicación del proveedor (Error / Timeout)
   if (!aiResponse.success || !aiResponse.rawText) {
     const errorMsg = aiResponse.error || "Fallo desconocido en la comunicación con el proveedor IA.";
 
@@ -93,7 +98,7 @@ export async function executePlanningGeneration(
     };
   }
 
-  // 6. Parseo JSON y Validación estricta con Zod
+  // 7. Parseo JSON y Validación estricta con Zod
   const parseResult = parseAndValidateAIOutput(aiResponse.rawText);
 
   if (!parseResult.success || !parseResult.data) {
@@ -144,12 +149,30 @@ export async function executePlanningGeneration(
     };
   }
 
-  // 7. Evaluación de Seguridad Biomecánica y Nutricional
-  const safetyEvaluation = evaluatePlanningSafety(sanitizedInput, parseResult.data);
+  // 8. Reconciliación Determinista de Ejercicios contra Catálogo Activo (FASE C)
+  const reconciliation = reconcilePlanTrainingExercises(
+    parseResult.data.planEntrenamiento,
+    activeCatalog
+  );
+
+  const planEntrenamientoReconciliado = reconciliation.plan;
+
+  // 9. Evaluación de Seguridad Biomecánica, Nutricional y Catálogo
+  const candidateOutput = {
+    ...parseResult.data,
+    planEntrenamiento: planEntrenamientoReconciliado,
+  };
+
+  const safetyEvaluation = evaluatePlanningSafety(
+    sanitizedInput,
+    candidateOutput,
+    activeCatalog,
+    reconciliation.warnings
+  );
 
   // Actualizar banderas en el objeto resultante
   const finalizedOutput = {
-    ...parseResult.data,
+    ...candidateOutput,
     evaluacionSeguridad: {
       requiresHumanReview: safetyEvaluation.requiresHumanReview,
       banderasAdvertencia: safetyEvaluation.banderasAdvertencia,
