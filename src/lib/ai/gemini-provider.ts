@@ -249,7 +249,7 @@ export class GeminiAIPlanningProvider implements AIPlanningProvider {
   constructor(apiKey?: string, timeoutMs?: number, modelName?: string) {
     const config = getAIConfig();
     // Sanitización defensiva: eliminar CR/LF y espacios que puedan contaminar el nombre del modelo
-    this.name = (modelName || config.model || "gemini-2.5-flash").trim();
+    this.name = (modelName || config.model || "gemini-3.6-flash").trim();
     this.apiKey = apiKey !== undefined ? apiKey : (process.env.GEMINI_API_KEY || null);
     this.timeoutMs = typeof timeoutMs === "number" ? timeoutMs : config.timeoutMs;
   }
@@ -283,6 +283,9 @@ export class GeminiAIPlanningProvider implements AIPlanningProvider {
           systemInstruction: prompt.systemPrompt,
           responseMimeType: "application/json",
           responseSchema: PLANNING_AI_RESPONSE_SCHEMA,
+          thinkingConfig: {
+            thinkingBudget: 0,
+          },
           abortSignal: controller.signal,
         },
       });

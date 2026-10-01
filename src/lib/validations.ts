@@ -287,9 +287,8 @@ export type PlanningAIInput = z.infer<typeof planningAIInputSchema>
 
 // 2. ESTRUCTURA JSON PLAN DE ENTRENAMIENTO (6 NIVELES)
 export const ejercicioAISchema = z.object({
-    // FASE 7: ejercicioId es OPCIONAL — referencia a la Biblioteca de Ejercicios (Fase 6).
-    // Los planes históricos sin este campo continúan funcionando normalmente.
-    ejercicioId: z.string().uuid("ID de ejercicio inválido").optional().nullable(),
+    // FASE C: ejercicioId es string UUID o null/ausente para compatibilidad y reconciliación determinista.
+    ejercicioId: z.string().optional().nullable().transform((val) => (val && val.trim().length > 0 ? val.trim() : null)),
     nombre: z.string().min(1, "Nombre de ejercicio requerido"),
     grupoMuscular: z.string().min(1, "Grupo muscular requerido"),
     series: z.number().int().min(1).max(10),
